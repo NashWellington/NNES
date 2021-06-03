@@ -1,0 +1,7 @@
+.vscode/*
+build/log/*
+build/NNES
+roms/*
+testing/*
+design.txt
+TODOS.txt
