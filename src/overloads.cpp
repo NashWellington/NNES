@@ -1,32 +1,6 @@
 #include "globals.h"
 
-std::ostream& operator<<(std::ostream& strm, uword data)
-{
-    strm << std::setfill('0') << std::setw(4) << std::uppercase << std::hex << (int)data;
-    return strm;
-}
-
-std::ostream& operator<<(std::ostream& strm, byte data)
-{
-    strm << std::setfill('0') << std::setw(2) << std::uppercase << std::hex << int(ubyte(data));
-    return strm;
-}
-
-std::ostream& operator<<(std::ostream& strm, ubyte data)
-{
-    strm << std::setfill('0') << std::setw(2) << std::uppercase << std::hex << int(data);
-    return strm;
-}
-
-std::ostream& operator<<(std::ostream& strm, InvalidOpcodeException& e)
-{
-    // TODO I can't be bothered to deal with ostream's bullshit about
-    //      word overloading but change this later
-    ubyte address_l = e.address & 0x00FF;
-    ubyte address_h = (e.address & 0xFF00) >> 8;
-    strm << "Invalid opcode: " << e.opcode << " at " << address_h << address_l;
-    return strm;
-}
+// TODO delete or move to savestate
 
 std::ostream& operator<<(std::ostream& strm, State& state)
 {
