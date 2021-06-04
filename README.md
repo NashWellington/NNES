@@ -1,7 +1,7 @@
 # NNES
 NNES is a NES emulator built in C++.
 NNES is **very** early in development, and is currently not expected to work on anything that isn't a select few test roms.
-NNES is has currently only been tested on Ubuntu 20.04 with gcc 9.3.0 on an x64 system.
+NNES has currently only been tested on Ubuntu 20.04 with gcc 9.3.0 on an x64 system.
 
 ## Roadmap
 This is a rough order of things I am planning to implement or change:
