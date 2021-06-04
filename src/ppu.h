@@ -1,9 +1,10 @@
-#ifndef NNES_PPU_H
-#define NNES_PPU_H
+#pragma once
 
 #include "globals.h"
 #include "bus.h"
 #include "display.h"
+
+extern PPU ppu;
 
 // TODO implement PAL/Dendy vals
 
@@ -141,5 +142,3 @@ public:
 
 #endif
 };
-
-#endif

@@ -1,5 +1,7 @@
 #include "ppu.h"
 
+PPU ppu;
+
 // TODO make this a param or something
 const std::string PALETTE_FILENAME = "../build/palettes/ntsc.pal";
 

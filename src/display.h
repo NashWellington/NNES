@@ -1,9 +1,11 @@
-#ifndef NNES_DISPLAY_H
-#define NNES_DISPLAY_H
+#pragma once
 
 #include "globals.h"
-#include <GL/glew.h>
-#include <SFML/Window.hpp>
+
+#include "libs/imgui/imgui.h"
+#include "libs/imgui/imgui_impl_sdl.h"
+#include "libs/imgui/imgui_impl_opengl3.h"
+#include <SDL.h>
 
 // TODO copy/move constructor?
 struct Pixel
@@ -22,7 +24,7 @@ public:
     ~Display();
 
     #ifndef NDEBUG
-    uint palette_selected = 0;
+    static uint palette_selected;
 
     /* Adds an element to the display
     * params:
@@ -32,10 +34,10 @@ public:
     *       - y = relative vertical position (-1 to 1)
     *       - texture = pixel matrix to be displayed
     */
-    void addElement(GLint width, GLint height, GLfloat x, GLfloat y, ubyte* texture);
+    static void addElement(GLint width, GLint height, GLfloat x, GLfloat y, ubyte* texture);
 
     // Add a palette and highlight if it is selected
-    void addPalette(std::array<Pixel,4>* palette, uint palette_index);
+    static void addPalette(std::array<Pixel,4>* palette, uint palette_index);
 
     #endif
 
@@ -44,7 +46,4 @@ public:
     void displayFrame();
 
 private:
-    sf::Window* window;
 };
-
-#endif

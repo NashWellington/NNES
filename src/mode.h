@@ -1,5 +1,4 @@
-#ifndef NNES_ADDRESSING_MODE_H
-#define NNES_ADDRESSING_MODE_H
+#pragma once
 
 // Include statements
 #include "globals.h"
@@ -23,7 +22,7 @@ namespace Mode
     *           +2 if read-modify-write instr - external
     *           extra +1 if indexed (all instrs) - external
     */
-    std::pair<uword,int> zeroPage(CPU& cpu, byte offset);
+    std::pair<uword,int> zeroPage(byte offset);
 
     /* Returns a memory address specified by two operands
     * For un-indexed, offset = 0
@@ -37,7 +36,7 @@ namespace Mode
     *           +3 if read-modify-write instr - external
     *               extra +1 if indexed - external
     */
-    std::pair<uword,int> absolute(CPU& cpu, byte offset, bool read_instr);
+    std::pair<uword,int> absolute(byte offset, bool read_instr);
 
     /* Returns a memory address specified indirectly by two operands
     * Read the docs to understand
@@ -55,19 +54,17 @@ namespace Mode
     *               extra +3 for read-modify-write instrs - external
     *               
     */
-    std::pair<uword,int> indirect(CPU& cpu, byte offset, ubyte index_type, bool read_instr);
+    std::pair<uword,int> indirect(byte offset, ubyte index_type, bool read_instr);
 
     /* Returns one operand (the next byte in memory) to be operated on
     * cycles: 2
     */
-    std::pair<byte,int> immediate(CPU& cpu);
+    std::pair<byte,int> immediate();
 
     /* Calculates the address the PC should branch to
     * cycles: 3 (minimum) //TODO conflicting sources say either 2 or 3
     *           +1 if branch is taken - external
     *               extra +1 if page cross - internal
     */
-    std::pair<uword,int> relative(CPU& cpu);
+    std::pair<uword,int> relative();
 };
-
-#endif

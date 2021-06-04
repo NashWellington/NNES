@@ -1,9 +1,10 @@
-#ifndef NNES_MAPPER_H
-#define NNES_MAPPER_H
+#pragma once
 
 #pragma GCC diagnostic warning "-Wunused-parameter"
 
 #include "globals.h"
+
+extern Mapper mapper;
 
 enum class MirrorType
 {
@@ -34,10 +35,10 @@ struct Header
 class Mapper
 {
 public:
-    virtual std::optional<byte> cpuRead(uword address) = 0;
-    virtual bool cpuWrite(uword address, byte data) = 0;
-    virtual std::optional<byte> ppuRead(uword address) = 0;
-    virtual bool ppuWrite(uword address, byte data) = 0;
+    std::optional<byte> cpuRead(uword address);
+    bool cpuWrite(uword address, byte data);
+    std::optional<byte> ppuRead(uword address);
+    bool ppuWrite(uword address, byte data);
     MirrorType mirroring = MirrorType::HORIZONTAL;
 };
 
@@ -118,5 +119,3 @@ private:
     */
     std::vector<byte> chr_rom = {};
 };
-
-#endif

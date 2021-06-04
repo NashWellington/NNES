@@ -1,15 +1,16 @@
-#ifndef NNES_CPU_H
-#define NNES_CPU_H
+#pragma once
 
 // Include
 #include "globals.h"
 #include "bus.h"
 #include "isa.h"
 
+extern CPU cpu;
+
 class CPU
 {
 public:
-    CPU(Bus& bus);
+    CPU();
 
     byte read(uword address);
     void write(uword address, byte data);
@@ -124,13 +125,8 @@ public:
 //
 
 private:
-    /* Reference to the Bus
-    */
-    Bus& bus;
 
     int cycle = 0;
 
     int handleInterrupt(InterruptType type);
 };
-
-#endif

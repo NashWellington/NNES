@@ -1,8 +1,9 @@
-#ifndef NNES_APU_H
-#define NNES_APU_H
+#pragma once
 
 #include "globals.h"
 #include "bus.h"
+
+extern APU apu;
 
 class APU
 {
@@ -11,5 +12,3 @@ public:
     APU();
 private:
 };
-
-#endif

@@ -19,6 +19,7 @@ int main(int argc, char ** argv)
     if (!error_stream.is_open()) 
     {
         std::cout << "Error: could not open " << ERROR_LOG_FILENAME << std::endl;
+        throw std::exception();
     }
     std::cerr.rdbuf(error_stream.rdbuf());
 
@@ -73,16 +74,35 @@ int main(int argc, char ** argv)
     }
 
     // Read .nes file and initialize bus, cartridge
-    Bus bus;
-    Boot::loadRom(rom, bus);
+    Boot::loadRom(rom);
 
     // Initialize display
     Display display = Display();
 
     // Initialize processors
-    CPU cpu = CPU(bus);
+    CPU cpu = CPU();
     PPU ppu = PPU(bus, display);
     //APU apu = APU();           // TODO fully implement APU
+
+    IMGUI_CHECKVERSION(); // TODO is this necessary?
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0); // TODO research
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE); // TODO research
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+
+    // Create window with graphics context
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1); // TODO research
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24); // TODO research
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8); // TODO research
+    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI); // TODO research DPI
+    SDL_Window* window = SDL_CreateWindow("NNES", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags); // TODO change title to "NNES - {game title}"
+    SDL_GLContext gl_context = SDL_GL_CreateContext(window);
+    SDL_GL_MakeCurrent(window, gl_context);
+    SDL_GL_SetSwapInterval(1); // Enable vsync
+
+    ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
+    ImGui_ImplOpenGL3_Init("#version 330");
 
     #ifndef NDEBUG
     // TODO testing

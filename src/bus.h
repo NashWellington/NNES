@@ -1,8 +1,9 @@
-#ifndef NNES_BUS_H
-#define NNES_BUS_H
+#pragma once
 
 #include "globals.h"
 #include "mapper.h"
+
+extern Bus bus;
 
 /* 64 KiB CPU memory map
 * $0000 - Zero Page
@@ -297,5 +298,3 @@ public:
     */
     byte reg_oam_dma;
 };
-
-#endif

@@ -1,5 +1,7 @@
 #include "bus.h"
 
+Bus bus;
+
 byte Bus::cpuRead(uword address)
 {
     auto data = mapper->cpuRead(address); // Cartridge mem

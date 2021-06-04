@@ -1,5 +1,7 @@
 #include "cpu.h"
 
+CPU cpu;
+
 // Addresses of interrupt handling routine vectors
 const uword IRQ_ADDRESS = 0xFFFE;
 const uword NMI_ADDRESS = 0xFFFA;
@@ -8,7 +10,7 @@ const uword RESET_ADDRESS = 0xFFFC;
 // Address of the stack (used for push and pop)
 const uword STACK_START = 0x0100;
 
-CPU::CPU(Bus& bus) : bus(bus)
+CPU::CPU()
 {
     start();
 }
@@ -76,7 +78,7 @@ int CPU::executeInstruction()
     byte instruction = nextByte();
 
     // Step 2: process opcode
-    return ISA::executeOpcode(*this, instruction);
+    return ISA::executeOpcode(instruction);
 }
 
 void CPU::clock()

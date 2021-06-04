@@ -1,5 +1,4 @@
-#ifndef NNES_ISA_H
-#define NNES_ISA_H
+#pragma once
 
 // Forward declaration
 class CPU;
@@ -11,7 +10,7 @@ class CPU;
 namespace ISA
 {
 
-    int executeOpcode(CPU& cpu, ubyte instr);
+    int executeOpcode(ubyte instr);
 
     /* ADd memory to accumulator with Carry
     * Type: read
@@ -27,7 +26,7 @@ namespace ISA
     * (indirect,X)          61	2	    6  
     * (indirect),Y          71	2	    5* 
     */
-    int ADC(CPU& cpu, int cycles, byte val);
+    int ADC(int cycles, byte val);
 
     /* AND memory with accumulator
     * Type: read
@@ -43,7 +42,7 @@ namespace ISA
     * (indirect,X)          21	2	    6  
     * (indirect),Y          31	2	    5* 
     */
-    int AND(CPU& cpu, int cycles, byte val);
+    int AND(int cycles, byte val);
 
     /* Accumulator (or memory) Shift Left one bit
     * Note: set address to 0 (or anything) if flag_accumulator is true
@@ -57,7 +56,7 @@ namespace ISA
     * absolute	            0E	3	    6  
     * absolute,X	        1E	3	    7  
     */
-    int ASL(CPU& cpu, int cycles, uword address, byte val, bool flag_accumulator);
+    int ASL(int cycles, uword address, byte val, bool flag_accumulator);
 
     /* Branch on Carry Clear
     * Branch if C = 0
@@ -65,7 +64,7 @@ namespace ISA
     * addressing	        opc	bytes	cycles
     * relative	            90	2	    2**
     */
-    int BCC(CPU& cpu, int cycles, uword address);
+    int BCC(int cycles, uword address);
 
     /* Branch on Carry Set
     * Branch if C = 1
@@ -73,7 +72,7 @@ namespace ISA
     * addressing	        opc	bytes	cycles
     * relative	            B0	2	    2**
     */
-    int BCS(CPU& cpu, int cycles, uword address);
+    int BCS(int cycles, uword address);
 
     /* Branch on EQual
     * Branch if Z = 1
@@ -81,7 +80,7 @@ namespace ISA
     * addressing	        opc	bytes	cycles
     * relative	            F0	2	    2**
     */
-    int BEQ(CPU& cpu, int cycles, uword address);
+    int BEQ(int cycles, uword address);
 
     /* test BITs
     * Type: read
@@ -91,7 +90,7 @@ namespace ISA
     * zeropage	            24	2	    3  
     * absolute	            2C	3	    4  
     */
-    int BIT(CPU& cpu, int cycles, byte val);
+    int BIT(int cycles, byte val);
 
     /* Branch on MInus
     * Branch if N = 1
@@ -99,7 +98,7 @@ namespace ISA
     * addressing	    	opc	bytes	cycles
     * relative	            30	2	    2**
     */
-    int BMI(CPU& cpu, int cycles, uword address);
+    int BMI(int cycles, uword address);
 
     /* Branch on Not Equal
     * Branch if Z = 0
@@ -107,7 +106,7 @@ namespace ISA
     * addressing	    	opc	bytes	cycles
     * relative	            D0	2	    2**
     */
-    int BNE(CPU& cpu, int cycles, uword address);
+    int BNE(int cycles, uword address);
 
     /* Branch on PLus
     * Branch if N = 0
@@ -115,7 +114,7 @@ namespace ISA
     * addressing	    	opc	bytes	cycles
     * relative	            10	2	    2**
     */
-    int BPL(CPU& cpu, int cycles, uword address);
+    int BPL(int cycles, uword address);
 
     /* BReaK
     * Read (then throw away) byte, then
@@ -132,7 +131,7 @@ namespace ISA
     * addressing	    	opc	bytes	cycles
     * relative	            50	2	    2**
     */
-    int BVC(CPU& cpu, int cycles, uword address);
+    int BVC(int cycles, uword address);
 
     /* Branch on oVerflow Set
     * Branch if V = 1
@@ -140,7 +139,7 @@ namespace ISA
     * addressing	    	opc	bytes	cycles
     * relative	            70	2	    2**
     */
-    int BVS(CPU& cpu, int cycles, uword address);
+    int BVS(int cycles, uword address);
 
     /* CLear Carry flag
     * C => 0
@@ -187,7 +186,7 @@ namespace ISA
     * (indirect,X)	        C1	2	    6  
     * (indirect),Y	        D1	2	    5* 
     */
-    int CMP(CPU& cpu, int cycles, byte val);
+    int CMP(int cycles, byte val);
 
     /* CoMPare memory with register X
     * Type: read
@@ -198,7 +197,7 @@ namespace ISA
     * zeropage              E4	2	    3  
     * absolute	            EC	3	    4  
     */
-    int CPX(CPU& cpu, int cycles, byte val);
+    int CPX(int cycles, byte val);
 
     /* CoMPare memory with register Y
     * Type: read
@@ -209,7 +208,7 @@ namespace ISA
     * zeropage              C4	2	    3  
     * absolute	            CC	3	    4  
     */
-    int CPY(CPU& cpu, int cycles, byte val);
+    int CPY(int cycles, byte val);
 
     /* DECrement memory by 1
     * Type: read-modify-write
@@ -221,7 +220,7 @@ namespace ISA
     * absolute	            CE	3   	6  
     * absolute,X	        DE	3   	7  
     */
-    int DEC(CPU& cpu, int cycles, uword address);
+    int DEC(int cycles, uword address);
 
     /* DEcrement X by 1
     * X - 1 -> X
@@ -253,7 +252,7 @@ namespace ISA
     * (indirect,X)	    	41	2   	6  
     * (indirect),Y	    	51	2   	5*
     */
-    int EOR(CPU& cpu, int cycles, byte val);
+    int EOR(int cycles, byte val);
 
     /* INCrement memory by 1
     * Type: read-modify-write
@@ -265,7 +264,7 @@ namespace ISA
     * absolute	            EE	3   	6  
     * absolute,X	        FE	3   	7  
     */
-    int INC(CPU& cpu, int cycles, uword address);
+    int INC(int cycles, uword address);
 
     /* INCrement X by 1
     * X + 1 -> X
@@ -290,7 +289,7 @@ namespace ISA
     * absolute	            4C	3   	3  
     * indirect	        	6C	3   	5 
     */
-    int JMP(CPU& cpu, int cycles, uword address);
+    int JMP(int cycles, uword address);
 
     /* Jump to SubRoutine
     * Type: read-modify-write
@@ -300,7 +299,7 @@ namespace ISA
     * addressing	       	opc	bytes	cycles
     * absolute	            20	3	    6
     */
-    int JSR(CPU& cpu, uword address);
+    int JSR(uword address);
 
     /* LoaD Accumulator with memory
     * Type: read
@@ -316,7 +315,7 @@ namespace ISA
     * (indirect,X)	       	A1	2	    6  
     * (indirect),Y	       	B1	2	    5* 
     */
-    int LDA(CPU& cpu, int cycles, byte val);
+    int LDA(int cycles, byte val);
 
     /* LoaD index X with memory
     * Type: read
@@ -329,7 +328,7 @@ namespace ISA
     * absolute	            AE	3   	4  
     * absolute,Y	        BE	3   	4*
     */
-    int LDX(CPU& cpu, int cycles, byte val);
+    int LDX(int cycles, byte val);
 
     /* LoaD index Y with memory
     * Type: read
@@ -342,7 +341,7 @@ namespace ISA
     * absolute	            AC	3   	4  
     * absolute,X	        BC	3   	4*
     */
-    int LDY(CPU& cpu, int cycles, byte val);
+    int LDY(int cycles, byte val);
 
     /* Logical Shift Right (memory or accumulator)
     * Type: read-modify-write
@@ -355,7 +354,7 @@ namespace ISA
     * absolute	          	4E	3   	6  
     * absolute,X	      	5E	3   	7 
     */
-    int LSR(CPU& cpu, int cycles, uword address, byte val, bool flag_accumulator);
+    int LSR(int cycles, uword address, byte val, bool flag_accumulator);
 
     // TODO split up unofficial NOPs
     /* No OPeration
@@ -386,7 +385,7 @@ namespace ISA
     * (indirect,X)	        01	2	    6  
     * (indirect),Y	        11	2	    5* 
     */
-    int ORA(CPU& cpu, int cycles, byte val);
+    int ORA(int cycles, byte val);
 
     /* PusH Accumulator onto stack
     * push A
@@ -428,7 +427,7 @@ namespace ISA
     * absolute	            2E	3	    6  
     * absolute,X	        3E	3	    7
     */
-    int ROL(CPU& cpu, int cycles, uword address, byte val, bool flag_accumulator);
+    int ROL(int cycles, uword address, byte val, bool flag_accumulator);
 
     /* Rotate One bit Right
     * Type: read-modify-write
@@ -441,7 +440,7 @@ namespace ISA
     * absolute	            6E	3	    6  
     * absolute,X	        7E	3	    7
     */
-    int ROR(CPU& cpu, int cycles, uword address, byte val, bool flag_accumulator);
+    int ROR(int cycles, uword address, byte val, bool flag_accumulator);
 
     /* ReTurn from Interrupt
     * pull SR, pull PC
@@ -474,7 +473,7 @@ namespace ISA
     * (indirect),Y	        F1	    2	    5*
     * Note: EB is an unofficial instruction
     */
-    int SBC(CPU& cpu, int cycles, byte val);
+    int SBC(int cycles, byte val);
 
     /* SEt Carry flag
     * 1 -> C
@@ -511,7 +510,7 @@ namespace ISA
     * (indirect,X)	        81	2	    6  
     * (indirect),Y	        91	2	    6
     */
-    int STA(CPU& cpu, int cycle, uword address);
+    int STA(int cycle, uword address);
 
     /* Store Index X in Memory
     * Type: write
@@ -522,7 +521,7 @@ namespace ISA
     * zeropage,Y	        96	2	    4  
     * absolute	            8E	3	    4
     */
-    int STX(CPU& cpu, int cycles, uword address);
+    int STX(int cycles, uword address);
 
     /* Store Index Y in Memory
     * Type: write
@@ -533,7 +532,7 @@ namespace ISA
     * zeropage,X	        94	2	    4  
     * absolute	            8C	3	    4
     */
-    int STY(CPU& cpu, int cycles, uword address);
+    int STY(int cycles, uword address);
 
     /* Transfer Accumulator to index X
     * A -> X
@@ -593,7 +592,7 @@ namespace ISA
     * addressing	        opc	    bytes	cycles
     * immediate             4B      2       2
     */
-    int ALR(CPU& cpu, int cycles, byte val);
+    int ALR(int cycles, byte val);
 
     /* ANd, set C
     * M and A -> A
@@ -602,7 +601,7 @@ namespace ISA
     * addressing	        opc	    bytes	cycles
     * immediate             0B,2B   2       2
     */
-    int ANC(CPU& cpu, int cycles, byte val);
+    int ANC(int cycles, byte val);
 
     /* And + RoR accumulator
     * M and A -> A
@@ -613,7 +612,7 @@ namespace ISA
     * addressing	        opc	    bytes	cycles
     * immediate             6B      2       2
     */
-    int ARR(CPU& cpu, int cycles, byte val);
+    int ARR(int cycles, byte val);
 
     /* Accumulator and index X with Subtraction
     * AKA "SBX"
@@ -622,7 +621,7 @@ namespace ISA
     * addressing	        opc	    bytes	cycles
     * immediate             CB      2       2
     */
-    int AXS(CPU& cpu, int cycles, byte val);
+    int AXS(int cycles, byte val);
 
     /* Dec + CmP
     * M - 1 -> M
@@ -637,7 +636,7 @@ namespace ISA
     * absolute,Y            DB      3       7
     * absolute,X            DF      3       7
     */
-    int DCP(CPU& cpu, int cycles, uword address);
+    int DCP(int cycles, uword address);
 
     /* Inc + SbC
     * AKA "ISB"
@@ -653,7 +652,7 @@ namespace ISA
     * absolute,Y            FB      3       7
     * absolute,X            FF      3       7
     */
-    int ISC(CPU& cpu, int cycles, uword address);
+    int ISC(int cycles, uword address);
 
     /* Lda + tAX
     * M -> A -> X
@@ -667,7 +666,7 @@ namespace ISA
     * zeropage,Y            B7      2       4
     * absolute,Y            BF      3       4
     */
-    int LAX(CPU& cpu, int cycles, byte val);
+    int LAX(int cycles, byte val);
 
     /* Load to index X and Accumulator
     * AKA "ATX"
@@ -678,7 +677,7 @@ namespace ISA
     * addressing	        opc	    bytes	cycles
     * immediate             AB	    2	    2
     */
-    int LXA(CPU& cpu, int cycles, byte val);
+    int LXA(int cycles, byte val);
 
     /* RoL + And
     * Flags: C, Z, N
@@ -691,7 +690,7 @@ namespace ISA
     * absolute,Y            3B      3       7
     * absolute,X            3F      3       7
     */
-    int RLA(CPU& cpu, int cycles, uword address);
+    int RLA(int cycles, uword address);
 
     /* RoR + Adc
     * Flags: C, Z, N
@@ -704,7 +703,7 @@ namespace ISA
     * absolute,Y            7B      3       7
     * absolute,X            7F      3       7
     */
-    int RRA(CPU& cpu, int cycles, uword address);
+    int RRA(int cycles, uword address);
 
     /* Store bitwise and of the Accumulator and register X
     * A and X -> M
@@ -716,7 +715,7 @@ namespace ISA
     * absolute              8F      3       4
     * zeropage,Y            97      2       4
     */
-    int SAX(CPU& cpu, int cycles, uword address);
+    int SAX(int cycles, uword address);
 
     /* Store High address bits and Accumulator and register X in memory
     * (A & X & (ADDR_HI + 1)) -> M
@@ -727,7 +726,7 @@ namespace ISA
     * absolute,Y            9F      3       5
     * //TODO testing
     */
-    int SHA(CPU& cpu, int cycles, uword address);
+    int SHA(int cycles, uword address);
 
     /* SHa + txS (where X is replaced by (A & X))
     * (A & X) -> SP????
@@ -737,7 +736,7 @@ namespace ISA
     * absolute,Y            9B      2       4
     * //TODO testing
     */
-    int SHS(CPU& cpu, int cycles, uword address);
+    int SHS(int cycles, uword address);
 
     /* Store High address bits and register X in memory
     * AKA "SXA"
@@ -746,7 +745,7 @@ namespace ISA
     * addressing	        opc	    bytes	cycles
     * absolute,Y            9E      2       5
     */
-    int SHX(CPU& cpu, int cycles, uword address);
+    int SHX(int cycles, uword address);
 
     /* Store High address bits and register Y in memory
     * AKA "SYA"
@@ -755,7 +754,7 @@ namespace ISA
     * addressing	        opc	    bytes	cycles
     * absolute,X            9C      2       5
     */
-    int SHY(CPU& cpu, int cycles, uword address);
+    int SHY(int cycles, uword address);
 
     /* aSL + Ora
     * Flags: C, Z, N
@@ -768,7 +767,7 @@ namespace ISA
     * absolute,Y            1B      3       7
     * absolute,X            1F      3       7
     */
-    int SLO(CPU& cpu, int cycles, uword address);
+    int SLO(int cycles, uword address);
 
     /* lSR + Eor
     * Flags: C, Z, N
@@ -781,7 +780,5 @@ namespace ISA
     * absolute,Y            5B      3       7
     * absolute,X            5F      3       7
     */
-    int SRE(CPU& cpu, int cycles, uword address);
+    int SRE(int cycles, uword address);
 };
-
-#endif
