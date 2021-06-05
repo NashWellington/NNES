@@ -5,3 +5,4 @@ roms/*
 testing/*
 design.txt
 TODOS.txt
+src/imgui.ini

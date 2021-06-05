@@ -1,8 +1,8 @@
-objects =  main.o boot.o cpu.o ppu.o apu.o bus.o mapper.o isa.o mode.o overloads.o display.o
+objects =  main.o boot.o cpu.o ppu.o apu.o bus.o mapper.o isa.o mode.o overloads.o display.o imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
 
 flags = -g -std=c++17 -Wall -Werror -Wextra
 
-libs = -lGLEW -lsfml-window -lsfml-system -lGL
+libs = -lGLEW -lGL -lSDL2
 
 project = NNES
 
@@ -37,11 +37,30 @@ bus.o : bus.h globals.h mapper.h
 mapper.o : mapper.h globals.h
 		g++ $(flags) -c mapper.cpp
 
-display.o : display.h globals.h
+display.o : display.h globals.h libs/imgui/imgui.h libs/imgui/imgui_impl_sdl.h libs/imgui/imgui_impl_opengl3.h
 		g++ $(flags) -c display.cpp
 
 overloads.o : globals.h
 		g++ $(flags) -c overloads.cpp
+
+# external libs
+imgui.o : libs/imgui/imgui.h libs/imgui/imconfig.h libs/imgui/imgui_internal.h
+		g++ $(flags) -c libs/imgui/imgui.cpp
+
+imgui_draw.o : libs/imgui/imgui.h libs/imgui/imgui_internal.h libs/imgui/imstb_rectpack.h libs/imgui/imstb_truetype.h
+		g++ $(flags) -c libs/imgui/imgui_draw.cpp
+
+imgui_tables.o : libs/imgui/imgui.h libs/imgui/imgui_internal.h
+		g++ $(flags) -c libs/imgui/imgui_tables.cpp
+
+imgui_widgets.o : libs/imgui/imgui.h libs/imgui/imgui_internal.h libs/imgui/imstb_textedit.h
+		g++ $(flags) -c libs/imgui/imgui_widgets.cpp
+
+imgui_impl_sdl.o : libs/imgui/imgui_impl_sdl.h libs/imgui/imgui.h
+		g++ $(flags) -c libs/imgui/imgui_impl_sdl.cpp
+
+imgui_impl_opengl3.o : libs/imgui/imgui_impl_opengl3.h libs/imgui/imgui.h
+		g++ $(flags) -c libs/imgui/imgui_impl_opengl3.cpp
 
 clean : 
 		rm *.o

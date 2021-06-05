@@ -1,5 +1,4 @@
-#ifndef NNES_BUS_H
-#define NNES_BUS_H
+#pragma once
 
 #include "globals.h"
 #include "mapper.h"
@@ -41,6 +40,8 @@
 class Bus
 {
 public:
+    // TODO constructor
+
     byte  cpuRead(uword address);
     void  cpuWrite(uword address, byte data);
 
@@ -58,9 +59,9 @@ public:
     void addInterrupt(InterruptType interrupt);
     void clearInterrupt();
 
-    void setMapper(std::shared_ptr<Mapper> _mapper);
+    void setMapper(std::shared_ptr<Mapper> m);
 
-    //TODO start() and reset()?
+    //TODO start() and reset()
 
 private:
     std::shared_ptr<Mapper> mapper;
@@ -298,4 +299,4 @@ public:
     byte reg_oam_dma;
 };
 
-#endif
+extern Bus bus;

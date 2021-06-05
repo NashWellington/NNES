@@ -1,5 +1,4 @@
-#ifndef NNES_MAPPER_H
-#define NNES_MAPPER_H
+#pragma once
 
 #pragma GCC diagnostic warning "-Wunused-parameter"
 
@@ -118,5 +117,3 @@ private:
     */
     std::vector<byte> chr_rom = {};
 };
-
-#endif

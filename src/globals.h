@@ -1,5 +1,4 @@
-#ifndef NNES_GLOBALS_H
-#define NNES_GLOBALS_H
+#pragma once
 
 // Uncomment this in release builds to prevent assertions and logging
 //#ifndef NDEBUG
@@ -19,20 +18,18 @@
 #include <iostream>         // Used for logging errors etc.
 #include <stdexcept>        // exceptions
 #include <assert.h>         // assertions
-#include <iomanip>          // Used for converting to hex //TODO ios?
+#include <iomanip>          // Used for converting to hex //TODO ios? // TODO hex function
 #include <fstream>          // Used for reading files
 #include <cmath>            // Used for exponential functions // TODO just replace w/ bitshifting
 #include <chrono>           // Used for clocking
 #include <memory>           // Needed for shared_ptr
 #include <vector>           // needed for dynamic memory allocation
-#include <limits>           // needed for overflow detection
-#include <optional>         // for determining number of operands
+#include <optional>         // for determining number of operands // TODO
 
 typedef uint8_t ubyte;
 typedef int8_t byte;
 typedef uint16_t uword;
 typedef int16_t word;
-
 
 enum InterruptType
 {
@@ -42,7 +39,7 @@ enum InterruptType
     RESET
 };
 
-
+// TODO move to SaveState.cpp/h
 /* A global struct for keeping track of state values in each cycle
 * This will be used for logging states
 */
@@ -92,29 +89,7 @@ struct State
     void clearState();
 };
 
-extern State Current_State;
+extern State Current_State; // TODO make savestate class
 
-/* The number of times the main loop is run per frame
-*/
-const int SUBFRAMES_PER_FRAME = 1;
-
-// TODO deprecate
-class InvalidOpcodeException : public std::exception
-{
-public:
-    InvalidOpcodeException (ubyte opcode, uword address) 
-        : opcode(opcode), address(address) {};
-    ubyte opcode;
-    uword address;
-};
-
-// TODO make a function for converting hex to string
-// << overloads
-//std::ostream& operator<<(std::ostream& strm, uword data);
-std::ostream& operator<<(std::ostream& strm, byte data);
-std::ostream& operator<<(std::ostream& strm, ubyte data);
-std::ostream& operator<<(std::ostream& strm, InvalidOpcodeException& e);
-std::ostream& operator<<(std::ostream& strm, State& state);
-
-
-#endif
+std::string hex(uword x);
+std::string hex(ubyte x);

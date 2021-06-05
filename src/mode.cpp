@@ -1,13 +1,13 @@
 #include "mode.h"
 
 
-std::pair<uword,int> Mode::zeroPage(CPU& cpu, byte offset)
+std::pair<uword,int> Mode::zeroPage(byte offset)
 {
     uword address = static_cast<uword>(static_cast<ubyte>(cpu.nextByte() + offset));
     return std::make_pair(address, 3);
 }
 
-std::pair<uword,int> Mode::absolute(CPU& cpu, byte offset, bool read_instr)
+std::pair<uword,int> Mode::absolute(byte offset, bool read_instr)
 {
     int cycles = 3;
 
@@ -29,7 +29,7 @@ std::pair<uword,int> Mode::absolute(CPU& cpu, byte offset, bool read_instr)
     return std::make_pair(address, cycles);
 }
 
-std::pair<uword,int> Mode::indirect(CPU& cpu, byte offset, ubyte index_type, bool read_instr)
+std::pair<uword,int> Mode::indirect(byte offset, ubyte index_type, bool read_instr)
 {
     int cycles = 5;
     uword address = 0;
@@ -77,13 +77,13 @@ std::pair<uword,int> Mode::indirect(CPU& cpu, byte offset, ubyte index_type, boo
 }
 
 
-std::pair<byte,int> Mode::immediate(CPU& cpu)
+std::pair<byte,int> Mode::immediate()
 {
     ubyte val = cpu.nextByte();
     return std::make_pair(val, 2);
 }
 
-std::pair<uword,int> Mode::relative(CPU& cpu)
+std::pair<uword,int> Mode::relative()
 {
     int cycles = 3;     // TODO is this really 2?
     byte offset = static_cast<byte>(cpu.nextByte());

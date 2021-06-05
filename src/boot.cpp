@@ -1,6 +1,6 @@
 #include "boot.h"
 
-void Boot::loadRom(std::ifstream& rom, Bus& bus)
+void Boot::loadRom(std::ifstream& rom)
 {
     // Read header
     Header header = readHeader(rom);

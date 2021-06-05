@@ -1,5 +1,4 @@
-#ifndef NNES_PPU_H
-#define NNES_PPU_H
+#pragma once
 
 #include "globals.h"
 #include "bus.h"
@@ -39,7 +38,7 @@ struct Table
 class PPU
 {
 public:
-    PPU(Bus& bus, Display& display);
+    PPU();
 
     /* Background rendering
     * renderBackground()
@@ -85,9 +84,6 @@ public:
     void loadSystemPalette();
 
 private:
-    Bus& bus;
-    Display& display;
-
     std::array<Pixel, 64> system_palette = {};
 
     // The current cycle (resets at the start of a new scanline)
@@ -142,4 +138,4 @@ public:
 #endif
 };
 
-#endif
+extern PPU ppu;

@@ -6,6 +6,7 @@
 #include "boot.h"
 //#include "input.h"
 #include "display.h"
+#include "savestate.h"
 
 #ifndef NDEBUG
 #define ERROR_LOG_FILENAME "../build/log/error.log"
@@ -19,6 +20,7 @@ int main(int argc, char ** argv)
     if (!error_stream.is_open()) 
     {
         std::cout << "Error: could not open " << ERROR_LOG_FILENAME << std::endl;
+        throw std::exception();
     }
     std::cerr.rdbuf(error_stream.rdbuf());
 
@@ -49,6 +51,7 @@ int main(int argc, char ** argv)
     #endif
 
     /* Here's a general layout of how to get things rolling
+    // TODO rewrite
     * 1. Open ROM file with an ifstream
     * 2. Initialize Bus()
     * 3. call Boot::loadRom
@@ -72,27 +75,32 @@ int main(int argc, char ** argv)
         throw std::exception();
     }
 
-    // Read .nes file and initialize bus, cartridge
-    Bus bus;
-    Boot::loadRom(rom, bus);
+    // Initialize everything
+    Boot::loadRom(rom);
+    cpu.start();
 
-    // Initialize display
-    Display display = Display();
 
-    // Initialize processors
-    CPU cpu = CPU(bus);
-    PPU ppu = PPU(bus, display);
-    //APU apu = APU();           // TODO fully implement APU
 
     #ifndef NDEBUG
-    // TODO testing
-    bool running = true;
-    while (running) 
+    bool done = false;
+    unsigned long long int ppu_cycles = 0;
+    unsigned long long int cycles_per_frame = 262 * 341; // Skips a cycle every odd frame
+    while (!done) 
     {
         ppu.clock();
-        ppu.clock();
-        ppu.clock();
-        cpu.clock();
+        if ((ppu_cycles % 3) == 2) cpu.clock();
+        ppu_cycles++;
+        if (ppu_cycles == cycles_per_frame)
+        {
+            done = display.pollEvents();
+            display.displayFrame();
+        }
+        else if (ppu_cycles == (cycles_per_frame * 2 - 1))
+        {
+            done = display.pollEvents();
+            display.displayFrame();
+            ppu_cycles -= (cycles_per_frame * 2 - 1);
+        }
     }
     #endif
 
