@@ -5,7 +5,6 @@ NNES is has currently only been tested on Ubuntu 20.04 with gcc 9.3.0 on an x64 
 
 ## Roadmap
 This is a rough order of things I am planning to implement or change:
-* Switch from SFML to imGui
 * Input
 * Sprites
 * Audio
@@ -17,7 +16,7 @@ This is a rough order of things I am planning to implement or change:
 
 ## Compiling
 NNES requires a C++17 compiler, as well as the following dependencies:
-* GLEW (package: libglew-dev) //TODO not necessary?
+* GLEW (package: libglew-dev)
 * SDL2 (package: libsdl2-dev)
 
 To compile, navigate to the src/ directory and run "make". The executable will be compiled as "NNES" in the build/ directory.
