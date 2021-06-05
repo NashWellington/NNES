@@ -10,11 +10,6 @@ const uword RESET_ADDRESS = 0xFFFC;
 // Address of the stack (used for push and pop)
 const uword STACK_START = 0x0100;
 
-CPU::CPU()
-{
-    start();
-}
-
 byte CPU::read(uword address)
 {
     return bus.cpuRead(address);

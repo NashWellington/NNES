@@ -4,8 +4,6 @@
 
 #include "globals.h"
 
-extern Mapper mapper;
-
 enum class MirrorType
 {
     HORIZONTAL,
@@ -35,10 +33,10 @@ struct Header
 class Mapper
 {
 public:
-    std::optional<byte> cpuRead(uword address);
-    bool cpuWrite(uword address, byte data);
-    std::optional<byte> ppuRead(uword address);
-    bool ppuWrite(uword address, byte data);
+    virtual std::optional<byte> cpuRead(uword address) = 0;
+    virtual bool cpuWrite(uword address, byte data) = 0;
+    virtual std::optional<byte> ppuRead(uword address) = 0;
+    virtual bool ppuWrite(uword address, byte data) = 0;
     MirrorType mirroring = MirrorType::HORIZONTAL;
 };
 

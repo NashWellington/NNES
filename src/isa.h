@@ -123,7 +123,7 @@ namespace ISA
     * addressing            opc bytes   cycles
     * implied               00  1       7
     */
-    int BRK(CPU& cpu);
+    int BRK();
 
     /* Branch on oVerflow Clear
     * Branch if V = 0
@@ -147,14 +147,14 @@ namespace ISA
     * addressing		    opc	bytes	cycles
     * implied	            18  1	    2 
     */
-    int CLC(CPU& cpu);
+    int CLC();
 
     /* CLear Decimal flag
     * Note: this does nothing for two cycles
     * addressing		    opc	bytes	cycles
     * implied	            D8  1	    2 
     */
-    int CLD(CPU& cpu);
+    int CLD();
 
     /* CLear Interrupt disable bit
     * I => 0
@@ -162,7 +162,7 @@ namespace ISA
     * addressing		    opc	bytes	cycles
     * implied	            D8  1	    2 
     */
-    int CLI(CPU& cpu);
+    int CLI();
 
     /* CLear oVerflow flag
     * V => 0
@@ -170,7 +170,7 @@ namespace ISA
     * addressing		    opc	bytes	cycles
     * implied	            B8  1	    2 
     */
-    int CLV(CPU& cpu);
+    int CLV();
 
     /* CoMPare memory with accumulator
     * Type: read
@@ -228,7 +228,7 @@ namespace ISA
     * addressing            opc	bytes	cycles
     * implied	            CA	1   	2  
     */
-    int DEX(CPU& cpu);
+    int DEX();
 
     /* DEcrement Y by 1
     * Y - 1 -> Y
@@ -236,7 +236,7 @@ namespace ISA
     * addressing            opc	bytes	cycles
     * implied	            88	1   	2  
     */
-    int DEY(CPU& cpu);
+    int DEY();
 
     /* bitwise Exclusive-OR memory with accumulator
     * Type: read
@@ -272,7 +272,7 @@ namespace ISA
     * addressing            opc	bytes	cycles
     * implied	            E8	1   	2  
     */
-    int INX(CPU& cpu);
+    int INX();
 
     /* INCrement Y by 1
     * Y + 1 -> Y
@@ -280,7 +280,7 @@ namespace ISA
     * addressing            opc	bytes	cycles
     * implied	            C8	1   	2  
     */
-    int INY(CPU& cpu);
+    int INY();
 
     /* JuMP to new location
     * M -> PC
@@ -392,14 +392,14 @@ namespace ISA
     * addressing	        opc	bytes	cycles
     * implied	            48	1       3
     */
-    int PHA(CPU& cpu);
+    int PHA();
 
     /* PusH Processor status onto stack
     * push SR
     * addressing	        opc	bytes	cycles
     * implied	            08	1       3
     */
-    int PHP(CPU& cpu);
+    int PHP();
 
     /* PuLl Accumulator from stack
     * pull A
@@ -407,14 +407,14 @@ namespace ISA
     * addressing	        opc	bytes	cycles
     * implied	            68	1       4
     */
-    int PLA(CPU& cpu);
+    int PLA();
 
     /* PuLl Processor status from stack
     * pull SR
     * addressing	        opc	bytes	cycles
     * implied	            28	1       4
     */
-    int PLP(CPU& cpu);
+    int PLP();
 
     /* Rotate One bit Left
     * Type: read-modify-write
@@ -448,7 +448,7 @@ namespace ISA
     * addressing            opc bytes   cycles
     * implied               40  1       6
     */
-    int RTI(CPU& cpu);
+    int RTI();
 
     /* ReTurn from Subroutine
     * pull PC, PC++
@@ -456,7 +456,7 @@ namespace ISA
     * addressing            opc bytes   cycles
     * implied               60  1       6
     */
-    int RTS(CPU& cpu);
+    int RTS();
 
     /* SuBtract memory from accumulator with Carry (borrow)
     * Type: read
@@ -480,7 +480,7 @@ namespace ISA
     * addressing	        opc	bytes	cycles
     * implied	            38	1	    2 
     */
-    int SEC(CPU& cpu);
+    int SEC();
 
     /* SEt Decimal flag
     * NOTE: not implemented on 2A03
@@ -488,14 +488,14 @@ namespace ISA
     * addressing	        opc	bytes	cycles
     * implied	            F8	1	    2 
     */
-    int SED(CPU& cpu);
+    int SED();
 
     /* SEt Interrupt disable status
     * 1 -> I
     * addressing	        opc	bytes	cycles
     * implied	            78	1	    2 
     */
-    int SEI(CPU& cpu);
+    int SEI();
 
     /* Store Accumulator in Memory
     * Type: write
@@ -540,7 +540,7 @@ namespace ISA
     * addressing	        opc	bytes	cycles
     * implied	            AA	1	    2
     */
-    int TAX(CPU& cpu);
+    int TAX();
 
     /* Transfer Accumulator to index Y
     * A -> Y
@@ -548,7 +548,7 @@ namespace ISA
     * addressing	        opc	bytes	cycles
     * implied	            A8	1	    2
     */
-    int TAY(CPU& cpu);
+    int TAY();
 
     /* Transfer Stack pointer to index X
     * SP -> X
@@ -556,7 +556,7 @@ namespace ISA
     * addressing	        opc	bytes	cycles
     * implied	            BA	1	    2
     */
-    int TSX(CPU& cpu);
+    int TSX();
 
     /* Transfer index X to Accumulator
     * X -> A
@@ -564,7 +564,7 @@ namespace ISA
     * addressing	        opc	bytes	cycles
     * implied	            8A	1	    2
     */
-    int TXA(CPU& cpu);
+    int TXA();
 
     /* Transfer index X to Stack pointer
     * X -> SP
@@ -572,7 +572,7 @@ namespace ISA
     * addressing	        opc	bytes	cycles
     * implied	            9A	1	    2
     */
-    int TXS(CPU& cpu);
+    int TXS();
 
     /* Transfer index Y to Accumulator
     * Y -> A
@@ -580,7 +580,7 @@ namespace ISA
     * addressing	        opc	bytes	cycles
     * implied	            98	1	    2
     */
-    int TYA(CPU& cpu);
+    int TYA();
 
 // Unofficial instructions
 

@@ -211,7 +211,7 @@ void Bus::clearInterrupt()
     current_interrupt = NO_INTERRUPT;
 }
 
-void Bus::setMapper(std::shared_ptr<Mapper> _mapper)
+void Bus::setMapper(std::shared_ptr<Mapper> m)
 {
-    mapper = _mapper;
+    mapper = m;
 }

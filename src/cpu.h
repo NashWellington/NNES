@@ -10,8 +10,6 @@ extern CPU cpu;
 class CPU
 {
 public:
-    CPU();
-
     byte read(uword address);
     void write(uword address, byte data);
 
@@ -120,9 +118,6 @@ public:
         };
         byte reg;
     } reg_sr = { .reg = 0x24 };
-    
-
-//
 
 private:
 

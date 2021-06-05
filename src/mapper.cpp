@@ -1,7 +1,5 @@
 #include "mapper.h"
 
-Mapper mapper;
-
 Mapper000::Mapper000(Header& header, std::ifstream& rom)
 {
     mirroring = header.mirroring;

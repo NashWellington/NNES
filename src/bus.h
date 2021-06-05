@@ -3,8 +3,6 @@
 #include "globals.h"
 #include "mapper.h"
 
-extern Bus bus;
-
 /* 64 KiB CPU memory map
 * $0000 - Zero Page
 * $0100 - Stack
@@ -42,6 +40,8 @@ extern Bus bus;
 class Bus
 {
 public:
+    // TODO constructor
+
     byte  cpuRead(uword address);
     void  cpuWrite(uword address, byte data);
 
@@ -59,9 +59,9 @@ public:
     void addInterrupt(InterruptType interrupt);
     void clearInterrupt();
 
-    void setMapper(std::shared_ptr<Mapper> _mapper);
+    void setMapper(std::shared_ptr<Mapper> m);
 
-    //TODO start() and reset()?
+    //TODO start() and reset()
 
 private:
     std::shared_ptr<Mapper> mapper;
@@ -298,3 +298,5 @@ public:
     */
     byte reg_oam_dma;
 };
+
+extern Bus bus;

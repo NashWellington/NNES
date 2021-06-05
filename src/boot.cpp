@@ -4,7 +4,7 @@ void Boot::loadRom(std::ifstream& rom)
 {
     // Read header
     Header header = readHeader(rom);
-    getMapper(header, rom);
+    bus.setMapper(getMapper(header, rom));
 }
 
 Header Boot::readHeader(std::ifstream& rom)
@@ -90,14 +90,15 @@ Header Boot::readHeader(std::ifstream& rom)
 
 std::shared_ptr<Mapper> Boot::getMapper(Header& header, std::ifstream& rom)
 {
+    std::shared_ptr<Mapper> mapper;
     switch (header.mapper)
     {
         case 0:
-            mapper = Mapper000(header, rom);
+            mapper = std::make_shared<Mapper000>(header, rom);
             break;
 
         case 1:
-            mapper = Mapper001(header, rom);
+            mapper = std::make_shared<Mapper001>(header, rom);
             break;
 
         default:

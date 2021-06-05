@@ -1,5 +1,7 @@
 #include "display.h"
 
+Display display;
+
 // TODO move these to their own files
 
 const char* vertexShaderSource = 
@@ -48,34 +50,53 @@ const GLint indices[] =
 
 Display::Display()
 {
-    // TODO look more into this
-    sf::ContextSettings settings;
-    settings.majorVersion = 3;
-    settings.minorVersion = 3;
-    
-    // TODO make these depend on something
-    int width = 400;
-    int height = 400;
+    // Setup SDL
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
+    {
+        std::cerr << "Failed to init SDL" << std::endl;
+        throw std::exception();
+    }
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0); // TODO research
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE); // TODO research
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1); // TODO research
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24); // TODO research
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8); // TODO research
+    window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI); // TODO research DPI
+    window = SDL_CreateWindow("NNES", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags); // TODO change title to "NNES - {game title}"
+    gl_context = SDL_GL_CreateContext(window);
+    SDL_GL_MakeCurrent(window, gl_context);
+    SDL_GL_SetSwapInterval(1); // Enable vsync
 
-    std::string title = "NNES";
-
-    window = new sf::Window(sf::VideoMode(width, height), title, sf::Style::Default, settings);
-
-    // Needed to set up GLEW
+    // Setup GLEW
     glewExperimental = GL_TRUE;
-
-    if (GLEW_OK != glewInit())
+    if (glewInit() != GLEW_OK)
     {
         std::cerr << "Failed to initialize GLEW" << std::endl;
         throw std::exception();
     }
 
+    // Setup ImGui
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    io = std::make_unique<ImGuiIO>(ImGui::GetIO());
+    (void)io; // TODO how and why
+    io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
+    //io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    ImGui::StyleColorsDark();                                   // Dark theme
+
+    // Setup backends
+    ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
+    ImGui_ImplOpenGL3_Init("#version 330");
+
+    // TODO fonts?
+
+    // Stats
+    // TODO use
+    //ImVec4 clear_color = ImVec4(1.0f, 0.0f, 1.0f, 1.0f);
+
     /*
-    // Frame Buffer creation
-    GLuint fbo;
-    glGenBuffers(1, &fbo);
-    glBindBuffer(GL_FRAMEBUFFER, fbo);
-    */
 
     // Vertex Array Object creation
     GLuint vao;
@@ -162,112 +183,102 @@ Display::Display()
     glBindTexture(GL_TEXTURE_2D, tex);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    */
+}
+
+// TODO add keyboard input
+bool Display::pollEvents()
+{
+    bool done = false;
+    SDL_Event event;
+    if (SDL_PollEvent(&event))
+    {
+        ImGui_ImplSDL2_ProcessEvent(&event);
+        if (event.type == SDL_QUIT) // TODO figure out the diff btwn these
+            done = true;
+        if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
+            done = true;
+    }
+    return done;
+}
+
+void Display::displayFrame()
+{
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL2_NewFrame(window);
+    ImGui::NewFrame();
+
+    // TODO remove later
+    IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context");
+
+    // Nametables
+    {
+        ImGui::Begin("Nametables");
+        ImGui::Text("Test text");
+        ImGui::End();
+    }
+
+    // Pattern tables
+
+    // Palette info/selection
+
+    // Render
+    ImGui::Render();
+    glViewport(0, 0, (int)io->DisplaySize.x, (int)io->DisplaySize.y);
+    glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+    glClear(GL_COLOR_BUFFER_BIT);
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    SDL_GL_SwapWindow(window);
 }
 
 Display::~Display()
 {
-    delete window;
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+
+    SDL_GL_DeleteContext(gl_context);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+
 }
 
-// TODO deprecate
-void Display::addPalette(std::array<Pixel,4>* palette, uint palette_index)
-{
-    if (palette_index == palette_selected)
-    {
-        // TODO highlight
-    }
-    glWindowPos2i(20 * (palette_index + 1), 5); // TODO figure out where to place
-    GLint iViewport[4];
-    glGetIntegerv(GL_VIEWPORT, iViewport);
-    glPixelZoom(iViewport[2]/128.0, iViewport[3]/128.0);
-    glDrawPixels(4, 1, GL_RGB, GL_UNSIGNED_BYTE, palette);
-}
+// // TODO deprecate
+// void Display::addPalette(std::array<Pixel,4>* palette, uint palette_index)
+// {
+//     if (palette_index == palette_selected)
+//     {
+//         // TODO highlight
+//     }
+//     glWindowPos2i(20 * (palette_index + 1), 5); // TODO figure out where to place
+//     GLint iViewport[4];
+//     glGetIntegerv(GL_VIEWPORT, iViewport);
+//     glPixelZoom(iViewport[2]/128.0, iViewport[3]/128.0);
+//     glDrawPixels(4, 1, GL_RGB, GL_UNSIGNED_BYTE, palette);
+// }
 
-void Display::addElement(GLint width, GLint height, GLfloat x, GLfloat y, ubyte* texture)
-{
-    // TODO draw image at (x,y)
-    x = y;
-    y = x;
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture);
-}
+// void Display::addElement(GLint width, GLint height, GLfloat x, GLfloat y, ubyte* texture)
+// {
+//     // TODO draw image at (x,y)
+//     x = y;
+//     y = x;
+//     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture);
+// }
 
-// TODO deprecate
-void Display::processFrame(std::array<std::array<Pixel, 256>, 240>* frame)
-{   
-    // TODO move back?
+// // TODO deprecate
+// void Display::processFrame(std::array<std::array<Pixel, 256>, 240>* frame)
+// {   
+//     // TODO move back?
 
-    // Clear screen
-    glClearColor(0.5f, 0.0f, 0.5f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+//     // Clear screen
+//     glClearColor(0.5f, 0.0f, 0.5f, 1.0f);
+//     glClear(GL_COLOR_BUFFER_BIT);
 
-    // TODO switch to textured quads
-    // Draw pixels
-    glWindowPos2i(0,0);
-    GLint iViewport[4];
-    glGetIntegerv(GL_VIEWPORT, iViewport);
-    glPixelZoom(iViewport[2]/256.0, iViewport[3]/240.0);
-    glDrawPixels(256, 240, GL_RGB, GL_UNSIGNED_BYTE, frame);
-}
-
-void Display::displayFrame()
-{    
-    glClearColor(0.5f, 0.0f, 0.5f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    window->display();
-
-    #ifndef NDEBUG
-    sf::Event event;
-    while (window->pollEvent(event))
-    {
-        switch (event.type)
-        {
-            case sf::Event::Closed:
-                window->close();
-                exit(EXIT_SUCCESS);
-                break;
-
-            case sf::Event::Resized:
-                glViewport(0, 0, event.size.width, event.size.height);
-                break;
-            
-            default:
-                return;
-        }
-    }
-    /*
-    #else
-    sf::Event event;
-    while (window->waitEvent(event))
-    {
-        switch (event.type)
-        {
-            case sf::Event::Closed:
-                window->close();
-                exit(EXIT_SUCCESS);
-                break;
-
-            case sf::Event::Resized:
-                glViewport(0, 0, event.size.width, event.size.height);
-                break;
-
-            case sf::Event::KeyPressed:
-                switch (event.key.code)
-                {
-                    case sf::Keyboard::Space:
-                        return;
-
-                    case sf::Keyboard::Escape:
-                        window->close();
-                        return;
-
-                    default:
-                        break;
-                }
-            default:
-                break;
-        }
-    }
-    */
-    #endif
-}
+//     // TODO switch to textured quads
+//     // Draw pixels
+//     glWindowPos2i(0,0);
+//     GLint iViewport[4];
+//     glGetIntegerv(GL_VIEWPORT, iViewport);
+//     glPixelZoom(iViewport[2]/256.0, iViewport[3]/240.0);
+//     glDrawPixels(256, 240, GL_RGB, GL_UNSIGNED_BYTE, frame);
+// }

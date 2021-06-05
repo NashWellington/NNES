@@ -2,17 +2,14 @@
 
 PPU ppu;
 
-// TODO make this a param or something
-const std::string PALETTE_FILENAME = "../build/palettes/ntsc.pal";
-
-PPU::PPU(Bus& bus, Display& display) : bus(bus), display(display) 
+PPU::PPU() 
 {
     loadSystemPalette();
 }
 
 void PPU::loadSystemPalette()
 {
-    std::ifstream file(PALETTE_FILENAME, std::ios::binary);
+    std::ifstream file("../build/palettes/ntsc.pal", std::ios::binary); // TODO put name in config file
     if (!file.is_open())
     {
         std::cerr << "Error opening palette file" << std::endl;
@@ -80,7 +77,8 @@ void PPU::clock()
             #ifndef NDEBUG
             //TODO debug
             //displayPatternTable(bus.reg_ppu_ctrl.nn, bus.reg_ppu_ctrl.b);
-            displayNametable(0);
+            //displayNametable(0);
+            display.pollEvents();
             display.displayFrame();
             palette_counter++;
             palette_counter %= 8;
@@ -258,13 +256,13 @@ void PPU::displayPatternTable(uint pt_i, uint palette_index)
     std::array<Pixel,4> palette;
     getPalette(palette, palette_index);
     getPatternTable(pt_i, palette);
-    display.addElement(128, 128, 0, 0, reinterpret_cast<ubyte*>(&pattern_table));
+    //display.addElement(128, 128, 0, 0, reinterpret_cast<ubyte*>(&pattern_table));
 }
 
 void PPU::displayNametable(uint nt_i)
 {
     getNametable(nt_i, bus.reg_ppu_ctrl.b);
-    display.addElement(256, 240, 0, 0, reinterpret_cast<ubyte*>(&nametable));
+    //display.addElement(256, 240, 0, 0, reinterpret_cast<ubyte*>(&nametable));
 }
 #endif
 

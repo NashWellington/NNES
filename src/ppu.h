@@ -4,8 +4,6 @@
 #include "bus.h"
 #include "display.h"
 
-extern PPU ppu;
-
 // TODO implement PAL/Dendy vals
 
 // TODO move to globals?
@@ -40,7 +38,7 @@ struct Table
 class PPU
 {
 public:
-    PPU(Bus& bus, Display& display);
+    PPU();
 
     /* Background rendering
     * renderBackground()
@@ -86,9 +84,6 @@ public:
     void loadSystemPalette();
 
 private:
-    Bus& bus;
-    Display& display;
-
     std::array<Pixel, 64> system_palette = {};
 
     // The current cycle (resets at the start of a new scanline)
@@ -142,3 +137,5 @@ public:
 
 #endif
 };
+
+extern PPU ppu;
