@@ -80,14 +80,17 @@ int main(int argc, char ** argv)
     cpu.start();
 
 
+
     #ifndef NDEBUG
-    bool running = true;
-    while (running) 
+    bool done = false;
+    while (!done) 
     {
         ppu.clock();
         ppu.clock();
         ppu.clock();
         cpu.clock();
+        done = display.pollEvents();
+        display.displayFrame();
     }
     #endif
 

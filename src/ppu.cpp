@@ -78,8 +78,6 @@ void PPU::clock()
             //TODO debug
             //displayPatternTable(bus.reg_ppu_ctrl.nn, bus.reg_ppu_ctrl.b);
             //displayNametable(0);
-            display.pollEvents();
-            display.displayFrame();
             palette_counter++;
             palette_counter %= 8;
             #endif
