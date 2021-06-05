@@ -83,14 +83,24 @@ int main(int argc, char ** argv)
 
     #ifndef NDEBUG
     bool done = false;
+    unsigned long long int ppu_cycles = 0;
+    unsigned long long int cycles_per_frame = 262 * 341; // Skips a cycle every odd frame
     while (!done) 
     {
         ppu.clock();
-        ppu.clock();
-        ppu.clock();
-        cpu.clock();
-        done = display.pollEvents();
-        display.displayFrame();
+        if ((ppu_cycles % 3) == 2) cpu.clock();
+        ppu_cycles++;
+        if (ppu_cycles == cycles_per_frame)
+        {
+            done = display.pollEvents();
+            display.displayFrame();
+        }
+        else if (ppu_cycles == (cycles_per_frame * 2 - 1))
+        {
+            done = display.pollEvents();
+            display.displayFrame();
+            ppu_cycles -= (cycles_per_frame * 2 - 1);
+        }
     }
     #endif
 

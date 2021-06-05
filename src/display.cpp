@@ -92,35 +92,26 @@ Display::Display()
 
     // TODO fonts?
 
-    // Stats
-    // TODO use
-    //ImVec4 clear_color = ImVec4(1.0f, 0.0f, 1.0f, 1.0f);
+    // TODO Stats?
 
-    /*
-
-    // Vertex Array Object creation
+    // Setup OpenGL
     GLuint vao;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
-    // Vertex Buffer Object creation
     GLuint vbo;
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); // TODO experiment w/ dynamic
 
-    // Element Buffer Object creation
     GLuint ebo;
     glGenBuffers(1, &ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    // Vertex shader compilation
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     glCompileShader(vertexShader);
-
-    // Vertex shader error handling
     GLenum error;
     if ((error = glGetError()))
     {
@@ -138,12 +129,9 @@ Display::Display()
         throw std::exception();
     }
 
-    // Fragment shader compilation
     GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
     glCompileShader(fragmentShader);
-
-    // Fragment shader error handling
     if ((error = glGetError()))
     {
         std::cerr << "Error compiling vertex shader" << std::endl;
@@ -158,32 +146,42 @@ Display::Display()
         throw std::exception();
     }
 
-    // Combine shaders into a program
     GLuint shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vertexShader);
     glAttachShader(shaderProgram, fragmentShader);
 
-    // Link and use shader programs
     glLinkProgram(shaderProgram);
     glUseProgram(shaderProgram);
 
-    // Link vertex data and attributes
     GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
     glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_TRUE, 4 * sizeof(float), 0);
     glEnableVertexAttribArray(posAttrib);
 
-    // Link texture data and attributes
     GLint texAttrib = glGetAttribLocation(shaderProgram, "texCoord");
     glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_TRUE, 4 * sizeof(float), (void*) (2 * sizeof(float)));
     glEnableVertexAttribArray(texAttrib);
 
-    // Texture
-    GLuint tex;
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
+#ifndef NDEBUG
+    glGenTextures(1, &pt_tex[0]);
+    glBindTexture(GL_TEXTURE_2D, pt_tex[0]);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    */
+
+    glGenTextures(1, &pt_tex[1]);
+    glBindTexture(GL_TEXTURE_2D, pt_tex[1]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    for (int i = 0; i < 4; i++)
+    {
+        glGenTextures(1, &nt_tex[i]);
+        glBindTexture(GL_TEXTURE_2D, nt_tex[i]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+#endif
 }
 
 // TODO add keyboard input
@@ -202,35 +200,6 @@ bool Display::pollEvents()
     return done;
 }
 
-void Display::displayFrame()
-{
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplSDL2_NewFrame(window);
-    ImGui::NewFrame();
-
-    // TODO remove later
-    IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context");
-
-    // Nametables
-    {
-        ImGui::Begin("Nametables");
-        ImGui::Text("Test text");
-        ImGui::End();
-    }
-
-    // Pattern tables
-
-    // Palette info/selection
-
-    // Render
-    ImGui::Render();
-    glViewport(0, 0, (int)io->DisplaySize.x, (int)io->DisplaySize.y);
-    glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-    glClear(GL_COLOR_BUFFER_BIT);
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    SDL_GL_SwapWindow(window);
-}
-
 Display::~Display()
 {
     ImGui_ImplOpenGL3_Shutdown();
@@ -243,42 +212,76 @@ Display::~Display()
 
 }
 
-// // TODO deprecate
-// void Display::addPalette(std::array<Pixel,4>* palette, uint palette_index)
-// {
-//     if (palette_index == palette_selected)
-//     {
-//         // TODO highlight
-//     }
-//     glWindowPos2i(20 * (palette_index + 1), 5); // TODO figure out where to place
-//     GLint iViewport[4];
-//     glGetIntegerv(GL_VIEWPORT, iViewport);
-//     glPixelZoom(iViewport[2]/128.0, iViewport[3]/128.0);
-//     glDrawPixels(4, 1, GL_RGB, GL_UNSIGNED_BYTE, palette);
-// }
+void Display::displayFrame()
+{
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL2_NewFrame(window);
+    ImGui::NewFrame();
 
-// void Display::addElement(GLint width, GLint height, GLfloat x, GLfloat y, ubyte* texture)
-// {
-//     // TODO draw image at (x,y)
-//     x = y;
-//     y = x;
-//     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture);
-// }
+    IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context");
 
-// // TODO deprecate
-// void Display::processFrame(std::array<std::array<Pixel, 256>, 240>* frame)
-// {   
-//     // TODO move back?
+#ifndef NDEBUG
+    // Pattern Tables
+    {
+        ImGui::Begin("Pattern Tables");
+        // TODO figure out window padding/scaling
+        //ImGui::Text("Pattern Table 0");
+        //ImGui::SameLine();
+        //ImGui::Text("Pattern Table 1");
+        ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Image vals
+        ImVec2 uv_max = ImVec2(1.0f, 1.0f);
+        ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // TODO border thickness
+        ImVec2 size = ImVec2(ImGui::GetWindowWidth()/2, ImGui::GetWindowHeight()); // TODO lower height by (title bar height + whatever else is in window)
+        ImGui::Image((void*)(intptr_t)pt_tex[0], size, uv_min, uv_max, tint, border);
+        ImGui::SameLine();
+        ImGui::Image((void*)(intptr_t)pt_tex[1], size, uv_min, uv_max, tint, border);
+        // TODO palette selection
+        ImGui::End();
+    }
 
-//     // Clear screen
-//     glClearColor(0.5f, 0.0f, 0.5f, 1.0f);
-//     glClear(GL_COLOR_BUFFER_BIT);
+    // Nametables
+    {
+        ImGui::Begin("Nametables");
+        // TODO labels
+        ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Image vals
+        ImVec2 uv_max = ImVec2(1.0f, 1.0f);
+        ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // TODO border thickness
+        ImVec2 size = ImVec2(ImGui::GetWindowWidth()/2, ImGui::GetWindowHeight()/2); // TODO lower height by (title bar height + whatever else is in window)
+        ImGui::Image((void*)(intptr_t)nt_tex[0], size, uv_min, uv_max, tint, border);
+        ImGui::SameLine();
+        ImGui::Image((void*)(intptr_t)nt_tex[1], size, uv_min, uv_max, tint, border);
+        ImGui::Image((void*)(intptr_t)nt_tex[2], size, uv_min, uv_max, tint, border);
+        ImGui::SameLine();
+        ImGui::Image((void*)(intptr_t)nt_tex[3], size, uv_min, uv_max, tint, border);
+        ImGui::End();
+    }
 
-//     // TODO switch to textured quads
-//     // Draw pixels
-//     glWindowPos2i(0,0);
-//     GLint iViewport[4];
-//     glGetIntegerv(GL_VIEWPORT, iViewport);
-//     glPixelZoom(iViewport[2]/256.0, iViewport[3]/240.0);
-//     glDrawPixels(256, 240, GL_RGB, GL_UNSIGNED_BYTE, frame);
-// }
+    //TODO add (save)state info
+#endif
+
+    // Render
+    ImGui::Render();
+    glViewport(0, 0, (int)io->DisplaySize.x, (int)io->DisplaySize.y);
+    glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+    glClear(GL_COLOR_BUFFER_BIT);
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    SDL_GL_SwapWindow(window);
+}
+
+void Display::addPatternTable(ubyte* pt, int pt_i)
+{
+    assert((pt_i >= 0) && (pt_i < 2));
+    glBindTexture(GL_TEXTURE_2D, pt_tex[pt_i]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 128, 128, 0, GL_RGB, GL_UNSIGNED_BYTE, pt);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void Display::addNametable(ubyte* nt, int nt_i)
+{
+    assert((nt_i >= 0) && (nt_i < 4));
+    glBindTexture(GL_TEXTURE_2D, nt_tex[nt_i]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 128, 128, 0, GL_RGB, GL_UNSIGNED_BYTE, nt);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}

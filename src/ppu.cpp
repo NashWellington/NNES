@@ -76,8 +76,12 @@ void PPU::clock()
             // TODO testing
             #ifndef NDEBUG
             //TODO debug
-            //displayPatternTable(bus.reg_ppu_ctrl.nn, bus.reg_ppu_ctrl.b);
-            //displayNametable(0);
+            displayPatternTable(0, 0);
+            displayPatternTable(1, 0);
+            for (int i = 0; i < 4; i++)
+            {
+                displayNametable(i);
+            }
             palette_counter++;
             palette_counter %= 8;
             #endif
@@ -92,7 +96,6 @@ void PPU::clock()
     if (scanline >= SCANLINES_PER_FRAME)
     {
         scanline -= SCANLINES_PER_FRAME;
-        display.displayFrame();
     }
     Current_State.cycle = cycle;
 }
@@ -254,13 +257,13 @@ void PPU::displayPatternTable(uint pt_i, uint palette_index)
     std::array<Pixel,4> palette;
     getPalette(palette, palette_index);
     getPatternTable(pt_i, palette);
-    //display.addElement(128, 128, 0, 0, reinterpret_cast<ubyte*>(&pattern_table));
+    display.addPatternTable(reinterpret_cast<ubyte*>(&pattern_table), pt_i);
 }
 
 void PPU::displayNametable(uint nt_i)
 {
     getNametable(nt_i, bus.reg_ppu_ctrl.b);
-    //display.addElement(256, 240, 0, 0, reinterpret_cast<ubyte*>(&nametable));
+    display.addNametable(reinterpret_cast<ubyte*>(&nametable), nt_i);
 }
 #endif
 

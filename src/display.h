@@ -29,7 +29,14 @@ public:
     void displayFrame();
 
     #ifndef NDEBUG
-    uint palette_selected;
+    uint palette_selected = 0;
+    int pt_selected = 0;
+    GLuint pt_tex[2]; // pattern table textures
+    GLuint nt_tex[4]; // nametable textures
+
+    void addPatternTable(ubyte* pt, int pt_i);
+
+    void addNametable(ubyte* nt, int nt_i);
 
     /* Adds an element to the display
     * params:
@@ -54,7 +61,7 @@ private:
     SDL_GLContext gl_context;
 // ImGui variables
     std::unique_ptr<ImGuiIO> io;
-    ImVec4 clear_color = {1.0f, 0.0f, 1.0f, 1.0f};
+    ImVec4 clear_color = {0.1f, 0.1f, 0.1f, 1.0f};
 };
 
 extern Display display;
