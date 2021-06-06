@@ -76,12 +76,10 @@ void PPU::clock()
             // TODO testing
             #ifndef NDEBUG
             //TODO debug
-            displayPatternTable(0, 0);
-            displayPatternTable(1, 0);
-            for (int i = 0; i < 4; i++)
-            {
-                displayNametable(i);
-            }
+            displayPatternTable(0, display.palette_selected);
+            displayPatternTable(1, display.palette_selected);
+            for (int i = 0; i < 4; i++) displayNametable(i);
+            for (int i = 0; i < 8; i++) displayPalette(i);
             palette_counter++;
             palette_counter %= 8;
             #endif
@@ -166,19 +164,11 @@ void PPU::renderBackground()
 // TODO handle ppu mask color modifier
 void PPU::getPalette(std::array<Pixel,4>& palette, uint palette_index)
 {
-    assert(palette_index < 8); // TODO not sure about this one
-    palette[0] = getColor(bus.ppuRead(0x3F00)); // TODO handle mirroring + background hack
+    assert(palette_index < 8);
+    palette[0] = getColor(bus.ppuRead(0x3F00));
     palette[1] = getColor(bus.ppuRead(0x3F00 + 4 * palette_index + 1));
     palette[2] = getColor(bus.ppuRead(0x3F00 + 4 * palette_index + 2));
     palette[3] = getColor(bus.ppuRead(0x3F00 + 4 * palette_index + 3));
-
-    // TODO testing
-    /*
-    for (ubyte i = 0; i < 4; i++)
-    {
-        palette[i] = Pixel(85*i, 85*i, 85*i);
-    }
-    */
 }
 
 Tile PPU::getPTTile(uword address, std::array<Pixel,4>& palette)
@@ -264,6 +254,12 @@ void PPU::displayNametable(uint nt_i)
 {
     getNametable(nt_i, bus.reg_ppu_ctrl.b);
     display.addNametable(reinterpret_cast<ubyte*>(&nametable), nt_i);
+}
+
+void PPU::displayPalette(uint pal_i)
+{
+    getPalette(curr_palette, pal_i);
+    display.addPalette(reinterpret_cast<ubyte*>(&curr_palette), pal_i);
 }
 #endif
 

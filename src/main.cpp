@@ -72,13 +72,14 @@ int main(int argc, char ** argv)
         ppu.clock();
         if ((ppu_cycles % 3) == 2) cpu.clock();
         ppu_cycles++;
-        done = display.pollEvents(); // TODO make sure game input only polls once per frame
         if (ppu_cycles == cycles_per_frame)
         {
+            done = display.pollEvents();
             display.displayFrame();
         }
         else if (ppu_cycles == (cycles_per_frame * 2 - 1))
         {
+            done = display.pollEvents();
             display.displayFrame();
             ppu_cycles -= (cycles_per_frame * 2 - 1);
         }

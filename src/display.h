@@ -29,31 +29,15 @@ public:
     void displayFrame();
 
     #ifndef NDEBUG
-    uint palette_selected = 0;
-    int pt_selected = 0;
-    GLuint pt_tex[2]; // pattern table textures
+    int palette_selected = 0;
+    GLuint pt_tex[2]; // pattern table textures // TODO move to private?
     GLuint nt_tex[4]; // nametable textures
+    GLuint pal_tex[8]; // Palette textures
 
     void addPatternTable(ubyte* pt, int pt_i);
-
     void addNametable(ubyte* nt, int nt_i);
-
-    /* Adds an element to the display
-    * params:
-    *       - width = width of the element (px)
-    *       - height = height of the element (px)
-    *       - x = relative horizontal position (-1 to 1)
-    *       - y = relative vertical position (-1 to 1)
-    *       - texture = pixel matrix to be displayed
-    */
-    //static void addElement(GLint width, GLint height, GLfloat x, GLfloat y, ubyte* texture);
-
-    // Add a palette and highlight if it is selected
-    //static void addPalette(std::array<Pixel,4>* palette, uint palette_index);
+    void addPalette(ubyte* pal, int pal_i);
     #endif
-
-    // TODO deprecate
-    //void processFrame(std::array<std::array<Pixel, 256>, 240>* frame);
 private:
 // SDL variables
     SDL_WindowFlags window_flags;
@@ -62,7 +46,6 @@ private:
 // ImGui variables
     std::unique_ptr<ImGuiIO> io;
     ImVec4 clear_color = {0.1f, 0.1f, 0.1f, 1.0f};
-// Helper methods
 };
 
 extern Display display;

@@ -181,11 +181,30 @@ Display::Display()
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     }
 
+    for (int i = 0; i < 8; i++)
+    {
+        glGenTextures(1, &pal_tex[i]);
+        glBindTexture(GL_TEXTURE_2D, pal_tex[i]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+
     glBindTexture(GL_TEXTURE_2D, 0);
 #endif
 }
 
-// TODO add keyboard input
+Display::~Display()
+{
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+
+    SDL_GL_DeleteContext(gl_context);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+
+}
+
 bool Display::pollEvents()
 {
     bool done = false;
@@ -201,6 +220,10 @@ bool Display::pollEvents()
                     case SDLK_ESCAPE:
                         done = true;
                         break;
+                    case SDLK_p:
+                        palette_selected += 1;
+                        palette_selected %= 8;
+                        break;
                 }
                 break;
             case SDL_QUIT:
@@ -213,18 +236,6 @@ bool Display::pollEvents()
     return done;
 }
 
-Display::~Display()
-{
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
-    ImGui::DestroyContext();
-
-    SDL_GL_DeleteContext(gl_context);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-
-}
-
 void Display::displayFrame()
 {
     ImGui_ImplOpenGL3_NewFrame();
@@ -235,33 +246,54 @@ void Display::displayFrame()
 
 #ifndef NDEBUG
     // TODO look into window resize constraints
-    // Pattern Tables
+    // TODO add image zoom on hover
+    ImGuiWindowFlags wf = 0;
+    wf |= ImGuiWindowFlags_NoScrollbar;
+    wf |= ImGuiWindowFlags_NoMove;
+    wf |= ImGuiWindowFlags_NoResize;
+
+    // Palettes
     {
-        ImGui::Begin("Pattern Tables");
+        ImGui::Begin("Palettes", NULL, wf);
         ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Image vals
         ImVec2 uv_max = ImVec2(1.0f, 1.0f);
         ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-        ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // TODO border thickness
-        ImVec2 size = ImGui::GetContentRegionAvail();
-        size.x /= 2;
+        ImVec4 border_unselected = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
+        ImVec4 border_selected = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        ImVec2 size = ImVec2(58.0f, 14.5f);
+        for (int i = 0; i < 8; i++)
+        {
+            if (i == palette_selected)
+                ImGui::Image((void*)(intptr_t)pal_tex[i], size, uv_min, uv_max, tint, border_selected);
+            else
+                ImGui::Image((void*)(intptr_t)pal_tex[i], size, uv_min, uv_max, tint, border_unselected);
+            ImGui::SameLine();
+        }
+        ImGui::End();
+    }
+
+    // Pattern Tables
+    {
+        ImGui::Begin("Pattern Tables", NULL, wf);
+        ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Image vals
+        ImVec2 uv_max = ImVec2(1.0f, 1.0f);
+        ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
+        ImVec2 size = ImVec2(256.0f, 256.0f);
         ImGui::Image((void*)(intptr_t)pt_tex[0], size, uv_min, uv_max, tint, border);
         ImGui::SameLine();
         ImGui::Image((void*)(intptr_t)pt_tex[1], size, uv_min, uv_max, tint, border);
-        // TODO palette selection
         ImGui::End();
     }
 
     // Nametables
     {
-        ImGui::Begin("Nametables");
+        ImGui::Begin("Nametables", NULL, wf);
         ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Image vals
         ImVec2 uv_max = ImVec2(1.0f, 1.0f);
         ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-        ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // TODO border thickness
-        ImVec2 size = ImGui::GetContentRegionAvail();
-        size.x /= 2;
-        size.y /= 2;
-        //ImVec2 size = ImVec2(ImGui::GetWindowWidth()/2, ImGui::GetWindowHeight()/2); // TODO lower height by (title bar height + whatever else is in window)
+        ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
+        ImVec2 size = ImVec2(256.0f, 240.0f);
         ImGui::Image((void*)(intptr_t)nt_tex[0], size, uv_min, uv_max, tint, border);
         ImGui::SameLine();
         ImGui::Image((void*)(intptr_t)nt_tex[1], size, uv_min, uv_max, tint, border);
@@ -296,5 +328,13 @@ void Display::addNametable(ubyte* nt, int nt_i)
     assert((nt_i >= 0) && (nt_i < 4));
     glBindTexture(GL_TEXTURE_2D, nt_tex[nt_i]);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256, 240, 0, GL_RGB, GL_UNSIGNED_BYTE, nt);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void Display::addPalette(ubyte* pal, int pal_i)
+{
+    assert(pal_i >= 0 && pal_i < 8);
+    glBindTexture(GL_TEXTURE_2D, pal_tex[pal_i]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 4, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, pal);
     glBindTexture(GL_TEXTURE_2D, 0);
 }

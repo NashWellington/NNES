@@ -113,6 +113,7 @@ private:
 private: // Debugging tools
     Table<240,256> nametable = {};
     Table<128,128> pattern_table = {};
+    std::array<Pixel,4> curr_palette = {}; // TODO rename
 
     // TODO delet
     uint palette_counter = 0;
@@ -135,6 +136,7 @@ public:
     */
     void displayNametable(uint nt_i);
 
+    void displayPalette(uint pal_i);
 #endif
 };
 
