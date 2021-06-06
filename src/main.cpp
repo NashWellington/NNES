@@ -50,22 +50,6 @@ int main(int argc, char ** argv)
     #endif
     #endif
 
-    /* Here's a general layout of how to get things rolling
-    // TODO rewrite
-    * 1. Open ROM file with an ifstream
-    * 2. Initialize Bus()
-    * 3. call Boot::loadRom
-    *   - this reads the header, initializes a mapper and connects it to the bus
-    * 4. Initialize Display
-    *   - must be done before PPU
-    * 5. Initialize CPU()
-    * 6. Initialize PPU()
-    * 6. Initialize APU() (once implemented)
-    * 7. Do other potentially time-wasting initializations
-    * 8. Use <chrono> to get a time point and save it as start_point
-    * 9. Run main loop (described in design.txt)
-    */
-
     // Open ROM file
     std::string rom_filename = argv[1];
     std::ifstream rom(rom_filename, std::ios::binary);
@@ -79,25 +63,22 @@ int main(int argc, char ** argv)
     Boot::loadRom(rom);
     cpu.start();
 
-
-
     #ifndef NDEBUG
     bool done = false;
     unsigned long long int ppu_cycles = 0;
-    unsigned long long int cycles_per_frame = 262 * 341; // Skips a cycle every odd frame
+    unsigned long long int cycles_per_frame = 262 * 341; // Note: PPU skips a cycle every odd frame
     while (!done) 
     {
         ppu.clock();
         if ((ppu_cycles % 3) == 2) cpu.clock();
         ppu_cycles++;
+        done = display.pollEvents(); // TODO make sure game input only polls once per frame
         if (ppu_cycles == cycles_per_frame)
         {
-            done = display.pollEvents();
             display.displayFrame();
         }
         else if (ppu_cycles == (cycles_per_frame * 2 - 1))
         {
-            done = display.pollEvents();
             display.displayFrame();
             ppu_cycles -= (cycles_per_frame * 2 - 1);
         }

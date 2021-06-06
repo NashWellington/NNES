@@ -62,6 +62,7 @@ private:
 // ImGui variables
     std::unique_ptr<ImGuiIO> io;
     ImVec4 clear_color = {0.1f, 0.1f, 0.1f, 1.0f};
+// Helper methods
 };
 
 extern Display display;

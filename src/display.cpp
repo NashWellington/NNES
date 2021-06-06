@@ -63,7 +63,7 @@ Display::Display()
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1); // TODO research
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24); // TODO research
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8); // TODO research
-    window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI); // TODO research DPI
+    window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_FULLSCREEN_DESKTOP); // TODO research DPI
     window = SDL_CreateWindow("NNES", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags); // TODO change title to "NNES - {game title}"
     gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
@@ -81,8 +81,9 @@ Display::Display()
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     io = std::make_unique<ImGuiIO>(ImGui::GetIO());
-    (void)io; // TODO how and why
-    io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
+    (void)io;
+    io->IniFilename = NULL;
+    //io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     ImGui::StyleColorsDark();                                   // Dark theme
 
@@ -192,10 +193,22 @@ bool Display::pollEvents()
     if (SDL_PollEvent(&event))
     {
         ImGui_ImplSDL2_ProcessEvent(&event);
-        if (event.type == SDL_QUIT) // TODO figure out the diff btwn these
-            done = true;
-        if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
-            done = true;
+        switch (event.type)
+        {
+            case SDL_KEYDOWN:
+                switch (event.key.keysym.sym)
+                {
+                    case SDLK_ESCAPE:
+                        done = true;
+                        break;
+                }
+                break;
+            case SDL_QUIT:
+                done = true;
+                break;
+            default:
+                break;
+        }
     }
     return done;
 }
@@ -221,18 +234,16 @@ void Display::displayFrame()
     IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context");
 
 #ifndef NDEBUG
+    // TODO look into window resize constraints
     // Pattern Tables
     {
         ImGui::Begin("Pattern Tables");
-        // TODO figure out window padding/scaling
-        //ImGui::Text("Pattern Table 0");
-        //ImGui::SameLine();
-        //ImGui::Text("Pattern Table 1");
         ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Image vals
         ImVec2 uv_max = ImVec2(1.0f, 1.0f);
         ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
         ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // TODO border thickness
-        ImVec2 size = ImVec2(ImGui::GetWindowWidth()/2, ImGui::GetWindowHeight()); // TODO lower height by (title bar height + whatever else is in window)
+        ImVec2 size = ImGui::GetContentRegionAvail();
+        size.x /= 2;
         ImGui::Image((void*)(intptr_t)pt_tex[0], size, uv_min, uv_max, tint, border);
         ImGui::SameLine();
         ImGui::Image((void*)(intptr_t)pt_tex[1], size, uv_min, uv_max, tint, border);
@@ -243,12 +254,14 @@ void Display::displayFrame()
     // Nametables
     {
         ImGui::Begin("Nametables");
-        // TODO labels
         ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Image vals
         ImVec2 uv_max = ImVec2(1.0f, 1.0f);
         ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
         ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // TODO border thickness
-        ImVec2 size = ImVec2(ImGui::GetWindowWidth()/2, ImGui::GetWindowHeight()/2); // TODO lower height by (title bar height + whatever else is in window)
+        ImVec2 size = ImGui::GetContentRegionAvail();
+        size.x /= 2;
+        size.y /= 2;
+        //ImVec2 size = ImVec2(ImGui::GetWindowWidth()/2, ImGui::GetWindowHeight()/2); // TODO lower height by (title bar height + whatever else is in window)
         ImGui::Image((void*)(intptr_t)nt_tex[0], size, uv_min, uv_max, tint, border);
         ImGui::SameLine();
         ImGui::Image((void*)(intptr_t)nt_tex[1], size, uv_min, uv_max, tint, border);
@@ -282,6 +295,6 @@ void Display::addNametable(ubyte* nt, int nt_i)
 {
     assert((nt_i >= 0) && (nt_i < 4));
     glBindTexture(GL_TEXTURE_2D, nt_tex[nt_i]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 128, 128, 0, GL_RGB, GL_UNSIGNED_BYTE, nt);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256, 240, 0, GL_RGB, GL_UNSIGNED_BYTE, nt);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
