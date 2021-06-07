@@ -80,9 +80,9 @@ Display::Display()
     // Setup ImGui
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    io = std::make_unique<ImGuiIO>(ImGui::GetIO());
+    ImGuiIO& io = ImGui::GetIO();
     (void)io;
-    io->IniFilename = NULL;
+    io.IniFilename = NULL;
     //io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     ImGui::StyleColorsDark();                                   // Dark theme
@@ -238,18 +238,20 @@ bool Display::pollEvents()
 
 void Display::displayFrame()
 {
+#ifndef NDEBUG
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame(window);
     ImGui::NewFrame();
 
+    ImGuiIO& io = ImGui::GetIO();
+
     IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context");
 
-#ifndef NDEBUG
     // TODO look into window resize constraints
     // TODO add image zoom on hover
     ImGuiWindowFlags wf = 0;
     wf |= ImGuiWindowFlags_NoScrollbar;
-    wf |= ImGuiWindowFlags_NoMove;
+    //wf |= ImGuiWindowFlags_NoMove;
     wf |= ImGuiWindowFlags_NoResize;
 
     // Palettes
@@ -275,14 +277,37 @@ void Display::displayFrame()
     // Pattern Tables
     {
         ImGui::Begin("Pattern Tables", NULL, wf);
+        ImVec2 pos = ImGui::GetCursorScreenPos();
         ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Image vals
         ImVec2 uv_max = ImVec2(1.0f, 1.0f);
         ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
         ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
-        ImVec2 size = ImVec2(256.0f, 256.0f);
-        ImGui::Image((void*)(intptr_t)pt_tex[0], size, uv_min, uv_max, tint, border);
-        ImGui::SameLine();
-        ImGui::Image((void*)(intptr_t)pt_tex[1], size, uv_min, uv_max, tint, border);
+        float width = 256.0f;
+        float height = 256.0f;
+        ImVec2 size = ImVec2(width, height);
+        for (int i = 0; i < 2; i++)
+        {
+            ImGui::Image((void*)(intptr_t)pt_tex[i], size, uv_min, uv_max, tint, border);
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::BeginTooltip();
+                float region_sz = 32.0f;
+                float region_x = io.MousePos.x - pos.x - region_sz * 0.5f;
+                float region_y = io.MousePos.y - pos.y - region_sz * 0.5f;
+                float zoom = 4.0f;
+                if (region_x < 0.0f) region_x = 0.0f;
+                else if (region_x > width - region_sz) region_x = width - region_sz;
+                if (region_y < 0.0f) region_y = 0.0f;
+                else if (region_y > height - region_sz) region_y = height - region_sz;
+                //ImGui::Text("Min: (%.2f, %.2f)", region_x, region_y); // Change to palette location
+                //ImGui::Text("Max: (%.2f, %.2f)", region_x + region_sz, region_y + region_sz);
+                ImVec2 uv0 = ImVec2((region_x) / width, (region_y) / height);
+                ImVec2 uv1 = ImVec2((region_x + region_sz) / width, (region_y + region_sz) / height);
+                ImGui::Image((void*)(intptr_t)pt_tex[i], ImVec2(region_sz * zoom, region_sz * zoom), uv0, uv1, tint, border);
+                ImGui::EndTooltip();
+            }
+            ImGui::SameLine();
+        }
         ImGui::End();
     }
 
@@ -304,15 +329,15 @@ void Display::displayFrame()
     }
 
     //TODO add (save)state info
-#endif
 
     // Render
     ImGui::Render();
-    glViewport(0, 0, (int)io->DisplaySize.x, (int)io->DisplaySize.y);
+    glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
     glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(window);
+#endif
 }
 
 void Display::addPatternTable(ubyte* pt, int pt_i)

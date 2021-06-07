@@ -44,7 +44,6 @@ private:
     SDL_Window* window;
     SDL_GLContext gl_context;
 // ImGui variables
-    std::unique_ptr<ImGuiIO> io;
     ImVec4 clear_color = {0.1f, 0.1f, 0.1f, 1.0f};
 };
 
