@@ -5,7 +5,6 @@ NNES has currently only been tested on Ubuntu 20.04 with gcc 9.3.0 on an x64 sys
 
 ## Roadmap
 This is a rough order of things I am planning to implement or change:
-* Input
 * Sprites
 * Audio
 * Automated testing
