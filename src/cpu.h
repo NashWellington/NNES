@@ -120,8 +120,8 @@ public:
     } reg_sr = { .reg = 0x24 };
 
 private:
-
     int cycle = 0;
+    bool odd_cycle = false;
 
     int handleInterrupt(InterruptType type);
 };

@@ -104,7 +104,7 @@ byte Bus::cpuReadReg(uword address)
                 return data;
             
             case 0x2004: // OAM Data
-                // TODO
+                data = oam[oam_addr/4][oam_addr%4];
                 break;
 
             case 0x2007: // PPU data
@@ -154,9 +154,14 @@ void Bus::cpuWriteReg(uword address, byte data)
                 reg_ppu_mask.reg = data;
                 break;
 
+            case 0x2003: // OAM addr
+                oam_addr = data;
+                break;
+
+            // TODO no writing during vblank + more
             case 0x2004: // OAM data
-                reg_oam_data = data;
-                reg_oam_addr++; // Increment OAM addr
+                oam[oam_addr/4][oam_addr%4] = data;
+                oam_addr++;
                 break;
 
             case 0x2005: // PPU scroll
@@ -185,8 +190,8 @@ void Bus::cpuWriteReg(uword address, byte data)
         {
             case 0x4014: // OAM DMA
                 // TODO transfer data at $XX00-$XXFF to PPU OAM
-                reg_oam_dma = data;
-                cpu_suspend_cycles = 513; // TOOD verify & change if odd/even frame
+                dma_addr = static_cast<uword>(data) << 8;
+                cpu_suspend_cycles = 514;
                 break;
 
             default:
@@ -194,6 +199,29 @@ void Bus::cpuWriteReg(uword address, byte data)
                 break;
         }
     }
+}
+
+bool Bus::oamWrite(bool odd_cycle)
+{
+    assert(cpu_suspend_cycles <= 514 && cpu_suspend_cycles >= 0);
+    if (cpu_suspend_cycles == 0) return false;
+    if (cpu_suspend_cycles > 512)
+    {
+        if (cpu_suspend_cycles == 514 && !odd_cycle) cpu_suspend_cycles -=1; // One less idle cycle if even
+    }
+    else
+    {
+        if (!(cpu_suspend_cycles % 2))
+        {
+            oam_data = cpuRead(dma_addr);
+        }
+        else
+        {
+            oam[oam_addr/4][oam_addr%4] = oam_data;
+        }
+    }
+    cpu_suspend_cycles -= 1;
+    return true;
 }
 
 InterruptType Bus::getInterrupt()

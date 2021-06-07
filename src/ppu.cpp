@@ -44,12 +44,8 @@ void PPU::clock()
             }
             if (cycle == 339) // skip last cycle of odd frame
             {
-                if (odd_frame)
-                {
-                    cycle++;
-                    odd_frame = false;
-                }
-                else odd_frame = true;
+                if (odd_frame) cycle++;
+                odd_frame = !odd_frame;
             }
         }
         else
@@ -80,8 +76,6 @@ void PPU::clock()
             displayPatternTable(1, display.palette_selected);
             for (int i = 0; i < 4; i++) displayNametable(i);
             for (int i = 0; i < 8; i++) displayPalette(i);
-            palette_counter++;
-            palette_counter %= 8;
             #endif
         }
     }
@@ -241,6 +235,65 @@ void PPU::getNametable(uint nt_i, uint pt_i)
     }
 }
 
+void PPU::getBigSprite(uint spr_i)
+{
+    ubyte spr_index = bus.oam[spr_i][1];
+    uword pt_addr = static_cast<uword>(spr_index & 0x01) << 12;
+    pt_addr += static_cast<uword>(spr_index & 0xFE);
+    ubyte attributes = bus.oam[spr_i][2];
+    uint pal_i = (attributes & 0x03) + 4;
+    std::array<Pixel,4> palette = {};
+    getPalette(palette, pal_i);
+    bool flip_hori = static_cast<bool>((attributes & 0x40) >> 6);
+    bool flip_vert = static_cast<bool>((attributes & 0x80) >> 7);
+    Tile pt_tiles[2] = {getPTTile(pt_addr, palette), getPTTile(pt_addr+1, palette)};
+    int spr_x = 0;
+    int spr_y = 0;
+    for (int y = 0; y < 16; y++)
+    {
+        if (flip_vert) spr_y = 16-y;
+        else spr_y = y;
+        for (int x = 0; x < 8; x++)
+        {
+            if (flip_hori) spr_x = 8-x;
+            else spr_x = x;
+            small_sprites[(spr_i/8) * 8 + spr_y][(spr_i%8) * 8 + spr_x] = pt_tiles[y/8][y%8][x];
+        }
+    }
+}
+
+void PPU::getSmallSprite(uint spr_i)
+{
+    uword pt_addr = static_cast<uword>(bus.reg_ppu_ctrl.s) << 12; // Palette index (0 or 1)
+    pt_addr += static_cast<uword>(bus.oam[spr_i][1]);
+    ubyte attributes = bus.oam[spr_i][2];
+    uint pal_i = (attributes & 0x03) + 4;
+    std::array<Pixel,4> palette = {};
+    getPalette(palette, pal_i);
+    bool flip_hori = static_cast<bool>((attributes & 0x40) >> 6);
+    bool flip_vert = static_cast<bool>((attributes & 0x80) >> 7);
+    Tile pt_tile = getPTTile(pt_addr, palette);
+    int spr_x = 0;
+    int spr_y = 0;
+    for (int y = 0; y < 8; y++)
+    {
+        if (flip_vert) spr_y = 8-y;
+        else spr_y = y;
+        for (int x = 0; x < 8; x++)
+        {
+            if (flip_hori) spr_x = 8-x;
+            else spr_x = x;
+            small_sprites[(spr_i/8) * 8 + spr_y][(spr_i%8) * 8 + spr_x] = pt_tile[y][x];
+        }
+    }
+}
+
+void PPU::displayPalette(uint pal_i)
+{
+    getPalette(curr_palette, pal_i);
+    display.addPalette(reinterpret_cast<ubyte*>(&curr_palette), pal_i);
+}
+
 void PPU::displayPatternTable(uint pt_i, uint palette_index)
 {
     assert(pt_i < 2);
@@ -256,10 +309,24 @@ void PPU::displayNametable(uint nt_i)
     display.addNametable(reinterpret_cast<ubyte*>(&nametable), nt_i);
 }
 
-void PPU::displayPalette(uint pal_i)
+void PPU::displaySprites()
 {
-    getPalette(curr_palette, pal_i);
-    display.addPalette(reinterpret_cast<ubyte*>(&curr_palette), pal_i);
+    if (!static_cast<bool>(bus.reg_ppu_ctrl.h)) // 8x8 sprites
+    {
+        for (int i = 0; i < 64; i++)
+        {
+            getSmallSprite(i);
+        }
+        display.addSprites(reinterpret_cast<ubyte*>(&small_sprites), 8);
+    }
+    else // 8x16 sprites
+    {
+        for (int i = 0; i < 64; i++)
+        {
+            getBigSprite(i);
+        }
+        display.addSprites(reinterpret_cast<ubyte*>(&big_sprites), 16);
+    }
 }
 #endif
 

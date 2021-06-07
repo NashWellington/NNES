@@ -189,6 +189,11 @@ Display::Display()
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     }
 
+    glGenTextures(1, &spr_tex);
+    glBindTexture(GL_TEXTURE_2D, spr_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
     glBindTexture(GL_TEXTURE_2D, 0);
 #endif
 }
@@ -202,7 +207,6 @@ Display::~Display()
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
     SDL_Quit();
-
 }
 
 bool Display::pollEvents()
@@ -247,12 +251,10 @@ void Display::displayFrame()
 
     IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context");
 
-    // TODO look into window resize constraints
-    // TODO add image zoom on hover
     ImGuiWindowFlags wf = 0;
     wf |= ImGuiWindowFlags_NoScrollbar;
     //wf |= ImGuiWindowFlags_NoMove;
-    wf |= ImGuiWindowFlags_NoResize;
+    //wf |= ImGuiWindowFlags_NoResize;
 
     // Palettes
     {
@@ -291,16 +293,14 @@ void Display::displayFrame()
             if (ImGui::IsItemHovered())
             {
                 ImGui::BeginTooltip();
-                float region_sz = 32.0f;
-                float region_x = io.MousePos.x - pos.x - region_sz * 0.5f;
+                float region_sz = 64.0f;
+                float region_x = io.MousePos.x - pos.x - region_sz * 0.5f - width*i - 10.0f * i; // TODO find better val than 10
                 float region_y = io.MousePos.y - pos.y - region_sz * 0.5f;
-                float zoom = 4.0f;
+                float zoom = 2.0f;
                 if (region_x < 0.0f) region_x = 0.0f;
                 else if (region_x > width - region_sz) region_x = width - region_sz;
                 if (region_y < 0.0f) region_y = 0.0f;
                 else if (region_y > height - region_sz) region_y = height - region_sz;
-                //ImGui::Text("Min: (%.2f, %.2f)", region_x, region_y); // Change to palette location
-                //ImGui::Text("Max: (%.2f, %.2f)", region_x + region_sz, region_y + region_sz);
                 ImVec2 uv0 = ImVec2((region_x) / width, (region_y) / height);
                 ImVec2 uv1 = ImVec2((region_x + region_sz) / width, (region_y + region_sz) / height);
                 ImGui::Image((void*)(intptr_t)pt_tex[i], ImVec2(region_sz * zoom, region_sz * zoom), uv0, uv1, tint, border);
@@ -314,17 +314,47 @@ void Display::displayFrame()
     // Nametables
     {
         ImGui::Begin("Nametables", NULL, wf);
+        ImVec2 pos = ImGui::GetCursorScreenPos();
         ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Image vals
         ImVec2 uv_max = ImVec2(1.0f, 1.0f);
         ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
         ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
-        ImVec2 size = ImVec2(256.0f, 240.0f);
-        ImGui::Image((void*)(intptr_t)nt_tex[0], size, uv_min, uv_max, tint, border);
-        ImGui::SameLine();
-        ImGui::Image((void*)(intptr_t)nt_tex[1], size, uv_min, uv_max, tint, border);
-        ImGui::Image((void*)(intptr_t)nt_tex[2], size, uv_min, uv_max, tint, border);
-        ImGui::SameLine();
-        ImGui::Image((void*)(intptr_t)nt_tex[3], size, uv_min, uv_max, tint, border);
+        float width = 256.0f;
+        float height = 240.0f;
+        ImVec2 size = ImVec2(width, height);
+        for (int i = 0; i < 4; i++)
+        {
+            ImGui::Image((void*)(intptr_t)nt_tex[i], size, uv_min, uv_max, tint, border);
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::BeginTooltip();
+                float region_sz = 64.0f;
+                float region_x = io.MousePos.x - pos.x - region_sz * 0.5f - width*(i%2) - 10.0f * (i%2);
+                float region_y = io.MousePos.y - pos.y - region_sz * 0.5f - width*(i/2) - 10.0f * (i/2);
+                float zoom = 2.0f;
+                if (region_x < 0.0f) region_x = 0.0f;
+                else if (region_x > width - region_sz) region_x = width - region_sz;
+                if (region_y < 0.0f) region_y = 0.0f;
+                else if (region_y > height - region_sz) region_y = height - region_sz;
+                ImVec2 uv0 = ImVec2((region_x) / width, (region_y) / height);
+                ImVec2 uv1 = ImVec2((region_x + region_sz) / width, (region_y + region_sz) / height);
+                ImGui::Image((void*)(intptr_t)nt_tex[i], ImVec2(region_sz * zoom, region_sz * zoom), uv0, uv1, tint, border);
+                ImGui::EndTooltip();
+            }
+            if (i%2 == 0) ImGui::SameLine();
+        }
+        ImGui::End();
+    }
+
+    // Sprites
+    {
+        ImGui::Begin("Sprites", NULL, wf);
+        ImVec2 uv_min = ImVec2(0.0f, 0.0f);
+        ImVec2 uv_max = ImVec2(1.0f, 1.0f);
+        ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
+        ImVec2 size = ImVec2(256.0f, static_cast<float>(8 * spr_h * 4));
+        ImGui::Image((void*)(intptr_t)spr_tex, size, uv_min, uv_max, tint, border);
         ImGui::End();
     }
 
@@ -361,5 +391,14 @@ void Display::addPalette(ubyte* pal, int pal_i)
     assert(pal_i >= 0 && pal_i < 8);
     glBindTexture(GL_TEXTURE_2D, pal_tex[pal_i]);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 4, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, pal);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void Display::addSprites(ubyte* sprites, int height)
+{
+    assert(height == 8 || height == 16);
+    spr_h = height;
+    glBindTexture(GL_TEXTURE_2D, spr_tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 64, 8*height, 0, GL_RGB, GL_UNSIGNED_BYTE, sprites);
     glBindTexture(GL_TEXTURE_2D, 0);
 }

@@ -53,6 +53,9 @@ public:
     byte cpuReadReg(uword address);
     void cpuWriteReg(uword address, byte data);
 
+    // Write to OAM (if necessary) and decrement cpu_suspend_cycles
+    bool oamWrite(bool odd_cycle);
+
     // Interrupts
     // TODO get this Java bullshit out of there and put current_interrupt in public:
     InterruptType getInterrupt();
@@ -66,7 +69,6 @@ public:
 private:
     std::shared_ptr<Mapper> mapper;
     InterruptType current_interrupt = NO_INTERRUPT;
-    int cpu_suspend_cycles = 0;
 
 // CPU memory arrays
     /* Zero Page
@@ -150,11 +152,11 @@ public:
         {
             union
             {
-                unsigned nn : 2;
+                unsigned nn : 2; // nametable index
                 struct
                 {
-                    unsigned x : 1;
-                    unsigned y : 1;
+                    unsigned x : 1; // x scroll pos
+                    unsigned y : 1; // y scroll pos
                 };
             };
             unsigned i : 1;
@@ -233,19 +235,6 @@ public:
         byte reg;
     } reg_ppu_status { .reg = 0 };
 
-    /* OAM address port
-    * $2003
-    * On boot:  0
-    * On reset: unchanged
-    */
-    byte reg_oam_addr = 0;
-
-    /* OAM data port
-    * $2004
-    * On boot & reset: ??
-    */
-    byte reg_oam_data;
-
     /* PPU scrolling position register
     * $2005
     * On boot & reset: 0
@@ -289,14 +278,28 @@ public:
     */
     byte reg_ppu_data = 0;
 
-    //TODO internal data buses
+// PPU Object Attribute Memory
+    std::array<std::array<byte,4>,64> oam = {}; // Contains 64 4-byte sprites
 
-    /* OAM DMA register (high address byte)
-    * $4014
-    * On boot & reset: unspecified
-    * Note: this is also a PPU register
+    /* OAM address
+    * $2003
+    * On boot:  0
+    * On reset: unchanged
     */
-    byte reg_oam_dma;
+    ubyte oam_addr = 0;
+
+    /* Stores the byte to be transferred from CPU memory to OAM between reads/writes
+    */
+    byte oam_data = 0;
+
+    /* Address in CPU memory for DMA transfer to OAM
+    * High byte controlled by register $4014
+    * On boot & reset: unspecified
+    */
+    uword dma_addr;
+
+// Other
+    int cpu_suspend_cycles = 0; // Used to stall CPU during OAM DMA
 };
 
 extern Bus bus;

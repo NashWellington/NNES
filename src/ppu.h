@@ -86,6 +86,8 @@ public:
 private:
     std::array<Pixel, 64> system_palette = {};
 
+    std::array<std::array<byte,4>,8> secondary_oam = {};
+
     // The current cycle (resets at the start of a new scanline)
     int cycle = 0;
 
@@ -97,46 +99,32 @@ private:
 
     bool odd_frame = false;
 
-    /* A 2-D array of pixels (which are 1-D arrays)
-    * containing the background info
-    */
-    // TODO remove or change
-    #ifdef NDEBUG
-    std::array<std::array<Pixel, FRAME_WIDTH>, FRAME_HEIGHT>
-        background = {};
-    #endif
-
     // TODO implement
     Pixel getColor(byte color_byte);
 
 #ifndef NDEBUG
 private: // Debugging tools
+    std::array<Pixel,4> curr_palette = {};
     Table<240,256> nametable = {};
     Table<128,128> pattern_table = {};
-    std::array<Pixel,4> curr_palette = {}; // TODO rename
+    std::array<std::array<Pixel,64>,64> small_sprites = {};
+    std::array<std::array<Pixel,64>,128> big_sprites = {};
 
-    // TODO delet
-    uint palette_counter = 0;
     void getPalette(std::array<Pixel,4>& palette, uint palette_index);
 
     Tile getPTTile(uword address, std::array<Pixel,4>& palette);
-
     void getPatternTable(uint pt_i, std::array<Pixel,4>& palette);
 
     void getNTTile(uint i, uint j, uint nt_i, uint pt_i);
     void getNametable(uint nt_i, uint pt_i);
 
+    void getSmallSprite(uint spr_i); // 8x8 sprite
+    void getBigSprite(uint spr_i); // 8x16 sprite
 public:
-    void displayPatternTable(uint pt_i, uint palette_index);
-
-    /* Send the entire nametable to display
-    * params:
-    *       - nt_i = nametable index (0-3)
-    *       - pt_i = pattern table index (0 or 1)
-    */
-    void displayNametable(uint nt_i);
-
     void displayPalette(uint pal_i);
+    void displayPatternTable(uint pt_i, uint palette_index);
+    void displayNametable(uint nt_i);
+    void displaySprites();
 #endif
 };
 

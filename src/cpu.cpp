@@ -78,8 +78,12 @@ int CPU::executeInstruction()
 
 void CPU::clock()
 {
-    if (cycle == 0) step();
+    if (cycle == 0)
+    {
+        if (!bus.oamWrite(odd_cycle)) step();
+    }
     else cycle--;
+    odd_cycle = !odd_cycle;
 }
 
 void CPU::step()
