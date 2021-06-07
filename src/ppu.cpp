@@ -76,6 +76,7 @@ void PPU::clock()
             displayPatternTable(1, display.palette_selected);
             for (int i = 0; i < 4; i++) displayNametable(i);
             for (int i = 0; i < 8; i++) displayPalette(i);
+            displaySprites();
             #endif
         }
     }
@@ -92,68 +93,7 @@ void PPU::clock()
     Current_State.cycle = cycle;
 }
 
-#ifdef NDEBUG
-void PPU::renderBackgroundPixel(int x, int y, int nt_i, std::array<Pixel, 4>& palette)
-{
-    // Palette for current tile
-
-    // TODO move this out
-    
-
-    // get tile coords from nametable(x,y)
-    ubyte coords = static_cast<ubyte>(bus.ppuRead(NAMETABLE_START 
-        + NAMETABLE_OFFSET * nt_i + x + 32 * y));
-
-    // TODO pattern table addressing is probably more complicated than this
-    byte pattern_low = bus.ppuRead(PATTERN_TABLE_START + coords);
-    byte pattern_high = bus.ppuRead(PATTERN_TABLE_START + coords + 8);
-
-    int pattern = ((pattern_low & 0x80) >> 7) + ((pattern_high & 0x80) >> 6);
-    background[x][y] = palette[pattern];
-}
-
-void PPU::renderBackgroundScanline(int y, int nt_i)
-{
-    std::array<Pixel, 4> palette = {};
-    ubyte attribute = 0; // from the attribute table; used to find palette indices
-    ubyte palette_index = 0; // can be 0-4 for 4 background palettes
-    int offset = 0; // bit offset used to get palette number from palette byte
-
-    for (int x = 0; x < FRAME_WIDTH; x++)
-    {
-        // get attribute every 4 tiles from attribute table
-        if ((x % 32) == 0)
-        {
-            // get attribute byte
-            attribute = bus.ppuRead(NAMETABLE_START 
-                + NAMETABLE_OFFSET * nt_i 
-                + ATTRIBUTE_TABLE_OFFSET + x/32 + 30 * y / 32);
-        }
-
-        // get palette info from attribute depending on quadrant
-        offset = 0;
-        if (((x / 16) % 2) == 0) offset += 2; // left quadrants
-        if (((y / 16) % 2) == 1) offset += 4; // bottom quadrants
-        palette_index = ((attribute & (0x03 << offset)) >> offset);
-
-        // Copy palette colors to palette array
-        palette[0] = getColor(bus.ppuRead(PALETTE_RAM_START)); // TODO not sure if first or last
-        palette[1] = getColor(bus.ppuRead(PALETTE_RAM_START + 4 * palette_index) + 1);
-        palette[2] = getColor(bus.ppuRead(PALETTE_RAM_START + 4 * palette_index) + 2);
-        palette[3] = getColor(bus.ppuRead(PALETTE_RAM_START + 4 * palette_index) + 3);
-        renderBackgroundPixel(x, y, nt_i, palette);
-    }
-}
-
-void PPU::renderBackground()
-{
-    for (int y = 0; y < FRAME_HEIGHT; y++)
-    {
-        renderBackgroundScanline(y, bus.reg_ppu_ctrl.nn);
-    }
-}
-
-#else
+#ifndef NDEBUG
 
 // TODO handle ppu mask color modifier
 void PPU::getPalette(std::array<Pixel,4>& palette, uint palette_index)

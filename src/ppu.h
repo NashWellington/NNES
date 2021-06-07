@@ -40,40 +40,6 @@ class PPU
 public:
     PPU();
 
-    /* Background rendering
-    * renderBackground()
-    * (maybe make all of these parts of the renderBackground() method)
-    * get tile coords
-    *       gets the next tile coords from the nametable
-    * |
-    * V
-    * getTile(x,y)
-    *       8x8 grid of 2-bit color...choices?
-    *       uses coords (x,y) provided by the nametable
-    *       to find two 8x8 squares that add together to
-    *       give us the 2-bit 8x8 grid
-    * |
-    * V
-    * getPalette(x,y)
-    *       uses the attribute table to choose from one 
-    *       of 8 frame palettes
-    * |
-    * V
-    * colorTile()
-    * |
-    * V
-    *       return an 8x8 grid of colors
-    * 
-    * Note: this will change data in the background vector.
-    *       it doesn't return anything
-    */
-    // TODO delete or change these
-    #ifdef NDEBUG
-    void renderBackground();
-    void renderBackgroundScanline(int y, int nametable_index);
-    void renderBackgroundPixel(int x, int y, int nametable_index, std::array<Pixel, 4>& palette);
-    #endif
-
     // Send frame to display
     void sendFrame();
 
