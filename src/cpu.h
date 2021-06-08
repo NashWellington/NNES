@@ -4,6 +4,7 @@
 #include "globals.h"
 #include "bus.h"
 #include "isa.h"
+#include "savestate.h"
 
 extern CPU cpu;
 
@@ -43,6 +44,9 @@ public:
     /* Reset CPU registers
     */
     void reset();
+
+    void save(Savestate& savestate);
+    void load(Savestate& savestate);
 
     // CPU registers
 

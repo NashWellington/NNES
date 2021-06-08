@@ -2,6 +2,7 @@
 
 #include "globals.h"
 #include "mapper.h"
+#include "savestate.h"
 
 /* 64 KiB CPU memory map
 * $0000 - Zero Page
@@ -55,6 +56,9 @@ public:
 
     // Write to OAM (if necessary) and decrement cpu_suspend_cycles
     bool oamWrite(bool odd_cycle);
+
+    void save(Savestate& savestate);
+    void load(Savestate& savestate);
 
     // Interrupts
     // TODO get this Java bullshit out of there and put current_interrupt in public:

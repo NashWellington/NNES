@@ -135,10 +135,6 @@ byte Bus::cpuReadReg(uword address)
 
 void Bus::cpuWriteReg(uword address, byte data)
 {
-    // #ifndef NDEBUG
-    // std::cerr << "CPU register write at " << address << ": " << data << std::endl;
-    // #endif
-
     if (address < 0x4000)
     {
         address = 0x2000 + (address - 0x2000) % 0x0008;
@@ -223,6 +219,18 @@ bool Bus::oamWrite(bool odd_cycle)
     cpu_suspend_cycles -= 1;
     return true;
 }
+
+/*TODO Implement these
+void Bus::save(Savestate& savestate)
+{
+
+}
+
+void Bus::load(Savestate& savestate)
+{
+
+}
+*/
 
 InterruptType Bus::getInterrupt()
 {

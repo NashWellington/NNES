@@ -1,4 +1,4 @@
-objects =  main.o boot.o cpu.o ppu.o apu.o bus.o mapper.o isa.o mode.o overloads.o display.o imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
+objects =  main.o boot.o cpu.o ppu.o apu.o bus.o mapper.o isa.o mode.o savestate.o display.o globals.o imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
 
 flags = -g -std=c++17 -Wall -Werror -Wextra
 
@@ -10,16 +10,16 @@ $(project) : $(objects)
 		g++ $(flags) $(objects) -o ../build/$(project) $(libs)
 		rm $(objects)
 
-main.o : main.cpp globals.h boot.h cpu.h ppu.h apu.h display.h
+main.o : main.cpp globals.h boot.h cpu.h ppu.h apu.h display.h savestate.h
 		g++ $(flags) -c main.cpp
 
 boot.o : boot.h globals.h bus.h mapper.h
 		g++ $(flags) -c boot.cpp
 
-cpu.o : cpu.h globals.h isa.h bus.h
+cpu.o : cpu.h globals.h isa.h bus.h savestate.h
 		g++ $(flags) -c cpu.cpp
 
-ppu.o : ppu.h globals.h bus.h display.h
+ppu.o : ppu.h globals.h bus.h display.h savestate.h
 		g++ $(flags) -c ppu.cpp
 
 apu.o : apu.h globals.h bus.h
@@ -31,17 +31,20 @@ isa.o : isa.h globals.h mode.h cpu.h
 mode.o : mode.h globals.h cpu.h
 		g++ $(flags) -c mode.cpp
 
-bus.o : bus.h globals.h mapper.h
+bus.o : bus.h globals.h mapper.h savestate.h
 		g++ $(flags) -c bus.cpp
 
-mapper.o : mapper.h globals.h
+mapper.o : mapper.h globals.h savestate.h
 		g++ $(flags) -c mapper.cpp
 
-display.o : display.h globals.h libs/imgui/imgui.h libs/imgui/imgui_impl_sdl.h libs/imgui/imgui_impl_opengl3.h
+display.o : display.h globals.h savestate.h libs/imgui/imgui.h libs/imgui/imgui_impl_sdl.h libs/imgui/imgui_impl_opengl3.h
 		g++ $(flags) -c display.cpp
 
-overloads.o : globals.h
-		g++ $(flags) -c overloads.cpp
+savestate.o : savestate.h globals.h
+		g++ $(flags) -c savestate.cpp
+
+globals.o : globals.h
+		g++ $(flags) -c globals.cpp
 
 # external libs
 imgui.o : libs/imgui/imgui.h libs/imgui/imconfig.h libs/imgui/imgui_internal.h

@@ -69,16 +69,22 @@ int main(int argc, char ** argv)
     unsigned long long int cycles_per_frame = 262 * 341; // Note: PPU skips a cycle every odd frame
     while (!done) 
     {
-        ppu.testTick();
+        ppu.tick();
         if ((ppu_cycles % 3) == 2) cpu.tick();
         ppu_cycles++;
         done = display.pollEvents();
         if (ppu_cycles == cycles_per_frame)
         {
+            #ifndef NDEBUG
+            cpu.save(debug_state); // Save registers for use by the debugger
+            #endif
             display.displayFrame();
         }
         else if (ppu_cycles == (cycles_per_frame * 2 - 1))
         {
+            #ifndef NDEBUG
+            cpu.save(debug_state);
+            #endif
             display.displayFrame();
             ppu_cycles -= (cycles_per_frame * 2 - 1);
         }

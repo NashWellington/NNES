@@ -3,6 +3,7 @@
 #include "globals.h"
 #include "bus.h"
 #include "display.h"
+#include "savestate.h" // TODO
 
 // TODO implement PAL/Dendy vals
 
@@ -48,6 +49,9 @@ public:
     /* Initialize palette
     */
     void loadSystemPalette();
+
+    void save(Savestate& savestate);
+    void load(Savestate& savestate);
 
 private:
     std::array<Pixel, 64> system_palette = {};

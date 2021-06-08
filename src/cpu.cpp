@@ -59,11 +59,6 @@ byte CPU::nextByte()
     // This is a bit of a misnomer because it could also be an operand
     ubyte instruction = bus.cpuRead(reg_pc);
     reg_pc++;
-
-    #ifndef NDEBUG
-    Current_State.addOp(instruction);
-    #endif
-
     return instruction;
 }
 
@@ -88,15 +83,6 @@ void CPU::tick()
 
 void CPU::step()
 {
-    #ifndef NDEBUG
-    Current_State.reg_PC = reg_pc;
-    Current_State.reg_SP = reg_sp;
-    Current_State.reg_A = reg_a;
-    Current_State.reg_X = reg_x;
-    Current_State.reg_Y = reg_y;
-    Current_State.reg_SR = reg_sr.reg;
-    #endif
-
     // Check for interrupts
     // TODO fix interrupts
     if (bus.getInterrupt())
@@ -107,14 +93,6 @@ void CPU::step()
     
     if (cycle == 0)
         cycle += executeInstruction();
-
-    // Log the current state
-    #ifndef NDEBUG
-    #ifdef DISP_INSTR
-    std::clog << Current_State;
-    #endif
-    Current_State.clearState();
-    #endif
 }
 
 void CPU::start()
@@ -129,6 +107,30 @@ void CPU::reset()
     reg_sp -= 3;
     reg_sr.i = true;     // I flag
     // TODO APU/IO register reset stuff
+}
+
+void CPU::save(Savestate& savestate)
+{
+    savestate.registers.reg_pc = reg_pc;
+    savestate.registers.reg_sr = reg_sr.reg;
+    savestate.registers.reg_sp = reg_sp;
+    savestate.registers.reg_a = reg_a;
+    savestate.registers.reg_x = reg_x;
+    savestate.registers.reg_y = reg_y;
+    savestate.cpu_cycles_left = cycle; // Probably unnecessary; should be 0 every time this is called
+    savestate.cpu_odd_cycle = odd_cycle;
+}
+
+void CPU::load(Savestate& savestate)
+{
+    reg_pc = savestate.registers.reg_pc;
+    reg_sr.reg = savestate.registers.reg_sr;
+    reg_sp = savestate.registers.reg_sp;
+    reg_a = savestate.registers.reg_a;
+    reg_x = savestate.registers.reg_x;
+    reg_y = savestate.registers.reg_y;
+    cycle = savestate.cpu_cycles_left;
+    odd_cycle = savestate.cpu_odd_cycle;
 }
 
 void CPU::addInterrupt(InterruptType interrupt)

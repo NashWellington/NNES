@@ -368,7 +368,12 @@ void Display::displayFrame()
 
     {
         ImGui::Begin("Registers", NULL, wf);
-        // TODO add reg values from current_state?
+        ImGui::Text("Program Counter: %s", hex(debug_state.registers.reg_pc).c_str());
+        ImGui::Text("Stack Pointer:     %s", hex(debug_state.registers.reg_sp).c_str());
+        ImGui::Text("Accumulator:       %s", hex(debug_state.registers.reg_a).c_str());
+        ImGui::Text("Register X:        %s", hex(debug_state.registers.reg_x).c_str());
+        ImGui::Text("Register Y:        %s", hex(debug_state.registers.reg_y).c_str());
+        ImGui::Text("Status Register:   %s", hex(debug_state.registers.reg_sr).c_str());
         ImGui::End();
     }
 

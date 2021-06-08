@@ -28,52 +28,79 @@ void PPU::loadSystemPalette()
     file.close();
 }
 
+/*TODO
+void PPU::save(Savestate& savestate)
+{
+
+}
+void PPU::load(Savestate& savestate)
+{
+
+}
+*/
+
 void PPU::tick()
 {
     // TODO bounds checking
     // TODO check vblank
     // TODO OAM ADDR set during sprite eval
+    // TODO check if background/sprites should be loaded
+    // TODO sprite checking/resolution/whatever
 
-    if ((scanline < POST_RENDER_START) || (scanline == PRE_RENDER_START)) // pre-render + visible
+    if ((scanline>= 0 && scanline < POST_RENDER_START) || (scanline == PRE_RENDER_START)) // pre-render + visible
     {
+        if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) // Get table bytes
+        {
+            switch (cycle%8) // TODO do stuff
+            {
+                case 2: // NT byte
+                    break;
+                case 4: // AT byte
+                    break;
+                case 6: // Low BG tile byte
+                    break;
+                case 0: // High BG tile byte + inc hori
+                    break;
+                default:
+                    break;
+            }
+        }
+        else if (cycle == 257)
+        {
+            // TODO hori(v) = hori(t) ???
+        }
+        else if ((cycle >= 258) && (cycle <= 320)) // Idle cycles
+        {
+            bus.ppuWrite(0x2003, 0);
+        }
+        else if ((cycle == 338) || (cycle == 340)) // Unused NT fetches
+        {
+            // TODO
+        }
         if (scanline == PRE_RENDER_START)
         {
             if (cycle == 1) // clear vblank, //TODO clear sprite 0 & overflow?
             {
                 bus.reg_ppu_status.v = 0;
             }
-            if (cycle == 339) // skip last cycle of odd frame
+            else if (cycle >= 280 && cycle <= 304) // Clear vblank
+            {
+
+            }
+            else if (cycle == 339) // skip last cycle of odd frame
             {
                 if (odd_frame) cycle++;
                 odd_frame = !odd_frame;
             }
         }
-        if (cycle >= 1 && cycle <= 256) // Get table bytes
-        {
-
-        }
-        if ((cycle >= 257) && (cycle <= 320)) // Idle cycles
-        {
-            bus.ppuWrite(0x2003, 0);
-        }
     }
-    else if (scanline < PRE_RENDER_START) // post-render
+    else // post-render
     {
         // set vblank and render image
         if ((scanline == 241) && (cycle == 1))
         {
             bus.reg_ppu_status.v = 1;
             if (bus.reg_ppu_ctrl.v) bus.addInterrupt(NMI);
-            //sendFrame();
-            // TODO testing
-            #ifndef NDEBUG
-            //TODO debug
-            displayPatternTable(0, display.palette_selected);
-            displayPatternTable(1, display.palette_selected);
-            for (int i = 0; i < 4; i++) displayNametable(i);
-            for (int i = 0; i < 8; i++) displayPalette(i);
-            displaySprites();
-            #endif
         }
     }
     cycle++;
@@ -85,10 +112,14 @@ void PPU::tick()
     if (scanline >= SCANLINES_PER_FRAME - 1)
     {
         scanline -= SCANLINES_PER_FRAME;
+        #ifndef NDEBUG
+        displayPatternTable(0, display.palette_selected);
+        displayPatternTable(1, display.palette_selected);
+        for (int i = 0; i < 4; i++) displayNametable(i);
+        for (int i = 0; i < 8; i++) displayPalette(i);
+        displaySprites();
+        #endif
     }
-    #ifndef NDEBUG
-    Current_State.cycle = cycle;
-    #endif
 }
 
 #ifndef NDEBUG
@@ -171,9 +202,6 @@ void PPU::testTick()
         scanline -= SCANLINES_PER_FRAME;
         display.renderFrame(reinterpret_cast<ubyte*>(&test_frame), 341, 262);
     }
-    #ifndef NDEBUG
-    Current_State.cycle = cycle;
-    #endif
 }
 
 // TODO handle ppu mask color modifier

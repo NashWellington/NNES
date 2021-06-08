@@ -3,6 +3,7 @@
 #pragma GCC diagnostic warning "-Wunused-parameter"
 
 #include "globals.h"
+#include "savestate.h"
 
 enum class MirrorType
 {
@@ -37,6 +38,8 @@ public:
     virtual bool cpuWrite(uword address, byte data) = 0;
     virtual std::optional<byte> ppuRead(uword address) = 0;
     virtual bool ppuWrite(uword address, byte data) = 0;
+    bool save(Savestate& savestate) { return false; } // Most mappers won't need these
+    bool load(Savestate& savestate) { return false; }
     MirrorType mirroring = MirrorType::HORIZONTAL;
 };
 
