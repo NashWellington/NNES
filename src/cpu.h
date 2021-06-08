@@ -25,8 +25,8 @@ public:
     */
     int executeInstruction();
 
-
-    void tick();
+    // Returns true if step() was called
+    bool tick();
 
     /* Execute 1 instruction or handle 1 interrupt
     */

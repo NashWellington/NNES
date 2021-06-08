@@ -64,29 +64,53 @@ int main(int argc, char ** argv)
     cpu.start();
 
     #ifndef NDEBUG
-    bool done = false;
+    RunFlags run_flags = {};
     unsigned long long int ppu_cycles = 0;
     unsigned long long int cycles_per_frame = 262 * 341; // Note: PPU skips a cycle every odd frame
-    while (!done) 
+    while (!run_flags.finished) 
     {
-        ppu.tick();
-        if ((ppu_cycles % 3) == 2) cpu.tick();
-        ppu_cycles++;
-        done = display.pollEvents();
-        if (ppu_cycles == cycles_per_frame)
+        if (run_flags.paused)
         {
-            #ifndef NDEBUG
-            cpu.save(debug_state); // Save registers for use by the debugger
-            #endif
-            display.displayFrame();
-        }
-        else if (ppu_cycles == (cycles_per_frame * 2 - 1))
-        {
-            #ifndef NDEBUG
+            display.pollEvents(run_flags);
             cpu.save(debug_state);
-            #endif
-            display.displayFrame();
-            ppu_cycles -= (cycles_per_frame * 2 - 1);
+            display.displayFrame(run_flags);
+        }
+        else
+        {
+            ppu.tick();
+            if ((ppu_cycles % 3) == 2) 
+            {
+                bool stepped = cpu.tick();
+                if (run_flags.tick)
+                {
+                    run_flags.paused = true;
+                    run_flags.tick = false;
+                }
+                else if (run_flags.step)
+                {
+                    if (stepped)
+                    {
+                        run_flags.paused = true;
+                        run_flags.step = false;
+                    }
+                }
+            }
+            ppu_cycles++;
+            if ((ppu_cycles == cycles_per_frame) || (ppu_cycles == (cycles_per_frame * 2 - 1)))
+            {
+                cpu.save(debug_state); // Save registers for use by the debugger
+                display.displayFrame(run_flags);
+                ppu_cycles %= cycles_per_frame * 2 - 1;
+                if (run_flags.frame)
+                {
+                    run_flags.paused = true;
+                    run_flags.frame = false;
+                }
+                else // Take inputs as normal if not advancing by 1 frame
+                {
+                    display.pollEvents(run_flags);
+                }
+            }
         }
     }
     #endif

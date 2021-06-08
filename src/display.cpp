@@ -86,7 +86,7 @@ Display::Display()
     io.IniFilename = NULL;
     //io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-    ImGui::StyleColorsDark();                                   // Dark theme
+    ImGui::StyleColorsDark();                                    // Dark theme
 
     // Setup backends
     ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
@@ -215,9 +215,8 @@ Display::~Display()
     SDL_Quit();
 }
 
-bool Display::pollEvents()
+void Display::pollEvents(RunFlags& run_flags)
 {
-    bool done = false;
     SDL_Event event;
     if (SDL_PollEvent(&event))
     {
@@ -228,25 +227,41 @@ bool Display::pollEvents()
                 switch (event.key.keysym.sym)
                 {
                     case SDLK_ESCAPE:
-                        done = true;
+                        run_flags.finished = true;
                         break;
                     case SDLK_p:
                         palette_selected += 1;
                         palette_selected %= 8;
                         break;
+                    case SDLK_f:
+                        run_flags.paused = false;
+                        run_flags.frame = true;
+                        break;
+                    case SDLK_t:
+                        run_flags.paused = false;
+                        run_flags.tick = true;
+                        break;
+                    case SDLK_s:
+                        run_flags.paused = false;
+                        run_flags.step = true;
+                        break;
+                    case SDLK_SPACE:
+                        run_flags.paused = !run_flags.paused;
+                        break;
+                    default:
+                        break;
                 }
                 break;
             case SDL_QUIT:
-                done = true;
+                run_flags.finished = true;
                 break;
             default:
                 break;
         }
     }
-    return done;
 }
 
-void Display::displayFrame()
+void Display::displayFrame(RunFlags& run_flags)
 {
 #ifdef NDEBUG
 
@@ -365,6 +380,8 @@ void Display::displayFrame()
     // Registers
     {
         ImGui::Begin("Registers");
+        if (run_flags.paused) ImGui::Text("Paused"); // TODO move this to a better location (like top right of SDL window)
+        else ImGui::Text(" ");
         ImGui::Text("Program Counter: %s", hex(debug_state.registers.reg_pc).c_str());
         ImGui::Text("Stack Pointer:     %s", hex(debug_state.registers.reg_sp).c_str());
         ImGui::Text("Accumulator:       %s", hex(debug_state.registers.reg_a).c_str());

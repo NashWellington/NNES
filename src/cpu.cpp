@@ -71,14 +71,20 @@ int CPU::executeInstruction()
     return ISA::executeOpcode(instruction);
 }
 
-void CPU::tick()
+bool CPU::tick()
 {
+    bool stepped = false;
     if (cycle == 0)
     {
-        if (!bus.oamWrite(odd_cycle)) step();
+        if (!bus.oamWrite(odd_cycle)) 
+        {
+            step();
+            stepped = true;
+        }
     }
     else cycle--;
     odd_cycle = !odd_cycle;
+    return stepped;
 }
 
 void CPU::step()

@@ -9,6 +9,15 @@
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
 
+struct RunFlags
+{
+    bool finished = false;  
+    bool paused = false;    
+    bool tick = false;      // If true, execute one cpu cycle (& 3 ppu cycles)
+    bool step = false;      // If true, execute one cpu instruction
+    bool frame = false;
+};
+
 // TODO copy/move constructor?
 struct Pixel
 {
@@ -26,8 +35,8 @@ public:
     ~Display();
 
     // Returns true if window close
-    bool pollEvents();
-    void displayFrame();
+    void pollEvents(RunFlags& run_flags);
+    void displayFrame(RunFlags& run_flags);
     void renderFrame(ubyte* frame, int width, int height);
 
     #ifndef NDEBUG
