@@ -259,14 +259,14 @@ void Display::displayFrame()
 
     IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context");
 
-    ImGuiWindowFlags wf = 0;
-    wf |= ImGuiWindowFlags_NoScrollbar;
+    //ImGuiWindowFlags wf = 0;
+    //wf |= ImGuiWindowFlags_NoScrollbar;
     //wf |= ImGuiWindowFlags_NoMove;
     //wf |= ImGuiWindowFlags_NoResize;
 
     // Palettes
     {
-        ImGui::Begin("Palettes", NULL, wf);
+        ImGui::Begin("Palettes");
         ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Image vals
         ImVec2 uv_max = ImVec2(1.0f, 1.0f);
         ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -283,10 +283,9 @@ void Display::displayFrame()
         }
         ImGui::End();
     }
-
     // Pattern Tables
     {
-        ImGui::Begin("Pattern Tables", NULL, wf);
+        ImGui::Begin("Pattern Tables");
         ImVec2 pos = ImGui::GetCursorScreenPos();
         ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Image vals
         ImVec2 uv_max = ImVec2(1.0f, 1.0f);
@@ -318,10 +317,9 @@ void Display::displayFrame()
         }
         ImGui::End();
     }
-
     // Nametables
     {
-        ImGui::Begin("Nametables", NULL, wf);
+        ImGui::Begin("Nametables");
         ImVec2 pos = ImGui::GetCursorScreenPos();
         ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Image vals
         ImVec2 uv_max = ImVec2(1.0f, 1.0f);
@@ -353,10 +351,9 @@ void Display::displayFrame()
         }
         ImGui::End();
     }
-
     // Sprites
     {
-        ImGui::Begin("Sprites", NULL, wf);
+        ImGui::Begin("Sprites");
         ImVec2 uv_min = ImVec2(0.0f, 0.0f);
         ImVec2 uv_max = ImVec2(1.0f, 1.0f);
         ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -365,9 +362,9 @@ void Display::displayFrame()
         ImGui::Image((void*)(intptr_t)spr_tex, size, uv_min, uv_max, tint, border);
         ImGui::End();
     }
-
+    // Registers
     {
-        ImGui::Begin("Registers", NULL, wf);
+        ImGui::Begin("Registers");
         ImGui::Text("Program Counter: %s", hex(debug_state.registers.reg_pc).c_str());
         ImGui::Text("Stack Pointer:     %s", hex(debug_state.registers.reg_sp).c_str());
         ImGui::Text("Accumulator:       %s", hex(debug_state.registers.reg_a).c_str());
