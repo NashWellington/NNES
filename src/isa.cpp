@@ -1388,7 +1388,7 @@ int ISA::executeOpcode(ubyte instr)
             return SBC(cycles, val);
 
         case 0xEC: // CPX abs
-            LOG_INSTR("CPS", 2);
+            LOG_INSTR("CPX", 2);
             std::tie(address, cycles) = Mode::absolute(0, true);
             cycles += 1;
             val = cpu.read(address);

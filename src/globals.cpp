@@ -18,3 +18,9 @@ std::string hex(byte x)
 {
     return hex(static_cast<ubyte>(x));
 }
+
+// TODO add addressing mode support
+std::string decompile(uword address, std::vector<byte> ops)
+{
+    std::string return_string = hex(address) + ": " + instructions[ops[0]];
+}

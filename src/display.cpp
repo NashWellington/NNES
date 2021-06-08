@@ -390,8 +390,12 @@ void Display::displayFrame(RunFlags& run_flags)
         ImGui::Text("Status Register:   %s", hex(debug_state.registers.reg_sr).c_str());
         ImGui::End();
     }
+    // Decompiler
+    {
+        ImGui::Begin("Decompiler");
 
-    // TODO decompiled instructions
+        ImGui::End();
+    }
 
     // Render
     ImGui::Render();
