@@ -1,6 +1,7 @@
 #pragma once
 
 #include "globals.h"
+#include "savestate.h"
 
 #include "libs/imgui/imgui.h"
 #include "libs/imgui/imgui_impl_sdl.h"
@@ -27,6 +28,7 @@ public:
     // Returns true if window close
     bool pollEvents();
     void displayFrame();
+    void renderFrame(ubyte* frame, int width, int height);
 
     #ifndef NDEBUG
     int palette_selected = 0;
@@ -35,6 +37,7 @@ public:
     GLuint nt_tex[4];   // nametable textures
     GLuint pal_tex[8];  // Palette textures
     GLuint spr_tex;
+    GLuint frame_tex;
 
     void addPatternTable(ubyte* pt, int pt_i);
     void addNametable(ubyte* nt, int nt_i);
@@ -45,6 +48,7 @@ private:
 // SDL variables
     SDL_WindowFlags window_flags;
     SDL_Window* window;
+    SDL_Renderer* renderer;
     SDL_GLContext gl_context;
 // ImGui variables
     ImVec4 clear_color = {0.1f, 0.1f, 0.1f, 1.0f};

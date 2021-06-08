@@ -76,7 +76,7 @@ int CPU::executeInstruction()
     return ISA::executeOpcode(instruction);
 }
 
-void CPU::clock()
+void CPU::tick()
 {
     if (cycle == 0)
     {

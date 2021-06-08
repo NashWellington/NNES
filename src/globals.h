@@ -25,6 +25,7 @@
 #include <memory>           // Needed for shared_ptr
 #include <vector>           // needed for dynamic memory allocation
 #include <optional>         // for determining number of operands // TODO
+#include <queue>
 
 typedef uint8_t ubyte;
 typedef int8_t byte;

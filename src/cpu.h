@@ -25,7 +25,7 @@ public:
     int executeInstruction();
 
 
-    void clock();
+    void tick();
 
     /* Execute 1 instruction or handle 1 interrupt
     */

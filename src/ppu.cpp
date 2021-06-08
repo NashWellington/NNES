@@ -28,7 +28,7 @@ void PPU::loadSystemPalette()
     file.close();
 }
 
-void PPU::clock()
+void PPU::tick()
 {
     // TODO bounds checking
     // TODO check vblank
@@ -38,7 +38,7 @@ void PPU::clock()
     {
         if (scanline == PRE_RENDER_START)
         {
-            if (cycle == 1) // clear vblank
+            if (cycle == 1) // clear vblank, //TODO clear sprite 0 & overflow?
             {
                 bus.reg_ppu_status.v = 0;
             }
@@ -48,15 +48,11 @@ void PPU::clock()
                 odd_frame = !odd_frame;
             }
         }
-        else
+        if (cycle >= 1 && cycle <= 256) // Get table bytes
         {
-            if ((cycle >= 1) && (cycle <= 256))
-            {
-                // TODO get palette somewhere around here
-                //renderBackgroundPixel(pixel_x, pixel_y, bus.reg_ppu_ctrl.nn);
-            }
+
         }
-        if ((cycle >= 257) && (cycle <= 320))
+        if ((cycle >= 257) && (cycle <= 320)) // Idle cycles
         {
             bus.ppuWrite(0x2003, 0);
         }
@@ -86,14 +82,99 @@ void PPU::clock()
         scanline++;
         cycle -= CYCLES_PER_SCANLINE;
     }
-    if (scanline >= SCANLINES_PER_FRAME)
+    if (scanline >= SCANLINES_PER_FRAME - 1)
     {
         scanline -= SCANLINES_PER_FRAME;
     }
+    #ifndef NDEBUG
     Current_State.cycle = cycle;
+    #endif
 }
 
 #ifndef NDEBUG
+void PPU::testTick()
+{
+    // TODO bounds checking
+    // TODO check vblank
+    // TODO OAM ADDR set during sprite eval
+
+    if ((scanline >= 0 && scanline < POST_RENDER_START) || (scanline == PRE_RENDER_START)) // pre-render + visible
+    {
+        if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) // Get table bytes
+        {
+            // TODO break these up into R/W by cycle?
+            switch (cycle%8)
+            {
+                case 2: // NT byte
+                    test_frame[scanline+1][cycle] = {255,100,0};
+                    break;
+                case 4: // AT byte
+                    test_frame[scanline+1][cycle] = {255,150,0};
+                    break;
+                case 6: // Low BG tile byte
+                    test_frame[scanline+1][cycle] = {255,200,0};
+                    break;
+                case 0: // High BG tile byte + inc hori
+                    test_frame[scanline+1][cycle] = {255,  0,0};
+                    break;
+                default:
+                    break;
+            }
+        }
+        else if (cycle == 257) // TODO what does "hori(v) = hori(t)" mean?
+        {
+            test_frame[scanline+1][cycle] = {255,  0,255};
+        }
+        else if ((cycle >= 258) && (cycle <= 320)) // Idle cycles
+        {
+            test_frame[scanline+1][cycle] = {  0,  0,255};
+        }
+        else if ((cycle == 338) || (cycle == 340)) // Unused NT fetches
+        {
+            test_frame[scanline+1][cycle] = {255,100,  0};
+        }
+        if (scanline == PRE_RENDER_START)
+        {
+            if (cycle == 1) // clear vblank
+            {
+                test_frame[scanline+1][cycle] = {0,255,100};
+            }
+            else if (cycle >= 280 && cycle <= 304)
+            {
+                test_frame[scanline+1][cycle] = {255,0,0};
+            }
+            else if (cycle == 339) // skip last cycle of odd frame
+            {
+                /* Disabled for testing
+                if (odd_frame) cycle++;
+                odd_frame = !odd_frame;
+                */
+            }
+        }
+    }
+    else // post-render
+    {
+        // set vblank
+        if ((scanline == 241) && (cycle == 1))
+        {
+            test_frame[scanline+1][cycle] = {0,255,0};
+        }
+    }
+    cycle++;
+    if (cycle >= CYCLES_PER_SCANLINE)
+    {
+        scanline++;
+        cycle -= CYCLES_PER_SCANLINE;
+    }
+    if (scanline >= SCANLINES_PER_FRAME - 1)
+    {
+        scanline -= SCANLINES_PER_FRAME;
+        display.renderFrame(reinterpret_cast<ubyte*>(&test_frame), 341, 262);
+    }
+    #ifndef NDEBUG
+    Current_State.cycle = cycle;
+    #endif
+}
 
 // TODO handle ppu mask color modifier
 void PPU::getPalette(std::array<Pixel,4>& palette, uint palette_index)
@@ -270,6 +351,7 @@ void PPU::displaySprites()
 }
 #endif
 
+// TODO grayscale + color emphasis PPUMASK flags
 Pixel PPU::getColor(byte color_byte)
 {
     assert(static_cast<ubyte>(color_byte) < 0x40);

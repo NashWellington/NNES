@@ -68,6 +68,7 @@ Display::Display()
     gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
     // Setup GLEW
     glewExperimental = GL_TRUE;
@@ -162,6 +163,11 @@ Display::Display()
     glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_TRUE, 4 * sizeof(float), (void*) (2 * sizeof(float)));
     glEnableVertexAttribArray(texAttrib);
 
+    glGenTextures(1, &frame_tex);
+    glBindTexture(GL_TEXTURE_2D, frame_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
 #ifndef NDEBUG
     glGenTextures(1, &pt_tex[0]);
     glBindTexture(GL_TEXTURE_2D, pt_tex[0]);
@@ -242,7 +248,9 @@ bool Display::pollEvents()
 
 void Display::displayFrame()
 {
-#ifndef NDEBUG
+#ifdef NDEBUG
+
+#else
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame(window);
     ImGui::NewFrame();
@@ -358,13 +366,23 @@ void Display::displayFrame()
         ImGui::End();
     }
 
-    //TODO add (save)state info
+    {
+        ImGui::Begin("Registers", NULL, wf);
+        // TODO add reg values from current_state?
+        ImGui::End();
+    }
+
+    // TODO decompiled instructions
 
     // Render
     ImGui::Render();
     glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
     glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
     glClear(GL_COLOR_BUFFER_BIT);
+    // Draw frame
+    glBindTexture(GL_TEXTURE_2D, frame_tex);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(window);
 #endif
@@ -400,5 +418,15 @@ void Display::addSprites(ubyte* sprites, int height)
     spr_h = height;
     glBindTexture(GL_TEXTURE_2D, spr_tex);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 64, 8*height, 0, GL_RGB, GL_UNSIGNED_BYTE, sprites);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void Display::renderFrame(ubyte* frame, int width, int height)
+{
+    assert(width > 0 && height > 0);
+    glBindTexture(GL_TEXTURE_2D, frame_tex);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // To solve alignment in the case of frame width not aligning to 4 bytes
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, frame);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
