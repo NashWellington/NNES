@@ -9,4 +9,4 @@ extern std::map<byte,std::string> instructions;
 
 // Only decompiles 1 line for now
 // TODO take an iterator as second arg?
-std::string decompile(uword address);
+std::optional<std::string> decompile(uword& address);

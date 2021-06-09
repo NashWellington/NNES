@@ -32,10 +32,6 @@ typedef int8_t byte;
 typedef uint16_t uword;
 typedef int16_t word;
 
-// TODO maybe add addressing mode?
-// TODO unordered_map?
-
-
 enum InterruptType
 {
     NO_INTERRUPT,   // no interrupt

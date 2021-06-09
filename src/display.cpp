@@ -393,7 +393,17 @@ void Display::displayFrame(RunFlags& run_flags)
     // Decompiler
     {
         ImGui::Begin("Decompiler");
-        ImGui::Text("%s", decompile(debug_state.registers.reg_pc).c_str());
+        uword addr = debug_state.registers.reg_pc;
+        int lines = 5;
+        ImGui::Text("%-20s %s", decompile(addr).value().c_str(), "<---");
+        for (int i = 0; i < lines-1; i++)
+        {
+            if (auto line = decompile(addr))
+            {
+                ImGui::Text("%-20s", line.value().c_str());
+            }
+            else i = lines-1;
+        }
         ImGui::End();
     }
 

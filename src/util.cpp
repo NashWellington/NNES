@@ -22,10 +22,157 @@ std::map<byte,std::string> instructions =
     {0xF0,"BEQ"}, {0xF1,"SBC"}, /*{0xF2,""}*/ {0xF3,"ISC"}, {0XF4,"NOP"}, {0XF5,"SBC"}, {0XF6,"INC"}, {0XF7,"ISC"}, {0XF8,"SED"}, {0XF9,"SBC"}, {0XFA,"NOP"}, {0XFB,"ISC"}, {0XFC,"NOP"}, {0XFD,"SBC"}, {0XFE,"INC"}, {0XFF,"ISC"}
 };
 
-// TODO add addressing mode support
-std::string decompile(uword address)
+// Decompile addressing mode
+std::string decompileMode(uword& address, ubyte instr)
 {
+    std::string mode = " ";
+    switch (instr%32)
+    {
+        case 0x00:
+            if (instr == 0x20) // JSR Absolute
+            {
+                mode += "$";
+                mode += hex(bus.cpuRead(address+1));
+                mode += hex(bus.cpuRead(address));
+                address += 2;
+            }
+            else if (instr >= 0x80) // Immediate
+            {
+                sprintf(mode.data(), " #$%02X", bus.cpuRead(address++));
+                mode += "#$";
+                mode += hex(bus.cpuRead(address++));
+            }
+            break;
+
+        case 0x01: // X-indexed, indirect // TODO formatting?
+        case 0x03:
+            mode += "(X,#$";
+            mode += hex(bus.cpuRead(address++));
+            mode += ")";
+            break;
+
+        case 0x02: // Immediate
+        case 0x09:
+        case 0x0B:
+            assert (instr != 0x8B);
+            sprintf(mode.data(), " #$%02X", bus.cpuRead(address++));
+            mode += "#$";
+            mode += hex(bus.cpuRead(address++));
+            break;
+
+        case 0x04: // Zero Page
+        case 0x05:
+        case 0x06:
+        case 0x07:
+            mode += "$";
+            mode += hex(bus.cpuRead(address++));
+            break;
+
+        case 0x0A: // Accumulator // TODO formatting
+            if (instr < 0x7A) mode += "A";
+            break;
+
+        case 0x0C: // Absolute
+        case 0x0D:
+        case 0x0E:
+        case 0x0F:
+            if (instr == 0x6C) // Un-indexed indirect
+            {
+                mode += "($";
+                mode += hex(bus.cpuRead(address++));
+                mode += ")";
+            }
+            else
+            {
+                mode += "$";
+                mode += hex(bus.cpuRead(address+1));
+                mode += hex(bus.cpuRead(address));
+                address += 2;
+            }
+            break;
+
+        case 0x10: // Relative // TODO formatting?
+            mode += "$";
+            mode += hex(bus.cpuRead(address++));
+            break;
+
+        case 0x11: // indirect, Y-indexed
+        case 0x13:
+            mode += "(#$";
+            mode += hex(bus.cpuRead(address++));
+            mode += "),Y";
+            break;
+
+        case 0x14: // Zero Page, X-indexed // TODO formatting
+        case 0x15:
+            mode += "$";
+            mode += hex(bus.cpuRead(address++));
+            mode += ",X";
+            break;
+
+        case 0x16: // Zero Page, X & Y -indexed // TODO formatting
+        case 0x17:
+            if (instr >= 0x96) // Y-indexed
+            {
+                mode += "$";
+                mode += hex(bus.cpuRead(address++));
+                mode += ",Y";
+            }
+            else // X-indexed
+            {
+                mode += "$";
+                mode += hex(bus.cpuRead(address++));
+                mode += ",X";
+            }
+            break;
+
+        case 0x19: // Absolute, Y-indexed
+        case 0x1B:
+            assert(instr != 0xBB);
+            mode += "$";
+            mode += hex(bus.cpuRead(address+1));
+            mode += hex(bus.cpuRead(address));
+            mode += ",Y";
+            address += 2;
+            break;
+        
+        case 0x1C: // Absolute, X-indexed
+        case 0x1D:
+        case 0x1E:
+        case 0x1F:
+            if (instr == 0x9E || instr == 0xBE || instr == 0x9F || instr == 0xBF) // Y-indexed
+            {
+                mode += "$";
+                mode += hex(bus.cpuRead(address+1));
+                mode += hex(bus.cpuRead(address));
+                mode += ",Y";
+                address += 2;
+            }
+            else
+            {
+                mode += "$";
+                mode += hex(bus.cpuRead(address+1));
+                mode += hex(bus.cpuRead(address));
+                mode += ",X";
+                address += 2;
+            }
+            break;
+
+        default: // implied/unsupported opcode
+            break;
+    }   
+    return mode; 
+}
+
+std::optional<std::string> decompile(uword& address)
+{
+    if (address == 0) return {};
+    uword start_address = address;
     std::string line = hex(address) + ": ";
-    line += instructions[bus.cpuRead(address)];
+    byte instr = bus.cpuRead(address++);
+    line += instructions[instr];
+    line += decompileMode(address, static_cast<ubyte>(instr));
+    if (start_address > (address - 1)) return {};
+    for (int i = 0; i < (20 - static_cast<int>(line.size())); i++) line += ' ';
     return line;
 }
