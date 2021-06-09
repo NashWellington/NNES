@@ -43,11 +43,6 @@ public:
     #ifndef NDEBUG
     int palette_selected = 0;
     int spr_h = 8;      // sprite height. 8 for 8x8 sprites, 16 for 8x16
-    GLuint pt_tex[2];   // pattern table textures // TODO move to private?
-    GLuint nt_tex[4];   // nametable textures
-    GLuint pal_tex[8];  // Palette textures
-    GLuint spr_tex;
-    GLuint frame_tex;
 
     void addPatternTable(ubyte* pt, int pt_i);
     void addNametable(ubyte* nt, int nt_i);
@@ -55,6 +50,12 @@ public:
     void addSprites(ubyte* sprites, int spr_height);
     #endif
 private:
+// OGL textures
+    GLuint pt_tex[2];   // pattern table textures
+    GLuint nt_tex[4];   // nametable textures
+    GLuint pal_tex[8];  // Palette textures
+    GLuint spr_tex;
+    GLuint frame_tex;
 // SDL variables
     SDL_WindowFlags window_flags;
     SDL_Window* window;

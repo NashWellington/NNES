@@ -28,7 +28,7 @@ struct Header
     uint64_t chr_rom_size = 0;
     uint64_t prg_ram_size = 0;
     bool trainer = false;
-    MirrorType mirroring; // TODO it's probably a little more complicated than this
+    MirrorType mirroring;
 };
 
 class Mapper

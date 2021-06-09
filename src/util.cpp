@@ -1,6 +1,5 @@
 #include "util.h"
 
-// TODO maybe add addressing mode?
 // TODO unordered_map?
 std::map<byte,std::string> instructions = 
 {

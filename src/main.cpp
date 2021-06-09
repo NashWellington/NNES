@@ -68,7 +68,7 @@ int main(int argc, char ** argv)
     if (argc == 3) run_flags.paused = true;
     uint32_t ppu_cycle = 0;
     uint32_t cycles_per_frame = 262 * 341; // Note: PPU skips a cycle every odd frame
-    while (!run_flags.finished) // TODO figure out why it skips BRK
+    while (!run_flags.finished)
     {
         if (run_flags.paused)
         {
@@ -117,9 +117,7 @@ int main(int argc, char ** argv)
     }
     #endif
 
-    // TODO main loop (after I figure out input & GUI)
-
-    // TODO resetting buffers necessary in c++?
+    // TODO real non-debugger main loop
 
     #ifndef NDEBUG
     #ifdef DISP_INSTR

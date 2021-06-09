@@ -52,7 +52,7 @@ Header Boot::readHeader(std::ifstream& rom)
 
     if ((prg_rom_ctrl & 0x0F00) != 0x0F00) // prg_rom_size = prg_rom_ctrl * 16 KiB if MSB is not 0x0F
     {
-        header.prg_rom_size = prg_rom_ctrl * pow(2, 14);
+        header.prg_rom_size = prg_rom_ctrl * (2 << 14);
     }
     else
     {
@@ -66,7 +66,7 @@ Header Boot::readHeader(std::ifstream& rom)
         chr_rom_ctrl += (uword(header_data[9] & 0xF0) << 4);
     if ((chr_rom_ctrl & 0x0F00) != 0x0F00) // chr_rom_size = chr_rom_ctrl * 8 KiB if MSB is not 0x0F
     {
-        header.chr_rom_size = chr_rom_ctrl * pow(2, 13);
+        header.chr_rom_size = chr_rom_ctrl * (2 << 13);
     }
     else
     {

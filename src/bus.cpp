@@ -57,7 +57,7 @@ byte Bus::ppuRead(uword address)
         address -= 0x2000;
         address %= 0x1000;
         if (mapper->mirroring == MirrorType::HORIZONTAL) address %= 2 * 0x0800;
-        else address = (address % 0x0400) + 0x0800 * (address / 0x0800); // TODO verify this rounds down
+        else address = (address % 0x0400) + 0x0800 * (address / 0x0800);
         return name_tables[address / 0x0400][address % 0x0400];
     }
     else
@@ -82,7 +82,7 @@ void Bus::ppuWrite(uword address, byte data)
         address -= 0x2000;
         address %= 0x1000;
         if (mapper->mirroring == MirrorType::HORIZONTAL) address %= 2 * 0x0800;
-        else address = (address % 0x0400) + 0x0800 * (address / 0x0800); // TODO verify this rounds down
+        else address = (address % 0x0400) + 0x0800 * (address / 0x0800);
         name_tables[address / 0x0400][address % 0x0400] = data;
     }
     else
@@ -192,7 +192,6 @@ void Bus::cpuWriteReg(uword address, byte data)
         switch (address)
         {
             case 0x4014: // OAM DMA
-                // TODO transfer data at $XX00-$XXFF to PPU OAM
                 dma_addr = static_cast<uword>(data) << 8;
                 cpu_suspend_cycles = 514;
                 break;

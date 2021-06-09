@@ -7,6 +7,5 @@
 
 extern std::map<byte,std::string> instructions;
 
-// Only decompiles 1 line for now
-// TODO take an iterator as second arg?
+// Decompile one line (1-3 bytes)
 std::optional<std::string> decompile(uword& address);

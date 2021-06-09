@@ -3,7 +3,7 @@
 #include "globals.h"
 #include "bus.h"
 #include "display.h"
-#include "savestate.h" // TODO
+#include "savestate.h"
 
 // TODO implement PAL/Dendy vals
 
@@ -14,7 +14,7 @@ const int VISIBLE_SCANLINE_START = 0;   // scanlines 0-239
 const int POST_RENDER_START = 240;      // scanlines 240-260
 const int PRE_RENDER_START = -1;       // scanline  261
 const int CYCLES_PER_SCANLINE = 341;    
-const int PIXELS_PER_SCANLINE = 256;    // TODO change to actual val
+const int PIXELS_PER_SCANLINE = 256;
 const int FRAME_WIDTH = 256;
 const int FRAME_HEIGHT = 240;
 
@@ -70,19 +70,13 @@ private:
     ubyte pt_byte_low = 0;  // Background pattern table bytes
     ubyte pt_byte_high = 8;
     std::queue<Pixel> pixel_pipeline = {};
-    //std::array<std::array<Pixel,256>,240> frame = {};
+    std::array<std::array<Pixel,256>,240> frame = {}; // TODO change to variables for PAL support
 
     bool odd_frame = false;
 
-    // TODO implement
     Pixel getColor(byte color_byte);
 
 #ifndef NDEBUG
-public:
-    void testTick(); // Used for testing PPU render timings. will probably deprecate at some point
-    // TODO change back to 341 width
-    std::array<std::array<Pixel,341>,262> test_frame = {};
-
 private: // Debugging tools
     std::array<Pixel,4> curr_palette = {};
     Table<240,256> nametable = {};

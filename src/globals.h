@@ -18,13 +18,11 @@
 #include <iostream>         // Used for logging errors etc.
 #include <stdexcept>        // exceptions
 #include <assert.h>         // assertions
-#include <iomanip>          // Used for converting to hex //TODO ios? // TODO hex function
 #include <fstream>          // Used for reading files
-#include <cmath>            // Used for exponential functions // TODO just replace w/ bitshifting
 #include <chrono>           // Used for clocking
 #include <memory>           // Needed for shared_ptr
 #include <vector>           // needed for dynamic memory allocation
-#include <optional>         // for determining number of operands // TODO
+#include <optional>         
 #include <queue>
 
 typedef uint8_t ubyte;

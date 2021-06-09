@@ -88,7 +88,6 @@ bool CPU::tick()
 void CPU::step()
 {
     // Check for interrupts
-    // TODO fix interrupts
     if (bus.getInterrupt())
     {
         cycle += handleInterrupt(bus.getInterrupt());
@@ -200,7 +199,5 @@ int CPU::handleInterrupt(InterruptType type)
         default:
             break;
     }
-    // TODO test if RESET takes 7 cycles
-
     return 7;
 }

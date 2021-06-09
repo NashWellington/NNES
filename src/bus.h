@@ -60,7 +60,6 @@ public:
     void load(Savestate& savestate);
 
     // Interrupts
-    // TODO get this Java bullshit out of there and put current_interrupt in public:
     InterruptType getInterrupt();
     void addInterrupt(InterruptType interrupt);
     void clearInterrupt();
@@ -110,10 +109,7 @@ private:
     std::array<byte, 0x2000> dummy_pattern_tables = {};
 
     /* Name tables
-    * $2000 to $23FF    <= name table 0
-    * $2400 to $27FF    <= name table 1
-    * $2800 to $2BFF    <= name table 2
-    * $2C00 to $2FFF    <= name table 3
+    * $2000 to $2FFF
     */
     std::array<std::array<byte, 0x0400>, 4> name_tables = {};
 
