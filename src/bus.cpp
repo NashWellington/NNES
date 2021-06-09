@@ -102,20 +102,35 @@ byte Bus::cpuReadReg(uword address)
         address = 0x2000 + (address - 0x2000) % 0x0008;
         switch (address)
         {
-            //case 0x2000: //TODO latch stuff
+            case 0x2000: // PPU ctrl
+                return ppu_latch;
 
-            case 0x2002: // PPU Status reg
-                data = (reg_ppu_status.reg & 0xF8) + (reg_ppu_data * 0x07); // TODO figure this out
+            case 0x2001: // PPU mask
+                return ppu_latch;
+
+            case 0x2002: // PPU status
+                // TODO race condition
+                data = (reg_ppu_status.reg & 0xE0) + (ppu_latch & 0x1F);
                 reg_ppu_status.v = 0;
                 reg_ppu_addr.i = 0;
+                ppu_latch = data;
+                return data;
+
+            case 0x2003: // OAM addr
+                return ppu_latch;
+            
+            case 0x2004: // OAM data
+                data = oam[oam_addr/4][oam_addr%4];
+                ppu_latch = data;
                 return data;
             
-            case 0x2004: // OAM Data
-                data = oam[oam_addr/4][oam_addr%4];
-                break;
+            case 0x2005: // PPU scroll
+                return ppu_latch;
+
+            case 0x2006: // PPU address
+                return ppu_latch;
 
             case 0x2007: // PPU data
-                // TODO increment VRAM address
                 data = reg_ppu_data;
                 reg_ppu_data = ppuRead(reg_ppu_addr.address);
                 if (reg_ppu_addr.address >= 0x3F00) data = reg_ppu_data;
@@ -128,15 +143,18 @@ byte Bus::cpuReadReg(uword address)
                 
         }
     }
-    /*
     else
     {
         switch (address)
         {
+            case 0x4014:
+                return ppu_latch;
 
+            default:
+                std::cerr << "Warning: unsupported CPU Reg Read at " << hex(address) << std::endl;
+                break;
         }
-    }*/
-    std::cerr << "Warning: unsupported CPU Reg Read at " << hex(address) << std::endl;
+    }
     return data;
 }
 
@@ -148,31 +166,49 @@ void Bus::cpuWriteReg(uword address, byte data)
         switch (address)
         {
             // TODO ignore writes for "about 30k cycles" after power/reset
-            // TODO weird NMI behavior
             case 0x2000: // PPU ctrl
+                if (reg_ppu_ctrl.v && reg_ppu_status.v && data < 0)
+                {
+                    addInterrupt(NMI);
+                }
                 reg_ppu_ctrl.reg = data;
+                #ifndef NDEBUG
+                if (reg_ppu_ctrl.p)
+                    std::cerr << "Warning: PPUCTRL bit 6 set" << std::endl;
+                #endif
+                ppu_latch = data;
                 break;
 
             case 0x2001: // PPU mask
                 reg_ppu_mask.reg = data;
+                ppu_latch = data;
+                break;
+
+            case 0x2002: // PPU status
+                ppu_latch = data;
                 break;
 
             case 0x2003: // OAM addr
+                // TODO 2C02 OAM corruption
                 oam_addr = data;
+                ppu_latch = data;
                 break;
 
             // TODO no writing during vblank + more
             case 0x2004: // OAM data
                 oam[oam_addr/4][oam_addr%4] = data;
                 oam_addr++;
+                ppu_latch = data;
                 break;
 
             case 0x2005: // PPU scroll
                 reg_ppu_scroll.write(data);
+                ppu_latch = data;
                 break;
             
             case 0x2006: // PPU addr
                 reg_ppu_addr.write(data);
+                ppu_latch = data;
                 break;
 
             case 0x2007: // PPU data
@@ -180,10 +216,10 @@ void Bus::cpuWriteReg(uword address, byte data)
                 ppuWrite(reg_ppu_addr.address, data);
                 if(reg_ppu_ctrl.i) reg_ppu_addr.address += 32;
                 else reg_ppu_addr.address += 1;
+                ppu_latch = data;
                 break;
 
             default:
-                std::cerr << "Unsupported CPU Reg Write at " << address << std::endl;
                 break;
         }
     }
@@ -194,6 +230,7 @@ void Bus::cpuWriteReg(uword address, byte data)
             case 0x4014: // OAM DMA
                 dma_addr = static_cast<uword>(data) << 8;
                 cpu_suspend_cycles = 514;
+                ppu_latch = data;
                 break;
 
             default:

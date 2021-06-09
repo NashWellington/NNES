@@ -123,12 +123,9 @@ void PPU::tick()
 }
 
 #ifndef NDEBUG
+/*TODO probably delete
 void PPU::testTick()
 {
-    // TODO bounds checking
-    // TODO check vblank
-    // TODO OAM ADDR set during sprite eval
-
     if ((scanline >= 0 && scanline < POST_RENDER_START) || (scanline == PRE_RENDER_START)) // pre-render + visible
     {
         if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) // Get table bytes
@@ -176,10 +173,10 @@ void PPU::testTick()
             }
             else if (cycle == 339) // skip last cycle of odd frame
             {
-                /* Disabled for testing
+                * Disabled for testing
                 if (odd_frame) cycle++;
                 odd_frame = !odd_frame;
-                */
+                
             }
         }
     }
@@ -203,6 +200,7 @@ void PPU::testTick()
         display.renderFrame(reinterpret_cast<ubyte*>(&test_frame), 341, 262);
     }
 }
+*/
 
 // TODO handle ppu mask color modifier
 void PPU::getPalette(std::array<Pixel,4>& palette, uint palette_index)

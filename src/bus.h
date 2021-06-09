@@ -146,6 +146,7 @@ public:
     *      0: 8x8 px; 1: 8x16px
     *  P - PPU master/slave select
     *      0: read backdrop from EXT pins; 1: output color on EXT pins
+    *      NOTE: P should never be set; it could potentially break a normal NES
     *  V - Generate an NMI at the start of vblank
     *      0: off, 1: on
     * 
@@ -302,6 +303,10 @@ public:
     * On boot & reset: unspecified
     */
     uword dma_addr;
+
+// Other PPU internals
+    // Detailed here: https://wiki.nesdev.com/w/index.php/PPU_registers#Ports
+    byte ppu_latch = 0;
 
 // Other
     int cpu_suspend_cycles = 0; // Used to stall CPU during OAM DMA
