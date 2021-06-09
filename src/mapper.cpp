@@ -4,7 +4,6 @@ Mapper000::Mapper000(Header& header, std::ifstream& rom)
 {
     mirroring = header.mirroring;
 
-    // TODO throw exceptions instead for some of these
     assert(!header.trainer);
     assert((header.prg_ram_size == 0) || (header.prg_ram_size == 0x1000));
     assert((header.prg_rom_size == 0x4000) || (header.prg_rom_size == 0x8000));
@@ -69,9 +68,10 @@ Mapper001::Mapper001(Header& header, std::ifstream& rom)
     mirroring = header.mirroring;
 
     assert(!header.trainer);
-    assert((header.prg_rom_size == 0x40000) || (header.prg_rom_size == 0x80000));
-    assert(header.chr_rom_size == 0x2000);
-    assert((header.prg_ram_size == 0) || (header.prg_ram_size == 0x2000));
+    assert(header.prg_rom_size == 0x40000 || header.prg_rom_size == 0x80000);
+    // Allowing size 0 chr_rom_size for test rom compatibility
+    assert(header.chr_rom_size == 0 || header.chr_rom_size == 0x2000);
+    assert(header.prg_ram_size == 0 || header.prg_ram_size == 0x2000);
 
     if (header.prg_ram_size > 0)
     {

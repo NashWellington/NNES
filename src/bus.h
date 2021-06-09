@@ -103,6 +103,12 @@ private:
     std::array<byte, 0xBFD0> dummy_cart_mem = {};
 
 // PPU memory arrays
+    /* Dummy pattern tables
+    * Note: only used if pattern tables not present on the cartridge,
+    *       generally for compatibility with test roms
+    */
+    std::array<byte, 0x2000> dummy_pattern_tables = {};
+
     /* Name tables
     * $2000 to $23FF    <= name table 0
     * $2400 to $27FF    <= name table 1

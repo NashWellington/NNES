@@ -4,7 +4,7 @@ Bus bus;
 
 byte Bus::cpuRead(uword address)
 {
-    auto data = mapper->cpuRead(address); // Cartridge mem
+    std::optional<byte> data = mapper->cpuRead(address); // Cartridge mem
     if (data) return data.value();
     else if (address < 0x2000) // zpg, stack, RAM, or their mirrors
     {
@@ -14,7 +14,13 @@ byte Bus::cpuRead(uword address)
         else                        return zero_page[address];
     }
     else if (address < 0x4020) return cpuReadReg(address);
-    else return dummy_cart_mem[address - 0x4020];
+    else 
+    {
+        #ifndef NDEBUG
+        std::cerr << "Warning: read from dummy cart memory at " << hex(address) << std::endl;
+        #endif
+        return dummy_cart_mem[address - 0x4020];
+    }
 }
 
 void Bus::cpuWrite(uword address, byte data)
@@ -28,7 +34,13 @@ void Bus::cpuWrite(uword address, byte data)
         else                        zero_page[address] = data;
     }
     else if (address < 0x4020) cpuWriteReg(address, data);
-    else dummy_cart_mem[address - 0x4020] = data;
+    else 
+    {
+        #ifndef NDEBUG
+        std::cerr << "Warning: write to dummy cart memory at " << hex(address) << std::endl;
+        #endif
+        dummy_cart_mem[address - 0x4020] = data;
+    }
 }
 
 byte Bus::ppuRead(uword address)
@@ -37,8 +49,8 @@ byte Bus::ppuRead(uword address)
     if (data) return data.value();
     else if (address < 0x2000)
     {
-        std::cerr << "Error: CHR-ROM missing from cart" << std::endl;
-        throw std::exception();
+        std::cerr << "Warning: read from dummy CHR-ROM at " << hex(address) << std::endl;
+        return dummy_pattern_tables[address];
     }
     else if (address < 0x3F00) // Nametables + mirrors
     {
@@ -62,8 +74,8 @@ void Bus::ppuWrite(uword address, byte data)
     if (mapper->ppuWrite(address, data)) return;
     else if (address < 0x2000)
     {
-        std::cerr << "Error: CHR-ROM missing from cart" << std::endl;
-        throw std::exception();
+        std::cerr << "Warning: write dummy CHR-ROM at " << hex(address) << std::endl;
+        dummy_pattern_tables[address] = data;
     }
     else if (address < 0x3F00) // Nametables + mirrors
     {
@@ -84,10 +96,6 @@ void Bus::ppuWrite(uword address, byte data)
 
 byte Bus::cpuReadReg(uword address)
 {
-    // #ifndef NDEBUG
-    // std::cerr << "CPU register read at " << address << std::endl;
-    // #endif
-
     byte data = 0;
     if (address < 0x4000)
     {
@@ -95,7 +103,6 @@ byte Bus::cpuReadReg(uword address)
         switch (address)
         {
             //case 0x2000: //TODO latch stuff
-
 
             case 0x2002: // PPU Status reg
                 data = (reg_ppu_status.reg & 0xF8) + (reg_ppu_data * 0x07); // TODO figure this out
