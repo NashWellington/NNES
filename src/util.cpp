@@ -173,3 +173,14 @@ std::optional<std::string> decompile(uword& address)
     for (int i = 0; i < (20 - static_cast<int>(line.size())); i++) line += ' ';
     return line;
 }
+
+std::string peekMem(uword address)
+{
+    std::string line = hex(address) + ":";
+    for (int i = 0; i < 16; i++)
+    {
+        line += ' ';
+        line += hex(bus.cpuRead(address++));
+    }
+    return line;
+}

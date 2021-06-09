@@ -410,6 +410,20 @@ void Display::displayFrame(RunFlags& run_flags)
         ImGui::Text("CPU cycle: %6i", debug_state.ppu_cycle/3);
         ImGui::End();
     }
+    // Memory
+    // TODO for now this just shows PRG-ROM
+    {
+        ImGui::Begin("Memory");
+        ImGui::Text("PRG-ROM:");
+        uword addr = mem_address - 4 * 16;
+        for (int i = 0; i < 9; i++) // Display 9 lines
+        {
+            if (addr < 0x8000) ImGui::Text(" ");
+            else ImGui::Text("%s", peekMem(addr).c_str());
+            addr += 16;
+        }
+        ImGui::End();
+    }
 
     // Render
     ImGui::Render();
@@ -425,6 +439,7 @@ void Display::displayFrame(RunFlags& run_flags)
 #endif
 }
 
+#ifndef NDEBUG
 void Display::addPatternTable(ubyte* pt, int pt_i)
 {
     assert((pt_i >= 0) && (pt_i < 2));
@@ -457,6 +472,7 @@ void Display::addSprites(ubyte* sprites, int height)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 64, 8*height, 0, GL_RGB, GL_UNSIGNED_BYTE, sprites);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
+#endif
 
 void Display::renderFrame(ubyte* frame, int width, int height)
 {
