@@ -98,7 +98,7 @@ byte Bus::cpuReadReg(uword address)
 
 
             case 0x2002: // PPU Status reg
-                data = (reg_ppu_status.reg & 0xF8) + (reg_ppu_data * 0x07);
+                data = (reg_ppu_status.reg & 0xF8) + (reg_ppu_data * 0x07); // TODO figure this out
                 reg_ppu_status.v = 0;
                 reg_ppu_addr.i = 0;
                 return data;
@@ -129,7 +129,7 @@ byte Bus::cpuReadReg(uword address)
 
         }
     }*/
-    std::cerr << "Warning: unsupported CPU Reg Read at " << address << std::endl;
+    std::cerr << "Warning: unsupported CPU Reg Read at " << hex(address) << std::endl;
     return data;
 }
 
@@ -191,7 +191,7 @@ void Bus::cpuWriteReg(uword address, byte data)
                 break;
 
             default:
-                std::cerr << "Unsupported CPU Reg Write at " << address << std::endl;
+                std::cerr << "Unsupported CPU Reg Write at " << hex(address) << std::endl;
                 break;
         }
     }

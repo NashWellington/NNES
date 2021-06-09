@@ -29,8 +29,7 @@ byte CPU::pop()
     #ifndef NDEBUG
     if (reg_sp < old_sp)
     {
-        std::cerr << "Error: stack underflow" << std::endl;
-        throw std::exception();
+        std::cerr << "Warning: stack underflow" << std::endl;
     }
     #endif
 
@@ -46,8 +45,7 @@ void CPU::push(byte data)
     #ifndef NDEBUG
     if (reg_sp > old_sp)
     {
-        std::cerr << "Error: stack overflow" << std::endl;
-        throw std::exception();
+        std::cerr << "Warning: stack overflow" << std::endl;
     }
     #endif
 

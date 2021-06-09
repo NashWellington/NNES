@@ -1510,7 +1510,7 @@ int ISA::executeOpcode(ubyte instr)
             return ISC(cycles, address);
 
         default:
-            std::cerr << "Error: invalid opcode " << instr << std::endl;
+            std::cerr << "Error: invalid opcode " << hex(instr) << std::endl;
             throw std::exception();
             break;
     }
