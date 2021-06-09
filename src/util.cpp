@@ -165,7 +165,6 @@ std::string decompileMode(uword& address, ubyte instr)
 
 std::optional<std::string> decompile(uword& address)
 {
-    if (address == 0) return {};
     uword start_address = address;
     std::string line = hex(address) + ": ";
     byte instr = bus.cpuRead(address++);

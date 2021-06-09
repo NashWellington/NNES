@@ -394,15 +394,17 @@ void Display::displayFrame(RunFlags& run_flags)
         if (run_flags.paused) ImGui::Text("Paused");
         else ImGui::Text(" ");
         uword addr = debug_state.registers.reg_pc;
-        int lines = 5;
-        ImGui::Text("%-20s %s", decompile(addr).value().c_str(), "<---");
-        for (int i = 0; i < lines-1; i++)
+        int lines = 10;
+        std::optional<std::string> line;
+        for (int i = 0; i < lines; i++)
         {
-            if (auto line = decompile(addr))
+            line = decompile(addr);
+            if (line)
             {
-                ImGui::Text("%-20s", line.value().c_str());
+                if (i == 0) ImGui::Text("%-20s %s", line.value().c_str(), "<---");
+                else ImGui::Text("%-20s", line.value().c_str());
             }
-            else i = lines-1;
+            else i = lines;
         }
         ImGui::Text("PPU cycle: %6i", debug_state.ppu_cycle);
         ImGui::Text("CPU cycle: %6i", debug_state.ppu_cycle/3);
