@@ -4,7 +4,6 @@
 #include "apu.h"
 #include "bus.h"
 #include "boot.h"
-//#include "input.h"
 #include "display.h"
 #include "savestate.h"
 
@@ -12,6 +11,7 @@
 #define ERROR_LOG_FILENAME "../build/log/error.log"
 #endif
 
+// TODO find better way of handling args
 int main(int argc, char ** argv)
 {
     #ifndef NDEBUG
@@ -42,7 +42,7 @@ int main(int argc, char ** argv)
 
     #else
     // Check number of arguments
-    if (argc != 2)
+    if (argc < 2 || argc > 3)
     {
         std::cout << "Too few or too many arguments" << std::endl;
         throw std::exception();
@@ -65,9 +65,10 @@ int main(int argc, char ** argv)
 
     #ifndef NDEBUG
     RunFlags run_flags = {};
-    unsigned long long int ppu_cycles = 0;
-    unsigned long long int cycles_per_frame = 262 * 341; // Note: PPU skips a cycle every odd frame
-    while (!run_flags.finished) 
+    if (argc == 3) run_flags.paused = true;
+    uint32_t ppu_cycle = 0;
+    uint32_t cycles_per_frame = 262 * 341; // Note: PPU skips a cycle every odd frame
+    while (!run_flags.finished) // TODO figure out why it skips BRK
     {
         if (run_flags.paused)
         {
@@ -78,7 +79,7 @@ int main(int argc, char ** argv)
         else
         {
             ppu.tick();
-            if ((ppu_cycles % 3) == 2) 
+            if ((ppu_cycle % 3) == 2) 
             {
                 bool stepped = cpu.tick();
                 if (run_flags.tick)
@@ -95,12 +96,13 @@ int main(int argc, char ** argv)
                     }
                 }
             }
-            ppu_cycles++;
-            if ((ppu_cycles == cycles_per_frame) || (ppu_cycles == (cycles_per_frame * 2 - 1)))
+            ppu_cycle++;
+            debug_state.ppu_cycle = ppu_cycle;
+            if ((ppu_cycle == cycles_per_frame) || (ppu_cycle == (cycles_per_frame * 2 - 1)))
             {
                 cpu.save(debug_state); // Save registers for use by the debugger
                 display.displayFrame(run_flags);
-                ppu_cycles %= cycles_per_frame * 2 - 1;
+                ppu_cycle %= cycles_per_frame * 2 - 1;
                 if (run_flags.frame)
                 {
                     run_flags.paused = true;

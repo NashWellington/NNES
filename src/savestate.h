@@ -18,6 +18,7 @@ struct Savestate
     } registers = {};
     int cpu_cycles_left = 0;
     bool cpu_odd_cycle = false;
+    uint32_t ppu_cycle = 0;
 };
 
 extern std::vector<Savestate> savestates;

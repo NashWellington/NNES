@@ -55,7 +55,6 @@ std::string decompileMode(uword& address, ubyte instr)
         case 0x09:
         case 0x0B:
             assert (instr != 0x8B);
-            sprintf(mode.data(), " #$%02X", bus.cpuRead(address++));
             mode += "#$";
             mode += hex(bus.cpuRead(address++));
             break;

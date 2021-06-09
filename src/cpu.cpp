@@ -82,7 +82,7 @@ bool CPU::tick()
             stepped = true;
         }
     }
-    else cycle--;
+    else cycle--; // TODO ?
     odd_cycle = !odd_cycle;
     return stepped;
 }

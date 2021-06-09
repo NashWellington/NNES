@@ -380,8 +380,6 @@ void Display::displayFrame(RunFlags& run_flags)
     // Registers
     {
         ImGui::Begin("Registers");
-        if (run_flags.paused) ImGui::Text("Paused"); // TODO move this to a better location (like top right of SDL window)
-        else ImGui::Text(" ");
         ImGui::Text("Program Counter: %s", hex(debug_state.registers.reg_pc).c_str());
         ImGui::Text("Stack Pointer:     %s", hex(debug_state.registers.reg_sp).c_str());
         ImGui::Text("Accumulator:       %s", hex(debug_state.registers.reg_a).c_str());
@@ -393,6 +391,8 @@ void Display::displayFrame(RunFlags& run_flags)
     // Decompiler
     {
         ImGui::Begin("Decompiler");
+        if (run_flags.paused) ImGui::Text("Paused");
+        else ImGui::Text(" ");
         uword addr = debug_state.registers.reg_pc;
         int lines = 5;
         ImGui::Text("%-20s %s", decompile(addr).value().c_str(), "<---");
@@ -404,6 +404,8 @@ void Display::displayFrame(RunFlags& run_flags)
             }
             else i = lines-1;
         }
+        ImGui::Text("PPU cycle: %6i", debug_state.ppu_cycle);
+        ImGui::Text("CPU cycle: %6i", debug_state.ppu_cycle/3);
         ImGui::End();
     }
 
