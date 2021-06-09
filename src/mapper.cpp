@@ -5,8 +5,8 @@ Mapper000::Mapper000(Header& header, std::ifstream& rom)
     mirroring = header.mirroring;
 
     assert(!header.trainer);
-    assert((header.prg_ram_size == 0) || (header.prg_ram_size == 0x1000));
-    assert((header.prg_rom_size == 0x4000) || (header.prg_rom_size == 0x8000));
+    assert(header.prg_ram_size == 0 || header.prg_ram_size == 0x1000);
+    assert(header.prg_rom_size == 0x4000 || header.prg_rom_size == 0x8000);
     assert(header.chr_rom_size == 0x2000);
 
     if (header.prg_ram_size > 0) // TODO figure out Family Basic mode
