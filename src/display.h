@@ -2,6 +2,7 @@
 
 #include "globals.h"
 #include "savestate.h"
+#include "util.h"
 
 #include "libs/imgui/imgui.h"
 #include "libs/imgui/imgui_impl_sdl.h"

@@ -41,8 +41,7 @@
 class Bus
 {
 public:
-    // TODO constructor
-
+    // TODO make an arg for cpuRead that doesn't allow register state change on read
     byte  cpuRead(uword address);
     void  cpuWrite(uword address, byte data);
 

@@ -1,4 +1,4 @@
-objects =  main.o boot.o cpu.o ppu.o apu.o bus.o mapper.o isa.o mode.o savestate.o display.o globals.o imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
+objects =  main.o boot.o cpu.o ppu.o apu.o bus.o mapper.o isa.o mode.o savestate.o display.o util.o globals.o imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
 
 flags = -g -std=c++17 -Wall -Werror -Wextra
 
@@ -37,11 +37,14 @@ bus.o : bus.h globals.h mapper.h savestate.h
 mapper.o : mapper.h globals.h savestate.h
 		g++ $(flags) -c mapper.cpp
 
-display.o : display.h globals.h savestate.h libs/imgui/imgui.h libs/imgui/imgui_impl_sdl.h libs/imgui/imgui_impl_opengl3.h
+display.o : display.h globals.h util.h savestate.h libs/imgui/imgui.h libs/imgui/imgui_impl_sdl.h libs/imgui/imgui_impl_opengl3.h
 		g++ $(flags) -c display.cpp
 
 savestate.o : savestate.h globals.h
 		g++ $(flags) -c savestate.cpp
+
+util.o : util.h globals.h
+		g++ $(flags) -c util.cpp
 
 globals.o : globals.h
 		g++ $(flags) -c globals.cpp

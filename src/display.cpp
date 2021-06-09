@@ -393,7 +393,7 @@ void Display::displayFrame(RunFlags& run_flags)
     // Decompiler
     {
         ImGui::Begin("Decompiler");
-
+        ImGui::Text("%s", decompile(debug_state.registers.reg_pc).c_str());
         ImGui::End();
     }
 
