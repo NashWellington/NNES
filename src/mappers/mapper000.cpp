@@ -18,7 +18,6 @@ Mapper000::Mapper000(Header& header, std::ifstream& rom)
     if (header.prg_ram_size > 0)
     {
         prg_ram.resize(header.prg_ram_size);
-        rom.read(reinterpret_cast<char*>(prg_ram.data()), prg_ram.size());
         prg_ram_enabled = true;
     }
 

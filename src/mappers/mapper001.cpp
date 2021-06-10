@@ -22,11 +22,7 @@ Mapper001::Mapper001(Header& header, std::ifstream& rom)
     {
         banks = header.prg_ram_size / 0x2000;
         prg_ram.resize(banks);
-        for (uint i = 0; i < banks; i++)
-        {
-            rom.read(reinterpret_cast<char*>(prg_ram[i].data()), 0x2000);
-        }
-        // TODO change depending on MMC1A,B,C
+        // TODO change default depending on MMC1A,B,C
         prg_ram_enabled = true;
     }
     else prg_ram.clear();
