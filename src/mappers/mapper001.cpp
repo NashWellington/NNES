@@ -1,34 +1,48 @@
 #include "mapper.h"
 
-// TODO test
+// TODO support for SZROM
+
 Mapper001::Mapper001(Header& header, std::ifstream& rom)
 {
     mirroring = header.mirroring;
     assert(!header.trainer);
-    assert(header.prg_rom_size == 0x40000 || header.prg_rom_size == 0x80000);
-    // TODO testing
-    std::cout << header.chr_rom_size << std::endl;
-    std::cout << header.chr_ram_size << std::endl;
-    assert((header.chr_rom_size == 0x20000) != (header.chr_ram_size == 0x20000));
-    assert(header.prg_ram_size == 0 || header.prg_ram_size == 0x2000);
+    assert(header.prg_rom_size >= 0x8000 && header.prg_rom_size <= 0x80000);
+    assert(header.prg_ram_size <= 0x8000);
 
+    uint banks = 0;
     if (header.prg_ram_size > 0)
     {
-        rom.read(reinterpret_cast<char*>(prg_ram.data()), prg_ram.size());
+        banks = header.prg_ram_size / 0x2000;
+        prg_ram.resize(banks);
+        for (uint i = 0; i < banks; i++)
+        {
+            rom.read(reinterpret_cast<char*>(prg_ram[i].data()), 0x2000);
+        }
+        // TODO change depending on MMC1A,B,C
         prg_ram_enabled = true;
     }
-    uint banks = header.prg_rom_size / 0x4000;
+    else prg_ram.clear();
+
+    banks = header.prg_rom_size / 0x4000;
     prg_rom.resize(banks);
     for (uint i = 0; i < banks; i++)
     {
         rom.read(reinterpret_cast<char*>(prg_rom[i].data()), 0x4000);
     }
-    banks = header.chr_rom_size / 0x1000;
+
+    if (header.chr_rom_size > 0 && header.chr_ram_size == 0)
+        banks = header.chr_rom_size / 0x1000;
+    else if (header.chr_rom_size == 0 && header.chr_ram_size > 0)
+        banks = header.chr_ram_size / 0x1000;
     chr_mem.resize(banks);
     for (uint i = 0; i < banks; i++)
     {
         rom.read(reinterpret_cast<char*>(chr_mem[i].data()), 0x1000);
     }
+
+    assert(prg_rom.size() >= 2 && prg_rom.size() <= 16);
+    assert(prg_ram.size() <= 4);
+    assert(chr_mem.size() >= 2 && chr_mem.size() <= 16);
 }
 
 std::optional<byte> Mapper001::cpuRead(uword address)
@@ -36,11 +50,22 @@ std::optional<byte> Mapper001::cpuRead(uword address)
     if (address < 0x6000) return {};
     else if (address < 0x8000) // PRG-RAM
     {
-        if (!prg_ram_enabled) return {};
+        if (!prg_ram_enabled || prg_ram.size() == 0) return {};
         else
         {
-            // TODO bank switching
-            // TODO this probably has something to do w/ submappers...?
+            switch (prg_ram.size())
+            {
+                case 1: // No bank switching
+                    return prg_ram[0][address - 0x6000];
+                case 2: // 16 KiB PRG-RAM
+                    return prg_ram[chr_bank[0].s][address-0x6000];
+                case 4: // 32 KiB PRG-RAM
+                    return prg_ram[chr_bank[0].ss][address-0x6000];
+                default:
+                    // TODO remove
+                    std::cerr << "Error: Unsupported PRG-RAM size: " << (prg_ram.size() * 0x6000) << std::endl;
+                    throw std::exception();
+            }
             return {};
         }
     }
@@ -48,20 +73,20 @@ std::optional<byte> Mapper001::cpuRead(uword address)
     {
         ubyte low_bank = 0; // bank indices
         ubyte high_bank = 0;
-        assert (prg_bank_mode <= 3);
-        switch (prg_bank_mode)
+        assert (prg_rom_bank_mode <= 3);
+        switch (prg_rom_bank_mode)
         {
             case 0: // 32 KiB mode
             case 1:
-                low_bank = prg_bank & 0x0E;
+                low_bank = prg_rom_bank & 0x1E;
                 high_bank = low_bank + 1;
                 break;
             case 2: // Fix first bank
                 low_bank = 0;
-                high_bank = prg_bank;
+                high_bank = prg_rom_bank & 0x1F;
                 break;
             case 3: // Fix last bank
-                low_bank = prg_bank;
+                low_bank = prg_rom_bank & 0x1F;
                 high_bank = prg_rom.size() - 1;
                 break;
             default:
@@ -92,7 +117,7 @@ bool Mapper001::cpuWrite(uword address, byte data)
         if (data < 0) // check if byte 7 is set
         {
             reg_shift = 0x10;
-            prg_bank_mode = 3;
+            prg_rom_bank_mode = 3;
         }
         else
         {
@@ -126,20 +151,52 @@ bool Mapper001::cpuWrite(uword address, byte data)
                         default:
                             break;
                     }
-                    prg_bank_mode = (reg_shift & 0x0C) >> 2;
+                    prg_rom_bank_mode = (reg_shift & 0x0C) >> 2;
                     chr_bank_mode = (reg_shift & 0x10) >> 4;
                 }
                 else if (address < 0xC000) // CHR bank 0
                 {
-                    chr_bank_0 = reg_shift;
+                    chr_bank[0].reg = reg_shift;
+
+                    // Disable/Enable PRG-RAM if SNROM
+                    if (prg_rom.size() <= 8 && chr_mem.size() == 2 && prg_ram.size() == 1)
+                    {
+                        prg_ram_enabled = !chr_bank[0].e;
+                    }
+
+                    // Set PRG-RAM bank if SOROM/SUROM/SXROM
+                    if (prg_ram.size() == 2) 
+                        prg_ram_bank = chr_bank[0].s;
+                    else if (prg_ram.size() == 4) 
+                        prg_ram_bank = chr_bank[0].ss;
+
+                    // Set PRG-ROM bank if 512K PRG-ROM
+                    if (prg_rom.size() == 16) 
+                        prg_rom_bank = (prg_rom_bank & 0x0F) | ((chr_bank[0]).p << 4);
                 }
                 else if (address < 0xE000) // CHR bank 1
                 {
-                    chr_bank_1 = reg_shift;
+                    chr_bank[1].reg = reg_shift;
+
+                    // Disable/Enable PRG-RAM if SNROM and not 8KiB mode
+                    if (prg_rom.size() <= 8 && chr_mem.size() == 2 && prg_ram.size() == 1 && chr_bank_mode == 1)
+                    {
+                        prg_ram_enabled = !chr_bank[1].e;
+                    }
+
+                    // Set PRG-RAM bank if SOROM/SUROM/SXROM and not 8KiB mode
+                    if (prg_ram.size() == 2 && chr_bank_mode == 1) 
+                        prg_ram_bank = chr_bank[1].s;
+                    else if (prg_ram.size() == 4) 
+                        prg_ram_bank = chr_bank[1].ss;
+
+                    // Set PRG-ROM bank if 512K PRG-ROM and not 8KiB mode
+                    if (prg_rom.size() == 16 && chr_bank_mode == 1) 
+                        prg_rom_bank = (prg_rom_bank & 0x0F) | ((chr_bank[1]).p << 4);
                 }
                 else // PRG bank
                 {
-                    prg_bank = reg_shift & 0x0F;
+                    prg_rom_bank |= (reg_shift & 0x0F);
                     prg_ram_enabled = static_cast<bool>((reg_shift & 0x10) >> 4);
                 }
             }
@@ -157,13 +214,13 @@ std::optional<byte> Mapper001::ppuRead(uword address)
         ubyte high_bank = 0;
         if (chr_bank_mode == 0)
         {
-            low_bank = chr_bank_0 & 0x1E;
+            low_bank = (chr_bank[0].chr_bank & 0x1E) % chr_mem.size();
             high_bank = low_bank + 1;
         }
         else
         {
-            low_bank = chr_bank_0;
-            high_bank = chr_bank_1;
+            low_bank = chr_bank[0].chr_bank % chr_mem.size();
+            high_bank = chr_bank[1].chr_bank % chr_mem.size();
         }
 
         if (address < 0x1000)
@@ -188,13 +245,13 @@ bool Mapper001::ppuWrite(uword address, byte data)
             ubyte high_bank = 0;
             if (chr_bank_mode == 0)
             {
-                low_bank = chr_bank_0 & 0x1E;
+                low_bank = (chr_bank[0].chr_bank & 0x1E) % chr_mem.size();
                 high_bank = low_bank + 1;
             }
             else
             {
-                low_bank = chr_bank_0;
-                high_bank = chr_bank_1;
+                low_bank = chr_bank[0].chr_bank % chr_mem.size();
+                high_bank = chr_bank[1].chr_bank % chr_mem.size();
             }
 
             if (address < 0x1000)

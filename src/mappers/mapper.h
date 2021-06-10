@@ -106,13 +106,7 @@ public:
     std::optional<byte> ppuRead(uword address);
     bool ppuWrite(uword address, byte data);
 private:
-// Bank switching methods
-    void prgBankSwitch(); // called anytime a register is changed
-    void chrBankSwitch(); // called anytime a register is changed
-
 // Registers
-    /* Shift register
-    */
     byte reg_shift = 0x10;
 
     /* Controls PRG-ROM bank switching
@@ -120,7 +114,7 @@ private:
     * 2: fix first bank at $8000 and switch 16KiB at $C000
     * 3: fix last bank at $C000 and switch 16KiB at $8000
     */
-    ubyte prg_bank_mode = 0;
+    ubyte prg_rom_bank_mode = 0;
 
     /* Controls CHR-ROM bank switching
     * 0: switch one 8KiB bank uses prg_bank_0 for indices
@@ -128,28 +122,85 @@ private:
     */
     ubyte chr_bank_mode = 0;
 
-    ubyte prg_bank = 0; // Used w/ prg_bank_mode to determine PRG-ROM banking
-    ubyte chr_bank_0 = 0; // bit 0 ignored in 8KiB mode
-    ubyte chr_bank_1 = 0;
+    ubyte prg_rom_bank = 0; // Used w/ prg_bank_mode to determine PRG-ROM banking
+
+    ubyte prg_ram_bank = 0;
+
+    // https://wiki.nesdev.com/w/index.php/MMC1#Variants
+    union
+    {
+        struct
+        {
+            union
+            {
+                struct // default
+                {
+                    unsigned chr_bank : 5;
+                };
+                struct // SNROM
+                {
+                    unsigned : 4;
+                    
+                    /* Toggles PRG-RAM
+                    * Only used if //TODO when?
+                    */
+                    unsigned        e : 1;
+                };
+                struct // SOROM, SUROM, SXROM
+                {
+                    unsigned : 2;
+
+                    union
+                    {
+                        struct
+                        {
+                            /* Selects 8KiB PRG-RAM bank
+                            * Only used if PRG-RAM size == 32KiB
+                            * //TODO should I reverse this?
+                            */
+                            unsigned       ss : 2;
+                        };
+                        struct
+                        {
+                            unsigned : 1;
+                            /* Selects 8KiB PRG-RAM bank
+                            * Only used if PRG-RAM size == 16KiB
+                            */
+                            unsigned        s : 1;
+                        };
+                    };
+                    /* Selects 256 PRG-ROM bank
+                    * Only if PRG-ROM size == 512KiB
+                    */
+                    unsigned        p : 1;
+                };
+            };
+            unsigned : 3; // unused
+        };
+        byte reg = 0;
+    } chr_bank[2] {};
 
 // Banks
     /* Program RAM (optional)
-    * capacity: $8000
+    * capacity: $0 to $8000 (0-32 KiB)
+    * banks:      0-4
     * window:   $2000
     * location: $6000
     */
-    std::array<byte, 0x8000> prg_ram = {};
+    std::vector<std::array<byte,0x2000>> prg_ram = {};
     bool prg_ram_enabled = false;
 
     /* Program ROM
-    * capacity: $40000 or $80000 (256K or 512K)
+    * capacity: $8000 to $80000 (32-512 KiB)
+    * banks:     2-16
     * window:   $4000 x 2
     * location: $8000
     */
     std::vector<std::array<byte,0x4000>> prg_rom = {};
 
-    /* Character ROM
-    * capacity: $20000 (128K)
+    /* Character ROM/RAM
+    * capacity: $2000 to $20000 (8-128KiB)
+    * banks:     2-16
     * window:   $1000 x 2
     * location: $0000
     */
