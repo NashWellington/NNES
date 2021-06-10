@@ -2,8 +2,8 @@
 
 #pragma GCC diagnostic warning "-Wunused-parameter"
 
-#include "globals.h"
-#include "savestate.h"
+#include "../globals.h"
+#include "../savestate.h"
 
 // https://wiki.nesdev.com/w/index.php/Mirroring#Nametable_Mirroring
 enum class MirrorType

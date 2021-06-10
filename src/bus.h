@@ -1,7 +1,7 @@
 #pragma once
 
 #include "globals.h"
-#include "mapper.h"
+#include "mappers/mapper.h"
 #include "savestate.h"
 
 /* 64 KiB CPU memory map

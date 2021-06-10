@@ -1,4 +1,6 @@
-objects =  main.o boot.o cpu.o ppu.o apu.o bus.o mapper.o isa.o mode.o savestate.o display.o util.o globals.o imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
+objects =  main.o boot.o cpu.o ppu.o apu.o bus.o $(mapper_objects) isa.o mode.o savestate.o display.o util.o globals.o imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
+
+mapper_objects = mapper000.o mapper001.o
 
 flags = -g -std=c++17 -Wall -Werror -Wextra
 
@@ -13,7 +15,7 @@ $(project) : $(objects)
 main.o : main.cpp globals.h boot.h cpu.h ppu.h apu.h display.h savestate.h
 		g++ $(flags) -c main.cpp
 
-boot.o : boot.h globals.h bus.h mapper.h
+boot.o : boot.h globals.h bus.h mappers/mapper.h
 		g++ $(flags) -c boot.cpp
 
 cpu.o : cpu.h globals.h isa.h bus.h savestate.h
@@ -31,11 +33,14 @@ isa.o : isa.h globals.h mode.h cpu.h
 mode.o : mode.h globals.h cpu.h
 		g++ $(flags) -c mode.cpp
 
-bus.o : bus.h globals.h mapper.h savestate.h
+bus.o : bus.h globals.h mappers/mapper.h savestate.h
 		g++ $(flags) -c bus.cpp
 
-mapper.o : mapper.h globals.h savestate.h
-		g++ $(flags) -c mapper.cpp
+mapper000.o : mappers/mapper.h globals.h savestate.h
+		g++ $(flags) -c mappers/mapper000.cpp
+
+mapper001.o : mappers/mapper.h globals.h savestate.h
+		g++ $(flags) -c mappers/mapper001.cpp
 
 display.o : display.h globals.h util.h savestate.h libs/imgui/imgui.h libs/imgui/imgui_impl_sdl.h libs/imgui/imgui_impl_opengl3.h
 		g++ $(flags) -c display.cpp

@@ -2,7 +2,7 @@
 
 #include "globals.h"
 #include "bus.h"
-#include "mapper.h"
+#include "mappers/mapper.h"
 
 class Boot
 {
