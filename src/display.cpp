@@ -248,12 +248,21 @@ void Display::pollEvents(RunFlags& run_flags)
                     case SDLK_SPACE:
                         run_flags.paused = !run_flags.paused;
                         break;
+                    // TODO make these only work if Memory window is hovered/selected
                     case SDLK_UP:
                         mem_address -= 16;
                         if (mem_address < 0x8000) mem_address += 0x8000;
                         break;
                     case SDLK_DOWN:
                         mem_address += 16;
+                        if (mem_address < 0x8000) mem_address += 0x8000;
+                        break;
+                    case SDLK_LEFT:
+                        mem_address -= 9 * 16;
+                        if (mem_address < 0x8000) mem_address += 0x8000;
+                        break;
+                    case SDLK_RIGHT:
+                        mem_address += 9 * 16;
                         if (mem_address < 0x8000) mem_address += 0x8000;
                         break;
                     default:
@@ -359,7 +368,7 @@ void Display::displayFrame(RunFlags& run_flags)
                 ImGui::BeginTooltip();
                 float region_sz = 64.0f;
                 float region_x = io.MousePos.x - pos.x - region_sz * 0.5f - width*(i%2) - 10.0f * (i%2);
-                float region_y = io.MousePos.y - pos.y - region_sz * 0.5f - width*(i/2) - 10.0f * (i/2);
+                float region_y = io.MousePos.y - pos.y - region_sz * 0.5f - height*(i/2) - 10.0f * (i/2);
                 float zoom = 2.0f;
                 if (region_x < 0.0f) region_x = 0.0f;
                 else if (region_x > width - region_sz) region_x = width - region_sz;
@@ -421,7 +430,7 @@ void Display::displayFrame(RunFlags& run_flags)
         ImGui::End();
     }
     // Memory
-    // TODO for now this just shows PRG-ROM
+    // TODO add tabs or buttons to switch between memory fields
     {
         ImGui::Begin("Memory");
         ImGui::Text("PRG-ROM:");
