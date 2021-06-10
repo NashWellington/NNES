@@ -41,3 +41,5 @@ enum InterruptType
 std::string hex(uword x);
 std::string hex(ubyte x);
 std::string hex(byte x);
+
+std::string binary(byte x);
