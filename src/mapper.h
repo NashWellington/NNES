@@ -27,8 +27,8 @@ enum class HeaderType
 struct Header
 {
     HeaderType type = HeaderType::NONE;
-    int mapper = 0;
-    int submapper = 0;
+    uint mapper = 0;
+    uint submapper = 0;
     bool trainer = false;
     uint64_t prg_rom_size = 0;
     uint64_t chr_rom_size = 0;

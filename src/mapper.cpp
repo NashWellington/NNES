@@ -203,41 +203,40 @@ bool Mapper001::cpuWrite(uword address, byte data)
             // Set register
             if (set_reg)
             {
-                uword reg_i = (address & 0x6000) >> 13;
-                assert(reg_i <= 3);
-                switch (reg_i)
+                if (address < 0xA000) // control register
                 {
-                    case 0: // control register
-                        switch (reg_shift & 0x03) // mirroring
-                        {
-                            case 0:
-                                mirroring = MirrorType::SINGLE_SCREEN_LOWER;
-                                break;
-                            case 1:
-                                mirroring = MirrorType::SINGLE_SCREEN_UPPER;
-                                break;
-                            case 2:
-                                mirroring = MirrorType::VERTICAL;
-                                break;
-                            case 3:
-                                mirroring = MirrorType::HORIZONTAL;
-                                break;
-                            default:
-                                break;
-                        }
-                        prg_bank_mode = (reg_shift & 0x0C) >> 2;
-                        chr_bank_mode = (reg_shift & 0x10) >> 4;
-                        break;
-                    case 1: // CHR bank 0
-                        chr_bank_0 = reg_shift;
-                        break;
-                    case 2: // CHR bank 1
-                        chr_bank_1 = reg_shift;
-                        break;
-                    case 3: // PRG bank
-                        prg_bank = reg_shift & 0x0F;
-                        prg_ram_enabled = static_cast<bool>((reg_shift & 0x10) >> 4);
-                        break;
+                    switch (reg_shift & 0x03) // mirroring
+                    {
+                        case 0:
+                            mirroring = MirrorType::SINGLE_SCREEN_LOWER;
+                            break;
+                        case 1:
+                            mirroring = MirrorType::SINGLE_SCREEN_UPPER;
+                            break;
+                        case 2:
+                            mirroring = MirrorType::VERTICAL;
+                            break;
+                        case 3:
+                            mirroring = MirrorType::HORIZONTAL;
+                            break;
+                        default:
+                            break;
+                    }
+                    prg_bank_mode = (reg_shift & 0x0C) >> 2;
+                    chr_bank_mode = (reg_shift & 0x10) >> 4;
+                }
+                else if (address < 0xC000) // CHR bank 0
+                {
+                    chr_bank_0 = reg_shift;
+                }
+                else if (address < 0xE000) // CHR bank 1
+                {
+                    chr_bank_1 = reg_shift;
+                }
+                else // PRG bank
+                {
+                    prg_bank = reg_shift & 0x0F;
+                    prg_ram_enabled = static_cast<bool>((reg_shift & 0x10) >> 4);
                 }
             }
         }

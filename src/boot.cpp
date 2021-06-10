@@ -42,9 +42,12 @@ Header Boot::readHeader(std::ifstream& rom)
     {
         header.mapper = (header_data[7] & 0xF0) + ((header_data[6] & 0xF0) >> 4);
     }
-
     if (header.type == HeaderType::NES20) 
         header.mapper += uword(header_data[8] & 0x0F) << 8;
+
+    // Detect submapper type
+    if (header.type == HeaderType::NES20) 
+        header.submapper = (header_data[8] & 0xF0) >> 4;
 
     // Detect PRG-ROM size
     uword prg_rom_ctrl = header_data[4];
