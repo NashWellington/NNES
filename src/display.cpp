@@ -248,6 +248,14 @@ void Display::pollEvents(RunFlags& run_flags)
                     case SDLK_SPACE:
                         run_flags.paused = !run_flags.paused;
                         break;
+                    case SDLK_UP:
+                        mem_address -= 16;
+                        if (mem_address < 0x8000) mem_address += 0x8000;
+                        break;
+                    case SDLK_DOWN:
+                        mem_address += 16;
+                        if (mem_address < 0x8000) mem_address += 0x8000;
+                        break;
                     default:
                         break;
                 }
@@ -386,6 +394,8 @@ void Display::displayFrame(RunFlags& run_flags)
         ImGui::Text("Register X:        %s", hex(debug_state.registers.reg_x).c_str());
         ImGui::Text("Register Y:        %s", hex(debug_state.registers.reg_y).c_str());
         ImGui::Text("Status Register:   %s", hex(debug_state.registers.reg_sr).c_str());
+        ImGui::Text("NV BDIZC");
+        ImGui::Text("%s", binary(debug_state.registers.reg_sr).c_str());
         ImGui::End();
     }
     // Decompiler
@@ -422,6 +432,15 @@ void Display::displayFrame(RunFlags& run_flags)
             else ImGui::Text("%s", peekMem(addr).c_str());
             addr += 16;
         }
+        ImGui::End();
+    }
+    // ROM Info
+    {
+        ImGui::Begin("ROM Info");
+        ImGui::Text("Filename: %s", debug_state.filename.c_str());
+        ImGui::Text("Header: %s", debug_state.header_type.c_str());
+        ImGui::Text("Mapper: %3i", debug_state.mapper);
+        ImGui::Text("Submapper: %3i", debug_state.submapper);
         ImGui::End();
     }
 

@@ -45,7 +45,7 @@ mapper001.o : mappers/mapper.h globals.h savestate.h
 display.o : display.h globals.h util.h savestate.h libs/imgui/imgui.h libs/imgui/imgui_impl_sdl.h libs/imgui/imgui_impl_opengl3.h
 		g++ $(flags) -c display.cpp
 
-savestate.o : savestate.h globals.h
+savestate.o : savestate.h globals.h mappers/mapper.h
 		g++ $(flags) -c savestate.cpp
 
 util.o : util.h globals.h

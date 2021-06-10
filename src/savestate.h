@@ -19,6 +19,13 @@ struct Savestate
     int cpu_cycles_left = 0;
     bool cpu_odd_cycle = false;
     uint32_t ppu_cycle = 0;
+
+    #ifndef NDEBUG
+    std::string filename = "";
+    std::string header_type = "";
+    uint mapper = 0;
+    uint submapper = 0;
+    #endif
 };
 
 extern std::vector<Savestate> savestates;

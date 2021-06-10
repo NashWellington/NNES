@@ -64,6 +64,7 @@ int main(int argc, char ** argv)
     cpu.start();
 
     #ifndef NDEBUG
+    debug_state.filename = rom_filename;
     RunFlags run_flags = {};
     if (argc == 3) run_flags.paused = true;
     uint32_t ppu_cycle = 0;

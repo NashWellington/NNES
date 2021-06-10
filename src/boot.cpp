@@ -4,6 +4,27 @@ void Boot::loadRom(std::ifstream& rom)
 {
     // Read header
     Header header = readHeader(rom);
+    #ifndef NDEBUG
+    switch (header.type)
+    {
+        case HeaderType::NONE:
+            debug_state.header_type = "No Header";
+            break;
+        case HeaderType::INES:
+            debug_state.header_type = "iNES";
+            break;
+        case HeaderType::NES20:
+            debug_state.header_type = "NES 2.0";
+            break;
+        case HeaderType::UNIF:
+            debug_state.header_type = "UNIF";
+            break;
+        default:
+            break;
+    }
+    debug_state.mapper = header.mapper;
+    debug_state.submapper = header.submapper;
+    #endif
     bus.setMapper(getMapper(header, rom));
 }
 
