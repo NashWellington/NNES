@@ -23,8 +23,12 @@ struct Savestate
     #ifndef NDEBUG
     std::string filename = "";
     std::string header_type = "";
-    uint mapper = 0;
-    uint submapper = 0;
+    int mapper = -1;
+    int submapper = -1;
+    int64_t prg_rom_size = -1;
+    int64_t prg_ram_size = -1;
+    int64_t chr_rom_size = -1;
+    int64_t chr_ram_size = -1;
     #endif
 };
 

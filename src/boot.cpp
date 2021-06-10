@@ -4,6 +4,8 @@ void Boot::loadRom(std::ifstream& rom)
 {
     // Read header
     Header header = readHeader(rom);
+
+    // Send header info to debug_state
     #ifndef NDEBUG
     switch (header.type)
     {
@@ -24,7 +26,12 @@ void Boot::loadRom(std::ifstream& rom)
     }
     debug_state.mapper = header.mapper;
     debug_state.submapper = header.submapper;
+    debug_state.prg_rom_size = header.prg_rom_size;
+    debug_state.prg_ram_size = header.prg_ram_size;
+    debug_state.chr_rom_size = header.chr_rom_size;
+    debug_state.chr_ram_size = header.chr_ram_size;
     #endif
+
     bus.setMapper(getMapper(header, rom));
 }
 

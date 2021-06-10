@@ -438,9 +438,15 @@ void Display::displayFrame(RunFlags& run_flags)
     {
         ImGui::Begin("ROM Info");
         ImGui::Text("Filename: %s", debug_state.filename.c_str());
-        ImGui::Text("Header: %s", debug_state.header_type.c_str());
-        ImGui::Text("Mapper: %3i", debug_state.mapper);
-        ImGui::Text("Submapper: %3i", debug_state.submapper);
+        ImGui::Text("Header: %8s", debug_state.header_type.c_str());
+        ImGui::Text("Mapper:      %3i", debug_state.mapper);
+        ImGui::Text("Submapper:   %3i", debug_state.submapper);
+        ImGui::Text("PRG-ROM:     %3li KiB", debug_state.prg_rom_size/1024);
+        ImGui::Text("PRG-RAM:     %3li KiB", debug_state.prg_ram_size/1024);
+        if (debug_state.chr_rom_size != 0)
+            ImGui::Text("CHR-ROM:     %3li KiB", debug_state.chr_rom_size/1024);
+        if (debug_state.chr_ram_size != 0)
+            ImGui::Text("CHR-RAM:     %3li KiB", debug_state.chr_ram_size/1024);
         ImGui::End();
     }
 
