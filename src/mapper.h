@@ -26,7 +26,6 @@ enum class HeaderType
 
 struct Header
 {
-    // TODO reorder these
     HeaderType type = HeaderType::NONE;
     int mapper = 0;
     int submapper = 0;
@@ -34,6 +33,7 @@ struct Header
     uint64_t prg_rom_size = 0;
     uint64_t chr_rom_size = 0;
     uint64_t prg_ram_size = 0;
+    uint64_t chr_ram_size = 0;
     MirrorType mirroring;
 };
 
@@ -81,12 +81,17 @@ private:
     */
     std::vector<byte> prg_rom = {};
 
-    /* Character ROM
+    /* Character ROM or RAM
     * capacity: $2000
     * window:   $2000
     * location: $0000
     */
-    std::array<byte, 0x2000> chr_rom = {};
+    std::array<byte, 0x2000> chr_mem = {};
+
+    /* Determines if chr_mem acts as CHR-RAM
+    * Used for compatibility with some test roms and homebrew games
+    */
+    bool chr_ram = false;
 };
 
 /* MMC1
@@ -148,5 +153,7 @@ private:
     * window:   $1000 x 2
     * location: $0000
     */
-    std::vector<std::array<byte,0x1000>> chr_rom = {};
+    std::vector<std::array<byte,0x1000>> chr_mem = {};
+
+    bool chr_ram = false;
 };

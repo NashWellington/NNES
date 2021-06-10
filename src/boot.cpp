@@ -32,6 +32,8 @@ Header Boot::readHeader(std::ifstream& rom)
         header.type = HeaderType::NONE;
     }
 
+    assert(header.type == HeaderType::INES || header.type == HeaderType::NES20);
+
     // Detect trainer
     header.trainer = (header_data[6] & 0x04) >> 2;
 
@@ -52,7 +54,7 @@ Header Boot::readHeader(std::ifstream& rom)
 
     if ((prg_rom_ctrl & 0x0F00) != 0x0F00) // prg_rom_size = prg_rom_ctrl * 16 KiB if MSB is not 0x0F
     {
-        header.prg_rom_size = prg_rom_ctrl * (2 << 13);
+        header.prg_rom_size = prg_rom_ctrl * 0x4000;
     }
     else
     {
@@ -66,7 +68,7 @@ Header Boot::readHeader(std::ifstream& rom)
         chr_rom_ctrl += (uword(header_data[9] & 0xF0) << 4);
     if ((chr_rom_ctrl & 0x0F00) != 0x0F00) // chr_rom_size = chr_rom_ctrl * 8 KiB if MSB is not 0x0F
     {
-        header.chr_rom_size = chr_rom_ctrl * (2 << 12);
+        header.chr_rom_size = chr_rom_ctrl * 0x2000;
     }
     else
     {
@@ -75,12 +77,32 @@ Header Boot::readHeader(std::ifstream& rom)
     }
 
     // Detect PRG-RAM size
-    // TODO iNES 1.0 shenanigans
-    ubyte prg_ram_ctrl = header_data[10] & 0x0F;
-    if (prg_ram_ctrl != 0)
+    if (header.type == HeaderType::INES)
     {
-        header.prg_ram_size = 64 << prg_ram_ctrl;
+        ubyte prg_ram_ctrl = header_data[8];
+        if (prg_ram_ctrl == 0) header.prg_ram_size = 0x2000;
+        else header.prg_ram_size = prg_ram_ctrl * 0x2000;
     }
+    else if (header.type == HeaderType::NES20)
+    {
+        ubyte prg_ram_ctrl = header_data[10] & 0x0F;
+        if (prg_ram_ctrl != 0)
+        {
+            header.prg_ram_size = 64 << prg_ram_ctrl;
+        }
+    }
+
+    // Detect CHR-RAM size
+    if (header.type == HeaderType::INES)
+    {
+        if (header.chr_rom_size == 0) header.chr_ram_size = 0x2000;
+    }
+    else if (header.type == HeaderType::NES20)
+    {
+        header.chr_ram_size = 64 << (header_data[11] & 0x0F);
+    }
+
+    // TODO Detect CHR-NV-RAM size
 
     // Detect mirroring type
     if (header_data[6] & 0x01) header.mirroring = MirrorType::VERTICAL;

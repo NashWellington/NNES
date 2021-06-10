@@ -7,7 +7,8 @@ Mapper000::Mapper000(Header& header, std::ifstream& rom)
     assert(!header.trainer);
     assert(header.prg_ram_size == 0 || header.prg_ram_size == 0x1000);
     assert(header.prg_rom_size == 0x4000 || header.prg_rom_size == 0x8000);
-    assert(header.chr_rom_size == 0x2000);
+    // 8KiB CHR-ROM or CHR-RAM, but not both (aka XOR)
+    assert((header.chr_rom_size == 0x2000) != (header.chr_ram_size == 0x2000));
 
     if (header.prg_ram_size > 0) // TODO figure out Family Basic mode
     {
@@ -19,7 +20,8 @@ Mapper000::Mapper000(Header& header, std::ifstream& rom)
     prg_rom.resize(header.prg_rom_size);
     rom.read(reinterpret_cast<char*>(prg_rom.data()), prg_rom.size());
 
-    rom.read(reinterpret_cast<char*>(chr_rom.data()), chr_rom.size());
+    rom.read(reinterpret_cast<char*>(chr_mem.data()), chr_mem.size());    
+    if (header.chr_ram_size > 0) chr_ram = true;
 
     assert(header.prg_rom_size == prg_rom.size());
 }
@@ -61,7 +63,9 @@ bool Mapper000::cpuWrite(uword address, byte data)
     }
     else
     {
+        #ifndef NDEBUG
         std::cerr << "Warning: unsupported CPU write to " << hex(address) << std::endl;
+        #endif
         return true;
     }
 }
@@ -69,7 +73,7 @@ bool Mapper000::cpuWrite(uword address, byte data)
 std::optional<byte> Mapper000::ppuRead(uword address)
 {
     if (address >= 0x2000) return {};
-    else return chr_rom[address];
+    else return chr_mem[address];
 }
 
 bool Mapper000::ppuWrite(uword address, byte data)
@@ -77,8 +81,18 @@ bool Mapper000::ppuWrite(uword address, byte data)
     if (address >= 0x2000) return false;
     else
     {
-        std::cerr << "Warning: unsupported PPU write to " << hex(address) << std::endl;
-        return true;
+        if (chr_ram)
+        {
+            chr_mem[address] = data;
+            return true;
+        }
+        else
+        {
+            #ifndef NDEBUG
+            std::cerr << "Warning: unsupported PPU write to " << hex(address) << std::endl;
+            #endif
+            return true;
+        }
     }
 }
 
@@ -88,7 +102,10 @@ Mapper001::Mapper001(Header& header, std::ifstream& rom)
     mirroring = header.mirroring;
     assert(!header.trainer);
     assert(header.prg_rom_size == 0x40000 || header.prg_rom_size == 0x80000);
-    assert(header.chr_rom_size == 0x2000);
+    // TODO testing
+    std::cout << header.chr_rom_size << std::endl;
+    std::cout << header.chr_ram_size << std::endl;
+    assert((header.chr_rom_size == 0x20000) != (header.chr_ram_size == 0x20000));
     assert(header.prg_ram_size == 0 || header.prg_ram_size == 0x2000);
 
     if (header.prg_ram_size > 0)
@@ -103,10 +120,10 @@ Mapper001::Mapper001(Header& header, std::ifstream& rom)
         rom.read(reinterpret_cast<char*>(prg_rom[i].data()), 0x4000);
     }
     banks = header.chr_rom_size / 0x1000;
-    chr_rom.resize(banks);
+    chr_mem.resize(banks);
     for (uint i = 0; i < banks; i++)
     {
-        rom.read(reinterpret_cast<char*>(chr_rom[i].data()), 0x1000);
+        rom.read(reinterpret_cast<char*>(chr_mem[i].data()), 0x1000);
     }
 }
 
@@ -248,11 +265,11 @@ std::optional<byte> Mapper001::ppuRead(uword address)
 
         if (address < 0x1000)
         {
-            return chr_rom[low_bank][address];
+            return chr_mem[low_bank][address];
         }
         else
         {
-            return chr_rom[high_bank][address - 0x1000];
+            return chr_mem[high_bank][address - 0x1000];
         }
     }
 }
@@ -262,9 +279,36 @@ bool Mapper001::ppuWrite(uword address, byte data)
     if (address >= 0x2000) return false;
     else
     {
-        #ifndef NDEBUG
-        std::cerr << "Warning: unsupported PPU write to " << hex(address) << std::endl;
-        #endif
-        return true;
+        if (chr_ram)
+        {
+            ubyte low_bank = 0;
+            ubyte high_bank = 0;
+            if (chr_bank_mode == 0)
+            {
+                low_bank = chr_bank_0 & 0x1E;
+                high_bank = low_bank + 1;
+            }
+            else
+            {
+                low_bank = chr_bank_0;
+                high_bank = chr_bank_1;
+            }
+
+            if (address < 0x1000)
+            {
+                chr_mem[low_bank][address] = data;
+            }
+            else
+            {
+                chr_mem[high_bank][address - 0x1000] = data;
+            }
+        }
+        else
+        {
+            #ifndef NDEBUG
+            std::cerr << "Warning: unsupported PPU write to " << hex(address) << std::endl;
+            #endif
+        }
+    return true;
     }
 }
