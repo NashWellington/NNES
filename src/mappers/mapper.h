@@ -49,9 +49,6 @@ public:
     MirrorType mirroring = MirrorType::HORIZONTAL;
 };
 
-// TODO move derived mappers to their own cpp files (but keep this .h file)
-// TODO Submappers
-
 /* NROM
 * http://wiki.nesdev.com/w/index.php/NROM
 */
@@ -106,6 +103,8 @@ public:
     std::optional<byte> ppuRead(uword address);
     bool ppuWrite(uword address, byte data);
 private:
+    uint submapper = 0;
+
 // Registers
     byte reg_shift = 0x10;
 

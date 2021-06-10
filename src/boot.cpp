@@ -82,9 +82,8 @@ Header Boot::readHeader(std::ifstream& rom)
     // Detect PRG-RAM size
     if (header.type == HeaderType::INES)
     {
-        ubyte prg_ram_ctrl = header_data[8];
-        if (prg_ram_ctrl == 0) header.prg_ram_size = 0x2000;
-        else header.prg_ram_size = prg_ram_ctrl * 0x2000;
+        header.prg_ram_size = header_data[8] * 0x2000;
+        // NOTE: if prg_ram_size is 0, mapper will set it to some default
     }
     else if (header.type == HeaderType::NES20)
     {

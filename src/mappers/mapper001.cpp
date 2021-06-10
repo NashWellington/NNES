@@ -1,13 +1,21 @@
 #include "mapper.h"
 
 // TODO support for SZROM
+// TODO support submapper 5
 
 Mapper001::Mapper001(Header& header, std::ifstream& rom)
 {
     mirroring = header.mirroring;
+    submapper = header.submapper;
+
     assert(!header.trainer);
     assert(header.prg_rom_size >= 0x8000 && header.prg_rom_size <= 0x80000);
     assert(header.prg_ram_size <= 0x8000);
+
+    if (header.prg_ram_size == 0 && header.type == HeaderType::INES)
+    {
+        header.prg_ram_size = 0x8000;
+    }
 
     uint banks = 0;
     if (header.prg_ram_size > 0)
