@@ -5,29 +5,35 @@
 #include "globals.h"
 #include "savestate.h"
 
+// https://wiki.nesdev.com/w/index.php/Mirroring#Nametable_Mirroring
 enum class MirrorType
 {
     HORIZONTAL,
-    VERTICAL         // TODO there are more types of mirroring
+    VERTICAL,
+    SINGLE_SCREEN_LOWER, // lower or upper bank
+    SINGLE_SCREEN_UPPER, 
+    FOUR_SCREEN,
+    OTHER           // TODO
 };
 
 enum class HeaderType
 {
-    NO_HEADER,       // Not an iNES, NES 2.0, or UNIF header
-    INES_HEADER,
-    NES20_HEADER,
-    UNIF_HEADER      // Currently unimplemented
+    NONE,       // Not an iNES, NES 2.0, or UNIF header
+    INES,
+    NES20,
+    UNIF        // Currently unimplemented
 };
 
 struct Header
 {
     // TODO reorder these
-    HeaderType type = HeaderType::NO_HEADER;
+    HeaderType type = HeaderType::NONE;
     int mapper = 0;
+    int submapper = 0;
+    bool trainer = false;
     uint64_t prg_rom_size = 0;
     uint64_t chr_rom_size = 0;
     uint64_t prg_ram_size = 0;
-    bool trainer = false;
     MirrorType mirroring;
 };
 
@@ -44,6 +50,7 @@ public:
 };
 
 // TODO move derived mappers to their own cpp files (but keep this .h file)
+// TODO Submappers
 
 /* NROM
 * http://wiki.nesdev.com/w/index.php/NROM
@@ -65,7 +72,7 @@ private:
     * location: $6000
     */
     std::vector<byte> prg_ram = {};
-    bool prg_ram_exists = false;
+    bool prg_ram_enabled = false;
 
     /* Program ROM
     * capacity: $4000 or $8000
@@ -94,8 +101,31 @@ public:
     std::optional<byte> ppuRead(uword address);
     bool ppuWrite(uword address, byte data);
 private:
+// Bank switching methods
+    void prgBankSwitch(); // called anytime a register is changed
+    void chrBankSwitch(); // called anytime a register is changed
+
 // Registers
-    //TODO
+    /* Shift register
+    */
+    byte reg_shift = 0x10;
+
+    /* Controls PRG-ROM bank switching
+    * 0, 1: switch 32KiB at $8000
+    * 2: fix first bank at $8000 and switch 16KiB at $C000
+    * 3: fix last bank at $C000 and switch 16KiB at $8000
+    */
+    ubyte prg_bank_mode = 0;
+
+    /* Controls CHR-ROM bank switching
+    * 0: switch one 8KiB bank uses prg_bank_0 for indices
+    * 1: switch two 4KiB banks uses prg_bank_0 and prg_bank_1 for indices
+    */
+    ubyte chr_bank_mode = 0;
+
+    ubyte prg_bank = 0; // Used w/ prg_bank_mode to determine PRG-ROM banking
+    ubyte chr_bank_0 = 0; // bit 0 ignored in 8KiB mode
+    ubyte chr_bank_1 = 0;
 
 // Banks
     /* Program RAM (optional)
@@ -104,19 +134,19 @@ private:
     * location: $6000
     */
     std::array<byte, 0x8000> prg_ram = {};
-    bool prg_ram_exists = false;
+    bool prg_ram_enabled = false;
 
     /* Program ROM
     * capacity: $40000 or $80000 (256K or 512K)
     * window:   $4000 x 2
     * location: $8000
     */
-    std::vector<byte> prg_rom = {};
+    std::vector<std::array<byte,0x4000>> prg_rom = {};
 
     /* Character ROM
     * capacity: $20000 (128K)
     * window:   $1000 x 2
     * location: $0000
     */
-    std::vector<byte> chr_rom = {};
+    std::vector<std::array<byte,0x1000>> chr_rom = {};
 };

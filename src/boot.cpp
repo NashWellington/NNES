@@ -20,34 +20,34 @@ Header Boot::readHeader(std::ifstream& rom)
     {
         if ((header_data[7] & 0x0C) == 0x08)
         {
-            header.type = HeaderType::NES20_HEADER;
+            header.type = HeaderType::NES20;
         }
         else
         {
-            header.type = HeaderType::INES_HEADER;
+            header.type = HeaderType::INES;
         }
     }
     else // TODO UNIF headers
     {
-        header.type = HeaderType::NO_HEADER;
+        header.type = HeaderType::NONE;
     }
 
     // Detect trainer
     header.trainer = (header_data[6] & 0x04) >> 2;
 
     // Detect mapper type
-    if (header.type == HeaderType::INES_HEADER || header.type == HeaderType::NES20_HEADER)
+    if (header.type == HeaderType::INES || header.type == HeaderType::NES20)
     {
         header.mapper = (header_data[7] & 0xF0) + ((header_data[6] & 0xF0) >> 4);
     }
 
-    if (header.type == HeaderType::NES20_HEADER) 
+    if (header.type == HeaderType::NES20) 
         header.mapper += uword(header_data[8] & 0x0F) << 8;
 
     // Detect PRG-ROM size
     uword prg_rom_ctrl = header_data[4];
 
-    if (header.type == HeaderType::NES20_HEADER) 
+    if (header.type == HeaderType::NES20) 
         prg_rom_ctrl += (uword(header_data[9] & 0x0F) << 8);
 
     if ((prg_rom_ctrl & 0x0F00) != 0x0F00) // prg_rom_size = prg_rom_ctrl * 16 KiB if MSB is not 0x0F
@@ -62,7 +62,7 @@ Header Boot::readHeader(std::ifstream& rom)
 
     // Detect CHR-ROM size
     uword chr_rom_ctrl = header_data[5];
-    if (header.type == HeaderType::NES20_HEADER)
+    if (header.type == HeaderType::NES20)
         chr_rom_ctrl += (uword(header_data[9] & 0xF0) << 4);
     if ((chr_rom_ctrl & 0x0F00) != 0x0F00) // chr_rom_size = chr_rom_ctrl * 8 KiB if MSB is not 0x0F
     {
@@ -75,6 +75,7 @@ Header Boot::readHeader(std::ifstream& rom)
     }
 
     // Detect PRG-RAM size
+    // TODO iNES 1.0 shenanigans
     ubyte prg_ram_ctrl = header_data[10] & 0x0F;
     if (prg_ram_ctrl != 0)
     {
