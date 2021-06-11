@@ -24,30 +24,12 @@ int main(int argc, char ** argv)
     }
     std::cerr.rdbuf(error_stream.rdbuf());
 
-    #ifdef DISP_INSTR
-    // Set up state log
-    std::ofstream state_stream(argv[2]);
-    if (!state_stream.is_open()) 
-    {
-        std::cout << "Error: could not open " << argv[2] << std::endl;
-    }
-    std::clog.rdbuf(state_stream.rdbuf());
-
-    // Check number of arguments
-    if (argc != 3)
-    {
-        std::cout << "Too few or too many arguments" << std::endl;
-        throw std::exception();
-    }
-
-    #else
     // Check number of arguments
     if (argc < 2 || argc > 3)
     {
         std::cout << "Too few or too many arguments" << std::endl;
         throw std::exception();
     }
-    #endif
     #endif
 
     // Open ROM file
@@ -121,10 +103,6 @@ int main(int argc, char ** argv)
     // TODO real non-debugger main loop
 
     #ifndef NDEBUG
-    #ifdef DISP_INSTR
-    // Reset clog buffer
-    std::clog.rdbuf(nullptr);
-    #endif
     // Reset cerr buffer
     std::cerr.rdbuf(nullptr);
     #endif

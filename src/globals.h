@@ -5,16 +5,6 @@
 //#define NDEBUG
 //#endif
 
-//#ifndef NDEBUG
-//#define DISP_INSTR
-//#endif
-
-#ifdef DISP_INSTR
-#define LOG_INSTR(instruction, mode) Current_State.addInstr(instruction, mode)
-#else
-#define LOG_INSTR(instruction, mode)
-#endif
-
 #include <iostream>         // Used for logging errors etc.
 #include <stdexcept>        // exceptions
 #include <assert.h>         // assertions
