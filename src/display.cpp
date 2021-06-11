@@ -258,11 +258,11 @@ void Display::pollEvents(RunFlags& run_flags)
                         if (mem_address < 0x8000) mem_address += 0x8000;
                         break;
                     case SDLK_LEFT:
-                        mem_address -= 9 * 16;
+                        mem_address -= 16 * 16;
                         if (mem_address < 0x8000) mem_address += 0x8000;
                         break;
                     case SDLK_RIGHT:
-                        mem_address += 9 * 16;
+                        mem_address += 16 * 16;
                         if (mem_address < 0x8000) mem_address += 0x8000;
                         break;
                     default:
@@ -434,8 +434,8 @@ void Display::displayFrame(RunFlags& run_flags)
     {
         ImGui::Begin("Memory");
         ImGui::Text("PRG-ROM:");
-        uword addr = mem_address - 4 * 16;
-        for (int i = 0; i < 9; i++) // Display 9 lines
+        uword addr = mem_address - 8 * 16;
+        for (int i = 0; i < 16; i++) // Display 9 lines
         {
             if (addr < 0x8000) ImGui::Text(" ");
             else ImGui::Text("%s", peekMem(addr).c_str());
