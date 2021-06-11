@@ -6,7 +6,7 @@ void Boot::loadRom(std::ifstream& rom)
     Header header = readHeader(rom);
 
     // Send header info to debug_state
-    #ifndef NDEBUG
+    #ifdef DEBUGGER
     switch (header.type)
     {
         case HeaderType::NONE:

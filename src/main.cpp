@@ -45,18 +45,25 @@ int main(int argc, char ** argv)
     Boot::loadRom(rom);
     cpu.start();
 
-    #ifndef NDEBUG
-    debug_state.filename = rom_filename;
+    // Main loop
+    // TODO time it so 1 frame takes 1/60 seconds
     RunFlags run_flags = {};
     if (argc == 3) run_flags.paused = true;
     uint32_t ppu_cycle = 0;
     uint32_t cycles_per_frame = 262 * 341; // Note: PPU skips a cycle every odd frame
+
+    #ifdef DEBUGGER
+    debug_state.filename = rom_filename;
+    #endif
+
     while (!run_flags.finished)
     {
         if (run_flags.paused)
         {
             display.pollEvents(run_flags);
+            #ifdef DEBUGGER
             cpu.save(debug_state);
+            #endif
             display.displayFrame(run_flags);
         }
         else
@@ -64,11 +71,13 @@ int main(int argc, char ** argv)
             ppu.tick();
             if ((ppu_cycle % 3) == 2) 
             {
+                #ifdef DEBUGGER
                 bool stepped = cpu.tick();
                 if (run_flags.tick)
                 {
                     run_flags.paused = true;
                     run_flags.tick = false;
+                    ppu.addDebug();
                 }
                 else if (run_flags.step)
                 {
@@ -76,16 +85,24 @@ int main(int argc, char ** argv)
                     {
                         run_flags.paused = true;
                         run_flags.step = false;
+                        ppu.addDebug();
                     }
                 }
+                #else
+                cpu.tick();
+                #endif
             }
             ppu_cycle++;
-            debug_state.ppu_cycle = ppu_cycle;
             if ((ppu_cycle == cycles_per_frame) || (ppu_cycle == (cycles_per_frame * 2 - 1)))
             {
+                #ifdef DEBUGGER
                 cpu.save(debug_state); // Save registers for use by the debugger
+                #endif
+
                 display.displayFrame(run_flags);
                 ppu_cycle %= cycles_per_frame * 2 - 1;
+
+                #ifdef DEBUGGER
                 if (run_flags.frame)
                 {
                     run_flags.paused = true;
@@ -95,12 +112,16 @@ int main(int argc, char ** argv)
                 {
                     display.pollEvents(run_flags);
                 }
+                ppu.addDebug();
+                #else
+                display.pollEvents(run_flags);
+                #endif
             }
+            #ifdef DEBUGGER
+            debug_state.ppu_cycle = ppu_cycle;
+            #endif
         }
     }
-    #endif
-
-    // TODO real non-debugger main loop
 
     #ifndef NDEBUG
     // Reset cerr buffer

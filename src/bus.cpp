@@ -49,7 +49,9 @@ byte Bus::ppuRead(uword address)
     if (data) return data.value();
     else if (address < 0x2000)
     {
+        #ifndef NDEBUG
         std::cerr << "Warning: read from dummy CHR-ROM at " << hex(address) << std::endl;
+        #endif
         return dummy_pattern_tables[address];
     }
     else if (address < 0x3F00) // Nametables + mirrors
@@ -74,7 +76,9 @@ void Bus::ppuWrite(uword address, byte data)
     if (mapper->ppuWrite(address, data)) return;
     else if (address < 0x2000)
     {
+        #ifndef NDEBUG
         std::cerr << "Warning: write dummy CHR-ROM at " << hex(address) << std::endl;
+        #endif
         dummy_pattern_tables[address] = data;
     }
     else if (address < 0x3F00) // Nametables + mirrors
@@ -151,7 +155,9 @@ byte Bus::cpuReadReg(uword address)
                 return ppu_latch;
 
             default:
+                #ifndef NDEBUG
                 std::cerr << "Warning: unsupported CPU Reg Read at " << hex(address) << std::endl;
+                #endif
                 break;
         }
     }
@@ -234,7 +240,9 @@ void Bus::cpuWriteReg(uword address, byte data)
                 break;
 
             default:
+                #ifndef NDEBUG
                 std::cerr << "Unsupported CPU Reg Write at " << hex(address) << std::endl;
+                #endif
                 break;
         }
     }

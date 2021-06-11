@@ -1,9 +1,15 @@
 #pragma once
 
-// Uncomment this in release builds to prevent assertions and logging
+// Uncomment this in release builds to prevent assertions and cerr logging
 //#ifndef NDEBUG
 //#define NDEBUG
 //#endif
+
+// Comment this out if building as NNES
+// Uncomment this out if building as NNES - debugger
+#ifndef DEBUGGER
+//define DEBUGGER
+#endif
 
 #include <iostream>         // Used for logging errors etc.
 #include <stdexcept>        // exceptions

@@ -20,7 +20,7 @@ struct Savestate
     bool cpu_odd_cycle = false;
     uint32_t ppu_cycle = 0;
 
-    #ifndef NDEBUG
+    #ifdef DEBUGGER
     std::string filename = "";
     std::string header_type = "";
     int mapper = -1;
@@ -34,6 +34,6 @@ struct Savestate
 
 extern std::vector<Savestate> savestates;
 
-#ifndef NDEBUG
+#ifdef DEBUGGER
 extern Savestate debug_state; // Current state of the emulated NNES
 #endif

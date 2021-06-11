@@ -41,8 +41,6 @@ void PPU::load(Savestate& savestate)
 
 void PPU::tick()
 {
-    // TODO bounds checking
-    // TODO check vblank
     // TODO OAM ADDR set during sprite eval
     // TODO check if background/sprites should be loaded
     // TODO sprite checking/resolution/whatever
@@ -179,13 +177,6 @@ void PPU::tick()
     if (scanline >= SCANLINES_PER_FRAME - 1)
     {
         scanline -= SCANLINES_PER_FRAME;
-        #ifndef NDEBUG
-        displayPatternTable(0, display.palette_selected);
-        displayPatternTable(1, display.palette_selected);
-        for (int i = 0; i < 4; i++) displayNametable(i);
-        for (int i = 0; i < 8; i++) displayPalette(i);
-        displaySprites();
-        #endif
     }
 }
 
@@ -228,15 +219,14 @@ void PPU::addPixels()
     
 }
 
-#ifndef NDEBUG
-// TODO handle ppu mask color modifier
-void PPU::getPalette(std::array<Pixel,4>& palette, uint palette_index)
+#ifdef DEBUGGER
+void PPU::addDebug()
 {
-    assert(palette_index < 8);
-    palette[0] = getColor(bus.ppuRead(0x3F00));
-    palette[1] = getColor(bus.ppuRead(0x3F00 + 4 * palette_index + 1));
-    palette[2] = getColor(bus.ppuRead(0x3F00 + 4 * palette_index + 2));
-    palette[3] = getColor(bus.ppuRead(0x3F00 + 4 * palette_index + 3));
+    displayPatternTable(0, display.palette_selected);
+    displayPatternTable(1, display.palette_selected);
+    for (int i = 0; i < 4; i++) displayNametable(i);
+    for (int i = 0; i < 8; i++) displayPalette(i);
+    displaySprites();
 }
 
 Tile PPU::getPTTile(uword address, std::array<Pixel,4>& palette)
@@ -403,6 +393,16 @@ void PPU::displaySprites()
     }
 }
 #endif
+
+// TODO handle ppu mask color modifier
+void PPU::getPalette(std::array<Pixel,4>& palette, uint palette_index)
+{
+    assert(palette_index < 8);
+    palette[0] = getColor(bus.ppuRead(0x3F00));
+    palette[1] = getColor(bus.ppuRead(0x3F00 + 4 * palette_index + 1));
+    palette[2] = getColor(bus.ppuRead(0x3F00 + 4 * palette_index + 2));
+    palette[3] = getColor(bus.ppuRead(0x3F00 + 4 * palette_index + 3));
+}
 
 // TODO grayscale + color emphasis PPUMASK flags
 Pixel PPU::getColor(byte color_byte)

@@ -85,17 +85,16 @@ private:
 
     bool odd_frame = false;
 
+    void getPalette(std::array<Pixel,4>& palette, uint palette_index);
     Pixel getColor(byte color_byte);
 
-#ifndef NDEBUG
+#ifdef DEBUGGER
 private: // Debugging tools
     std::array<Pixel,4> curr_palette = {};
     Table<240,256> nametable = {};
     Table<128,128> pattern_table = {};
     std::array<std::array<Pixel,64>,64> small_sprites = {};
     std::array<std::array<Pixel,64>,128> big_sprites = {};
-
-    void getPalette(std::array<Pixel,4>& palette, uint palette_index);
 
     Tile getPTTile(uword address, std::array<Pixel,4>& palette);
     void getPatternTable(uint pt_i, std::array<Pixel,4>& palette);
@@ -106,6 +105,8 @@ private: // Debugging tools
     void getSmallSprite(uint spr_i); // 8x8 sprite
     void getBigSprite(uint spr_i); // 8x16 sprite
 public:
+    // TODO name this better
+    void addDebug(); // Adds all palettes, tables, sprites, etc. to display
     void displayPalette(uint pal_i);
     void displayPatternTable(uint pt_i, uint palette_index);
     void displayNametable(uint nt_i);

@@ -88,14 +88,13 @@ bool Mapper000::ppuWrite(uword address, byte data)
         if (chr_ram)
         {
             chr_mem[address] = data;
-            return true;
         }
         else
         {
             #ifndef NDEBUG
             std::cerr << "Warning: unsupported PPU write to " << hex(address) << std::endl;
             #endif
-            return true;
         }
+        return true;
     }
 }

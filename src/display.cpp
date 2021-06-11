@@ -68,7 +68,6 @@ Display::Display()
     gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
     // Setup GLEW
     glewExperimental = GL_TRUE;
@@ -77,7 +76,8 @@ Display::Display()
         std::cerr << "Failed to initialize GLEW" << std::endl;
         throw std::exception();
     }
-
+    
+    #ifdef DEBUGGER
     // Setup ImGui
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -91,6 +91,7 @@ Display::Display()
     // Setup backends
     ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
     ImGui_ImplOpenGL3_Init("#version 330");
+    #endif
 
     // TODO fonts?
 
@@ -126,7 +127,7 @@ Display::Display()
     glGetShaderInfoLog(vertexShader, 512, NULL, buffer);
     if (buffer[0] != '\0')
     {
-        std::cout << "Vertex shader log: " << std::endl;
+        std::cerr << "Vertex shader log: " << std::endl;
         std::cerr << buffer << std::endl;
         throw std::exception();
     }
@@ -143,7 +144,7 @@ Display::Display()
     glGetShaderInfoLog(fragmentShader, 512, NULL, buffer);
     if (buffer[0] != '\0')
     {
-        std::cout << "Fragment shader Log:" << std::endl;
+        std::cerr << "Fragment shader Log:" << std::endl;
         std::cerr << buffer << std::endl;
         throw std::exception();
     }
@@ -168,7 +169,7 @@ Display::Display()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-#ifndef NDEBUG
+#ifdef DEBUGGER
     glGenTextures(1, &pt_tex[0]);
     glBindTexture(GL_TEXTURE_2D, pt_tex[0]);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -206,9 +207,11 @@ Display::Display()
 
 Display::~Display()
 {
+    #ifdef DEBUGGER
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
+    #endif
 
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
@@ -220,7 +223,9 @@ void Display::pollEvents(RunFlags& run_flags)
     SDL_Event event;
     if (SDL_PollEvent(&event))
     {
+        #ifdef DEBUGGER
         ImGui_ImplSDL2_ProcessEvent(&event);
+        #endif
         switch (event.type)
         {
             case SDL_KEYDOWN:
@@ -229,6 +234,12 @@ void Display::pollEvents(RunFlags& run_flags)
                     case SDLK_ESCAPE:
                         run_flags.finished = true;
                         break;
+                    case SDLK_SPACE:
+                        run_flags.paused = !run_flags.paused;
+                        break;
+
+                    #ifdef DEBUGGER
+                    // Debugger controls
                     case SDLK_p:
                         palette_selected += 1;
                         palette_selected %= 8;
@@ -244,9 +255,6 @@ void Display::pollEvents(RunFlags& run_flags)
                     case SDLK_s:
                         run_flags.paused = false;
                         run_flags.step = true;
-                        break;
-                    case SDLK_SPACE:
-                        run_flags.paused = !run_flags.paused;
                         break;
                     // TODO make these only work if Memory window is hovered/selected
                     case SDLK_UP:
@@ -271,6 +279,8 @@ void Display::pollEvents(RunFlags& run_flags)
                     case SDLK_PAGEDOWN:
                         mem_address += 16 * 16;
                         break;
+                    #endif
+
                     default:
                         break;
                 }
@@ -286,8 +296,10 @@ void Display::pollEvents(RunFlags& run_flags)
 
 void Display::displayFrame(RunFlags& run_flags)
 {
-#ifdef NDEBUG
+#ifndef DEBUGGER
     // Draw frame
+    glClearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
+    glClear(GL_COLOR_BUFFER_BIT);
     int window_w = 0;
     int window_h = 0;
     SDL_GetWindowSize(window, &window_w, &window_h);
@@ -297,7 +309,7 @@ void Display::displayFrame(RunFlags& run_flags)
     glBindTexture(GL_TEXTURE_2D, frame_tex);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
-
+    SDL_GL_SwapWindow(window);
 #else
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame(window);
@@ -485,7 +497,7 @@ void Display::displayFrame(RunFlags& run_flags)
     int disp_w = io.DisplaySize.x;
     int disp_h = io.DisplaySize.y;
     glViewport(0, 0, disp_w, disp_h);
-    glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+    glClearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
     glClear(GL_COLOR_BUFFER_BIT);
 
     // Draw frame
@@ -503,7 +515,7 @@ void Display::displayFrame(RunFlags& run_flags)
 #endif
 }
 
-#ifndef NDEBUG
+#ifdef DEBUGGER
 void Display::addPatternTable(ubyte* pt, int pt_i)
 {
     assert((pt_i >= 0) && (pt_i < 2));

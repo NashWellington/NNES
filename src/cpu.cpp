@@ -171,26 +171,24 @@ int CPU::handleInterrupt(InterruptType type)
     reg_sr.i = true;
 
     // Load the address of the interrupt handling routine to PC
+    // TODO figure out how to log these to the debugger
     ubyte pcl;
     ubyte pch;
     switch (type)
     {
         case IRQ:
-            LOG_INSTR("IRQ", 0);
             pcl = static_cast<ubyte>(bus.cpuRead(IRQ_ADDRESS));
             pch = static_cast<ubyte>(bus.cpuRead(IRQ_ADDRESS + 1));
             reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
             break;
         
         case NMI:
-            LOG_INSTR("NMI", 0);
             pcl = static_cast<ubyte>(bus.cpuRead(NMI_ADDRESS));
             pch = static_cast<ubyte>(bus.cpuRead(NMI_ADDRESS + 1));
             reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
             break;
 
         case RESET:
-            LOG_INSTR("RST", 0);
             pcl = static_cast<ubyte>(bus.cpuRead(RESET_ADDRESS));
             pch = static_cast<ubyte>(bus.cpuRead(RESET_ADDRESS + 1));
             reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
