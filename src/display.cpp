@@ -258,12 +258,18 @@ void Display::pollEvents(RunFlags& run_flags)
                         if (mem_address < 0x8000) mem_address += 0x8000;
                         break;
                     case SDLK_LEFT:
-                        mem_address -= 16 * 16;
+                        mem_address--;
                         if (mem_address < 0x8000) mem_address += 0x8000;
                         break;
                     case SDLK_RIGHT:
-                        mem_address += 16 * 16;
+                        mem_address++;
                         if (mem_address < 0x8000) mem_address += 0x8000;
+                        break;
+                    case SDLK_PAGEUP:
+                        mem_address -= 16 * 16;
+                        break;
+                    case SDLK_PAGEDOWN:
+                        mem_address += 16 * 16;
                         break;
                     default:
                         break;
@@ -407,17 +413,22 @@ void Display::displayFrame(RunFlags& run_flags)
         ImGui::Text("%s", binary(debug_state.registers.reg_sr).c_str());
         ImGui::End();
     }
-    // Decompiler
+    // Disassembler
     {
-        ImGui::Begin("Decompiler");
-        if (run_flags.paused) ImGui::Text("Paused");
+        ImGui::Begin("Disassembler");
+        if (ImGui::Button("Program Counter")) disassemble_mode = FOLLOW_PC;
+        ImGui::SameLine();
+        if (ImGui::Button("Select Address")) disassemble_mode = SELECT_ADDRESS;
+        if (run_flags.paused) ImGui::Text("Paused"); // TODO move somewhere else
         else ImGui::Text(" ");
-        uword addr = debug_state.registers.reg_pc;
+        uword addr = 0; 
+        if (disassemble_mode == FOLLOW_PC) addr = debug_state.registers.reg_pc;
+        else if (disassemble_mode == SELECT_ADDRESS) addr = mem_address;
         int lines = 10;
         std::optional<std::string> line;
         for (int i = 0; i < lines; i++)
         {
-            line = decompile(addr);
+            line = disassemble(addr);
             if (line)
             {
                 if (i == 0) ImGui::Text("%-20s %s", line.value().c_str(), "<---");
@@ -427,14 +438,14 @@ void Display::displayFrame(RunFlags& run_flags)
         }
         ImGui::Text("PPU cycle: %6i", debug_state.ppu_cycle);
         ImGui::Text("CPU cycle: %6i", debug_state.ppu_cycle/3);
-        ImGui::End();
+    ImGui::End();
     }
     // Memory
     // TODO add tabs or buttons to switch between memory fields
     {
         ImGui::Begin("Memory");
         ImGui::Text("PRG-ROM:");
-        uword addr = mem_address - 8 * 16;
+        uword addr = (mem_address & 0xFFF0) - 8 * 16;
         for (int i = 0; i < 16; i++) // Display 9 lines
         {
             if (addr < 0x8000) ImGui::Text(" ");

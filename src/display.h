@@ -44,6 +44,11 @@ public:
     int palette_selected = 0;
     int spr_h = 8;              // sprite height. 8 for 8x8 sprites, 16 for 8x16
     uword mem_address = 0x8000; // Address in memory to be displayed by the "Memory" window
+    enum
+    {
+        FOLLOW_PC,              // Starts at the address pointed to by the Program Counter
+        SELECT_ADDRESS          // Starts at the address selected in the Memory window
+    } disassemble_mode = FOLLOW_PC;
 
     void addPatternTable(ubyte* pt, int pt_i);
     void addNametable(ubyte* nt, int nt_i);

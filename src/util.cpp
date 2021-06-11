@@ -21,8 +21,8 @@ std::map<byte,std::string> instructions =
     {0xF0,"BEQ"}, {0xF1,"SBC"}, /*{0xF2,""}*/ {0xF3,"ISC"}, {0XF4,"NOP"}, {0XF5,"SBC"}, {0XF6,"INC"}, {0XF7,"ISC"}, {0XF8,"SED"}, {0XF9,"SBC"}, {0XFA,"NOP"}, {0XFB,"ISC"}, {0XFC,"NOP"}, {0XFD,"SBC"}, {0XFE,"INC"}, {0XFF,"ISC"}
 };
 
-// Decompile addressing mode
-std::string decompileMode(uword& address, ubyte instr)
+// Disassemble addressing mode
+std::string disassembleMode(uword& address, ubyte instr)
 {
     std::string mode = " ";
     switch (instr%32)
@@ -162,13 +162,13 @@ std::string decompileMode(uword& address, ubyte instr)
     return mode; 
 }
 
-std::optional<std::string> decompile(uword& address)
+std::optional<std::string> disassemble(uword& address)
 {
     uword start_address = address;
     std::string line = hex(address) + ": ";
     byte instr = bus.cpuRead(address++);
     line += instructions[instr];
-    line += decompileMode(address, static_cast<ubyte>(instr));
+    line += disassembleMode(address, static_cast<ubyte>(instr));
     if (start_address > (address - 1)) return {};
     for (int i = 0; i < (20 - static_cast<int>(line.size())); i++) line += ' ';
     return line;
