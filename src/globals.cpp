@@ -24,7 +24,7 @@ std::string binary(byte x)
     std::string bin_str = "";
     for (int i = 0; i < 8; i++)
     {
-        bin_str += (x & (1 << (8-i)) ? '1' : '0');
+        bin_str += (x & (1 << (7-i)) ? '1' : '0');
     }
     return bin_str;
 }
