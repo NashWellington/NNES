@@ -51,23 +51,70 @@ void PPU::tick()
     {
         if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) // Get table bytes
         {
-            switch (cycle%8) // TODO do stuff
+            switch (cycle%8)
             {
                 case 2: // NT byte
+                {
+                    uword nt_addr_base = 0x2000 
+                        + (static_cast<uword>(bus.reg_ppu_ctrl.nn) * 0x0400);
+                    nt_byte = bus.ppuRead(nt_addr_base + 32 * reg_nt_row + reg_nt_col);
                     break;
+                }
                 case 4: // AT byte
+                {
+                    uword nt_addr_base = 0x2000 
+                        + (static_cast<uword>(bus.reg_ppu_ctrl.nn) * 0x0400);
+                    uword at_col = reg_nt_col / 2;
+                    uword at_row = reg_nt_row / 2;
+                    at_byte = bus.ppuRead(nt_addr_base + 0x3C0 + at_row * 8 + at_col);
+
+                    // TODO figure out if I need to do this now or later
+                    // get palette info from attribute depending on quadrant
+                    uint offset = 0;
+                    if (reg_nt_col % 2 == 0) offset += 2;       // left quadrants -> 1100 0000 or 0000 1100
+                    if (reg_nt_row % 2 == 1) offset += 4;       // bottom quadrants -> 1100 000 or 0011 0000
+                    at_byte = ((at_byte & (0x03 << offset)) >> offset);
                     break;
-                case 6: // Low BG tile byte
+                }
+                case 6: // Low PT byte
+                {
+                    uword pt_addr = bus.reg_ppu_ctrl.b * 0x1000 + (static_cast<uword>(nt_byte) << 4);
+                    uword y_offset = scanline;
+                    if (cycle >= 256) y_offset++;
+                    y_offset %= 8;
+                    pt_byte_low = bus.ppuRead(pt_addr + y_offset);
                     break;
-                case 0: // High BG tile byte + inc hori
+                }
+                case 0: // High PT byte + inc hori
+                {
+                    uword pt_addr = bus.reg_ppu_ctrl.b * 0x1000 + (static_cast<uword>(nt_byte) << 4);
+                    uword y_offset = scanline;
+                    if (cycle >= 256) y_offset++;
+                    y_offset %= 8;
+                    pt_byte_high = bus.ppuRead(pt_addr + y_offset + 8);
+                    if ((scanline != PRE_RENDER_START && cycle <= 240) 
+                        || (cycle >= 321 && scanline != 239)) 
+                    {
+                        pushPixels();
+                        reg_nt_col++;
+                        if (cycle == 240)
+                        {
+                            assert(reg_nt_col == 32);
+                            reg_nt_col = 0;
+                            if (scanline % 8 == 7)
+                                reg_nt_row++;
+                        }
+                    }
                     break;
+                }
                 default:
                     break;
             }
         }
         else if (cycle == 257)
         {
-            // TODO hori(v) = hori(t) ???
+            // TODO I forgot what else I'm supposed to do this cycle
+            bus.ppuWrite(0x2003, 0);
         }
         else if ((cycle >= 258) && (cycle <= 320)) // Idle cycles
         {
@@ -75,15 +122,16 @@ void PPU::tick()
         }
         else if ((cycle == 338) || (cycle == 340)) // Unused NT fetches
         {
-            // TODO
+            // This probably won't have an effect on anything
         }
         if (scanline == PRE_RENDER_START)
         {
             if (cycle == 1) // clear vblank, //TODO clear sprite 0 & overflow?
             {
                 bus.reg_ppu_status.v = 0;
+                pixel_i = 0;
             }
-            else if (cycle >= 280 && cycle <= 304) // Clear vblank
+            else if (cycle >= 280 && cycle <= 304) // Clear vblank???
             {
 
             }
@@ -93,14 +141,33 @@ void PPU::tick()
                 odd_frame = !odd_frame;
             }
         }
+        // TODO where should I add pixels?
+        else if (cycle % 8 == 4 && cycle <= 256)
+        {
+            addPixels();
+        }
+        else if (cycle == 261)
+        {
+            assert(pixel_pipeline.empty());
+            assert(pixel_pipeline.size() == 0);
+        }
     }
     else // post-render
     {
         // set vblank and render image
         if ((scanline == 241) && (cycle == 1))
         {
+            assert(reg_nt_row == 30);
+            assert(reg_nt_col == 0);
+            reg_nt_row = 0;
+            // Clear extra pixels in the pipeline
+            while (!pixel_pipeline.empty())
+            {
+                pixel_pipeline.pop();
+            }
             bus.reg_ppu_status.v = 1;
             if (bus.reg_ppu_ctrl.v) bus.addInterrupt(NMI);
+            sendFrame();
         }
     }
     cycle++;
@@ -122,86 +189,46 @@ void PPU::tick()
     }
 }
 
-#ifndef NDEBUG
-/*TODO probably delete
-void PPU::testTick()
+void PPU::pushPixels()
 {
-    if ((scanline >= 0 && scanline < POST_RENDER_START) || (scanline == PRE_RENDER_START)) // pre-render + visible
+    std::array<Pixel,4> palette;
+    getPalette(palette, at_byte);
+    uint pal_i = 0;
+    for (int i = 0; i < 8; i++)
     {
-        if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) // Get table bytes
-        {
-            // TODO break these up into R/W by cycle?
-            switch (cycle%8)
-            {
-                case 2: // NT byte
-                    test_frame[scanline+1][cycle] = {255,100,0};
-                    break;
-                case 4: // AT byte
-                    test_frame[scanline+1][cycle] = {255,150,0};
-                    break;
-                case 6: // Low BG tile byte
-                    test_frame[scanline+1][cycle] = {255,200,0};
-                    break;
-                case 0: // High BG tile byte + inc hori
-                    test_frame[scanline+1][cycle] = {255,  0,0};
-                    break;
-                default:
-                    break;
-            }
-        }
-        else if (cycle == 257) // TODO what does "hori(v) = hori(t)" mean?
-        {
-            test_frame[scanline+1][cycle] = {255,  0,255};
-        }
-        else if ((cycle >= 258) && (cycle <= 320)) // Idle cycles
-        {
-            test_frame[scanline+1][cycle] = {  0,  0,255};
-        }
-        else if ((cycle == 338) || (cycle == 340)) // Unused NT fetches
-        {
-            test_frame[scanline+1][cycle] = {255,100,  0};
-        }
-        if (scanline == PRE_RENDER_START)
-        {
-            if (cycle == 1) // clear vblank
-            {
-                test_frame[scanline+1][cycle] = {0,255,100};
-            }
-            else if (cycle >= 280 && cycle <= 304)
-            {
-                test_frame[scanline+1][cycle] = {255,0,0};
-            }
-            else if (cycle == 339) // skip last cycle of odd frame
-            {
-                * Disabled for testing
-                if (odd_frame) cycle++;
-                odd_frame = !odd_frame;
-                
-            }
-        }
-    }
-    else // post-render
-    {
-        // set vblank
-        if ((scanline == 241) && (cycle == 1))
-        {
-            test_frame[scanline+1][cycle] = {0,255,0};
-        }
-    }
-    cycle++;
-    if (cycle >= CYCLES_PER_SCANLINE)
-    {
-        scanline++;
-        cycle -= CYCLES_PER_SCANLINE;
-    }
-    if (scanline >= SCANLINES_PER_FRAME - 1)
-    {
-        scanline -= SCANLINES_PER_FRAME;
-        display.renderFrame(reinterpret_cast<ubyte*>(&test_frame), 341, 262);
+        pal_i = (pt_byte_low & (0x80 >> i)) >> (7-i);
+        pal_i += ((pt_byte_high & (0x80 >> i)) >> (7-i)) << 1;
+        pixel_pipeline.push(palette[pal_i]);
     }
 }
-*/
 
+// TODO figure out sprite shenanigans
+void PPU::addPixels()
+{
+    // Render background
+    if ((bus.reg_ppu_mask.left_background || ((pixel_i % 256) >= 8)) 
+        && bus.reg_ppu_mask.show_background)
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            frame[pixel_i] = pixel_pipeline.front();
+            pixel_pipeline.pop();
+            pixel_i++;
+        }
+    }
+    else // Don't render background
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            frame[pixel_i] = {0, 0, 0};
+            pixel_pipeline.pop();
+            pixel_i++;
+        }
+    }
+    
+}
+
+#ifndef NDEBUG
 // TODO handle ppu mask color modifier
 void PPU::getPalette(std::array<Pixel,4>& palette, uint palette_index)
 {
@@ -291,8 +318,8 @@ void PPU::getBigSprite(uint spr_i)
     uint pal_i = (attributes & 0x03) + 4;
     std::array<Pixel,4> palette = {};
     getPalette(palette, pal_i);
-    bool flip_hori = static_cast<bool>((attributes & 0x40) >> 6);
-    bool flip_vert = static_cast<bool>((attributes & 0x80) >> 7);
+    bool flip_hori = attributes & 0x40;
+    bool flip_vert = attributes & 0x80;
     Tile pt_tiles[2] = {getPTTile(pt_addr, palette), getPTTile(pt_addr+1, palette)};
     int spr_x = 0;
     int spr_y = 0;
@@ -304,7 +331,7 @@ void PPU::getBigSprite(uint spr_i)
         {
             if (flip_hori) spr_x = 8-x;
             else spr_x = x;
-            small_sprites[(spr_i/8) * 8 + spr_y][(spr_i%8) * 8 + spr_x] = pt_tiles[y/8][y%8][x];
+            big_sprites[(spr_i/8) * 8 + spr_y][(spr_i%8) * 8 + spr_x] = pt_tiles[y/8][y%8][x];
         }
     }
 }
@@ -358,7 +385,7 @@ void PPU::displayNametable(uint nt_i)
 
 void PPU::displaySprites()
 {
-    if (!static_cast<bool>(bus.reg_ppu_ctrl.h)) // 8x8 sprites
+    if (!bus.reg_ppu_ctrl.h) // 8x8 sprites
     {
         for (int i = 0; i < 64; i++)
         {
@@ -386,5 +413,5 @@ Pixel PPU::getColor(byte color_byte)
 
 void PPU::sendFrame()
 {
-    //display.processFrame(background);
+    display.renderFrame(reinterpret_cast<ubyte*>(&frame), 256, 240);
 }

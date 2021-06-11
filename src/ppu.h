@@ -46,6 +46,12 @@ public:
 
     void tick();
 
+    // Push 8 pixels to the pixel pipeline
+    void pushPixels();
+
+    // Add a horizontal line of 8 pixels to the frame
+    void addPixels();
+
     /* Initialize palette
     */
     void loadSystemPalette();
@@ -64,13 +70,18 @@ private:
     // The current scanline
     int scanline = -1;
 
+    // Keeps track of NT tile index while rendering
+    uword reg_nt_row = 0;
+    uword reg_nt_col = 0;
+
     // Values fetched during rendering
     ubyte nt_byte = 0;      // Nametable byte
     ubyte at_byte = 0;      // Attribute table byte
     ubyte pt_byte_low = 0;  // Background pattern table bytes
     ubyte pt_byte_high = 8;
-    std::queue<Pixel> pixel_pipeline = {};
-    std::array<std::array<Pixel,256>,240> frame = {}; // TODO change to variables for PAL support
+    std::queue<Pixel> pixel_pipeline = {};  // Should hold at most 16px at a time
+    uint32_t pixel_i = 0;                   // Index in the frame array
+    std::array<Pixel,61440> frame = {};     // TODO change to variables for PAL support
 
     bool odd_frame = false;
 
