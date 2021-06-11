@@ -37,17 +37,16 @@ std::string disassembleMode(uword& address, ubyte instr)
             }
             else if (instr >= 0x80) // Immediate
             {
-                sprintf(mode.data(), " #$%02X", bus.cpuRead(address++));
                 mode += "#$";
                 mode += hex(bus.cpuRead(address++));
             }
             break;
 
-        case 0x01: // X-indexed, indirect // TODO formatting?
+        case 0x01: // X-indexed, indirect
         case 0x03:
-            mode += "(X,#$";
+            mode += "(#$";
             mode += hex(bus.cpuRead(address++));
-            mode += ")";
+            mode += ",X)";
             break;
 
         case 0x02: // Immediate
@@ -66,21 +65,19 @@ std::string disassembleMode(uword& address, ubyte instr)
             mode += hex(bus.cpuRead(address++));
             break;
 
-        case 0x0A: // Accumulator // TODO formatting
-            if (instr < 0x7A) mode += "A";
-            break;
-
-        case 0x0C: // Absolute
+        case 0x0C: // Absolute or indirect
         case 0x0D:
         case 0x0E:
         case 0x0F:
             if (instr == 0x6C) // Un-indexed indirect
             {
                 mode += "($";
-                mode += hex(bus.cpuRead(address++));
+                mode += hex(bus.cpuRead(address+1));
+                mode += hex(bus.cpuRead(address));
                 mode += ")";
+                address += 2;
             }
-            else
+            else // Absolute
             {
                 mode += "$";
                 mode += hex(bus.cpuRead(address+1));
@@ -89,7 +86,7 @@ std::string disassembleMode(uword& address, ubyte instr)
             }
             break;
 
-        case 0x10: // Relative // TODO formatting?
+        case 0x10: // Relative
             mode += "$";
             mode += hex(bus.cpuRead(address++));
             break;
@@ -101,14 +98,14 @@ std::string disassembleMode(uword& address, ubyte instr)
             mode += "),Y";
             break;
 
-        case 0x14: // Zero Page, X-indexed // TODO formatting
+        case 0x14: // Zero Page, X-indexed=
         case 0x15:
             mode += "$";
             mode += hex(bus.cpuRead(address++));
             mode += ",X";
             break;
 
-        case 0x16: // Zero Page, X & Y -indexed // TODO formatting
+        case 0x16: // Zero Page, X & Y -indexed
         case 0x17:
             if (instr >= 0x96) // Y-indexed
             {
@@ -156,7 +153,7 @@ std::string disassembleMode(uword& address, ubyte instr)
             }
             break;
 
-        default: // implied/unsupported opcode
+        default: // implied/accumulator mode or unsupported opcode
             break;
     }   
     return mode; 
