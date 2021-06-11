@@ -413,5 +413,5 @@ Pixel PPU::getColor(byte color_byte)
 
 void PPU::sendFrame()
 {
-    display.renderFrame(reinterpret_cast<ubyte*>(&frame), 256, 240);
+    display.addFrame(reinterpret_cast<ubyte*>(&frame), 256, 240);
 }

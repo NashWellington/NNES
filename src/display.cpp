@@ -63,7 +63,7 @@ Display::Display()
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1); // TODO research
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24); // TODO research
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8); // TODO research
-    window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_FULLSCREEN_DESKTOP); // TODO research DPI
+    window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI); // TODO research DPI
     window = SDL_CreateWindow("NNES", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags); // TODO change title to "NNES - {game title}"
     gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
@@ -287,6 +287,16 @@ void Display::pollEvents(RunFlags& run_flags)
 void Display::displayFrame(RunFlags& run_flags)
 {
 #ifdef NDEBUG
+    // Draw frame
+    int window_w = 0;
+    int window_h = 0;
+    SDL_GetWindowSize(window, &window_w, &window_h);
+    int frame_h = window_h;
+    int frame_w = frame_h * 256 / 240;
+    glViewport(window_w/2 - frame_w/2, 0, frame_w, frame_h);
+    glBindTexture(GL_TEXTURE_2D, frame_tex);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
 #else
     ImGui_ImplOpenGL3_NewFrame();
@@ -472,13 +482,22 @@ void Display::displayFrame(RunFlags& run_flags)
 
     // Render
     ImGui::Render();
-    glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+    int disp_w = io.DisplaySize.x;
+    int disp_h = io.DisplaySize.y;
+    glViewport(0, 0, disp_w, disp_h);
     glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
     glClear(GL_COLOR_BUFFER_BIT);
+
     // Draw frame
+    int frame_h = disp_h;
+    int frame_w = frame_h * 256 / 240;
+    glViewport(0, 0, frame_w, frame_h);
     glBindTexture(GL_TEXTURE_2D, frame_tex);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
+
+    // Draw ImGui elements
+    glViewport(0, 0, disp_w, disp_h);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(window);
 #endif
@@ -519,7 +538,7 @@ void Display::addSprites(ubyte* sprites, int height)
 }
 #endif
 
-void Display::renderFrame(ubyte* frame, int width, int height)
+void Display::addFrame(ubyte* frame, int width, int height)
 {
     assert(width > 0 && height > 0);
     glBindTexture(GL_TEXTURE_2D, frame_tex);

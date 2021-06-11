@@ -7,6 +7,7 @@
 #include "libs/imgui/imgui.h"
 #include "libs/imgui/imgui_impl_sdl.h"
 #include "libs/imgui/imgui_impl_opengl3.h"
+
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
 
@@ -38,7 +39,7 @@ public:
     // Returns true if window close
     void pollEvents(RunFlags& run_flags);
     void displayFrame(RunFlags& run_flags);
-    void renderFrame(ubyte* frame, int width, int height);
+    void addFrame(ubyte* frame, int width, int height);
 
     #ifndef NDEBUG
     int palette_selected = 0;
@@ -70,7 +71,7 @@ private:
     SDL_Renderer* renderer;
     SDL_GLContext gl_context;
 // ImGui variables
-    ImVec4 clear_color = {0.1f, 0.1f, 0.1f, 1.0f};
+    ImVec4 clear_color = {0.0f, 0.0f, 0.0f, 1.0f};
 };
 
 extern Display display;
