@@ -284,6 +284,30 @@ public:
     */
     byte reg_ppu_data = 0;
 
+// I/O registers
+    bool poll_inputs = false;
+
+    // 8 inputs from joypads 1 and 2
+    // NOTE: I made this a ubyte so I don't have to deal w/ ASR/LSR bs
+    ubyte joypad_data[2] = {};
+
+    /* Input ports 1 and 2
+    * $4016 and $4017
+    */
+    union
+    {
+        struct
+        {
+            unsigned d0 : 1; // NES standard controller + Famicom hardwired controller
+            unsigned d1 : 1; // TODO the rest of these
+            unsigned d2 : 1;
+            unsigned d3 : 1;
+            unsigned d4 : 1;
+            unsigned    : 3;
+        };
+        byte reg;
+    } reg_input[2] = {};
+
 // PPU Object Attribute Memory
     std::array<std::array<byte,4>,64> oam = {}; // Contains 64 4-byte sprites
 

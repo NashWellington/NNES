@@ -203,6 +203,7 @@ bool Mapper001::cpuWrite(uword address, byte data)
                     prg_rom_bank |= (reg_shift & 0x0F);
                     prg_ram_enabled = static_cast<bool>((reg_shift & 0x10) >> 4);
                 }
+            reg_shift = 0x10;
             }
         }
         return true;

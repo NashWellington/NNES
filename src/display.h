@@ -41,8 +41,6 @@ public:
     Display();
     ~Display();
 
-    // Returns true if window close
-    void pollEvents(RunFlags& run_flags);
     void displayFrame(RunFlags& run_flags);
     void addFrame(ubyte* frame, int width, int height);
 

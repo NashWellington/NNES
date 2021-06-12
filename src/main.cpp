@@ -5,6 +5,7 @@
 #include "bus.h"
 #include "boot.h"
 #include "display.h"
+#include "input.h"
 #include "savestate.h"
 
 #ifndef NDEBUG
@@ -60,7 +61,7 @@ int main(int argc, char ** argv)
     {
         if (run_flags.paused)
         {
-            display.pollEvents(run_flags);
+            input.pollInputs(run_flags);
             #ifdef DEBUGGER
             cpu.save(debug_state);
             #endif
@@ -110,11 +111,11 @@ int main(int argc, char ** argv)
                 }
                 else // Take inputs as normal if not advancing by 1 frame
                 {
-                    display.pollEvents(run_flags);
+                    input.pollInputs(run_flags);
                 }
                 ppu.addDebug();
                 #else
-                display.pollEvents(run_flags);
+                input.pollInputs(run_flags);
                 #endif
             }
             #ifdef DEBUGGER

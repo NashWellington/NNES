@@ -1,4 +1,4 @@
-objects =  main.o boot.o cpu.o ppu.o apu.o bus.o $(mapper_objects) isa.o mode.o savestate.o display.o util.o globals.o imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
+objects =  main.o boot.o cpu.o ppu.o apu.o bus.o $(mapper_objects) isa.o mode.o savestate.o display.o input.o util.o globals.o imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
 
 mapper_objects = mapper000.o mapper001.o
 
@@ -12,7 +12,7 @@ $(project) : $(objects)
 		g++ $(flags) $(objects) -o ../build/$(project) $(libs)
 		rm $(objects)
 
-main.o : main.cpp globals.h boot.h cpu.h ppu.h apu.h display.h savestate.h
+main.o : main.cpp globals.h boot.h cpu.h ppu.h apu.h display.h input.h savestate.h
 		g++ $(flags) -c main.cpp
 
 boot.o : boot.h globals.h bus.h mappers/mapper.h
@@ -44,6 +44,9 @@ mapper001.o : mappers/mapper.h globals.h savestate.h
 
 display.o : display.h globals.h util.h savestate.h libs/imgui/imgui.h libs/imgui/imgui_impl_sdl.h libs/imgui/imgui_impl_opengl3.h
 		g++ $(flags) -c display.cpp
+
+input.o : input.h globals.h display.h bus.h
+		g++ $(flags) -c input.cpp
 
 savestate.o : savestate.h globals.h mappers/mapper.h
 		g++ $(flags) -c savestate.cpp

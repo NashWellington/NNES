@@ -148,12 +148,15 @@ int CPU::handleInterrupt(InterruptType type)
     // If IRQ, check for interrupt disable flag
     if ((type == IRQ) && reg_sr.i) return 0;
 
+    ubyte pch = 0;
+    ubyte pcl = 0;
+
     // Default behavior of IRQ and NMI
     if (type != RESET)
     {
         // Push PC (high byte), PC (low byte), and SR onto stack
-        byte pch = byte((reg_pc & 0xF0) >> 4);
-        byte pcl = byte(reg_pc & 0x0F);
+        pch = byte((reg_pc & 0xF0) >> 4);
+        pcl = byte(reg_pc & 0x0F);
         push(pch);
         push(pcl);
         push(reg_sr.reg);
@@ -172,8 +175,6 @@ int CPU::handleInterrupt(InterruptType type)
 
     // Load the address of the interrupt handling routine to PC
     // TODO figure out how to log these to the debugger
-    ubyte pcl;
-    ubyte pch;
     switch (type)
     {
         case IRQ:

@@ -7,8 +7,9 @@
 
 // Comment this out if building as NNES
 // Uncomment this out if building as NNES - debugger
+// TODO change this (and NDEBUG) to bemake flags or something
 #ifndef DEBUGGER
-//define DEBUGGER
+#define DEBUGGER
 #endif
 
 #include <iostream>         // Used for logging errors etc.

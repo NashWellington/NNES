@@ -144,15 +144,36 @@ byte Bus::cpuReadReg(uword address)
 
             default:
                 break;
-                
         }
     }
     else
     {
         switch (address)
         {
-            case 0x4014:
+            case 0x4014: // OAM DMA
                 return ppu_latch;
+
+            case 0x4016: // Input port 1
+                if (poll_inputs)
+                {
+                    reg_input[0].d0 = joypad_data[0] & 0x01;
+                    joypad_data[0] >>= 1;
+                    joypad_data[0] |= 0x80; // All bits after the first 8 read as 1
+                }
+                data = reg_input[0].reg & 0x1F;
+                reg_input[0].reg = 0; 
+                return data;
+
+            case 0x4017: // Input port 2
+                if (poll_inputs)
+                {
+                    reg_input[1].d0 = joypad_data[1] & 0x01;
+                    joypad_data[1] >>= 1;
+                    joypad_data[1] |= 0x80;
+                }
+                data = reg_input[1].reg & 0x1F;
+                reg_input[1].reg = 0;
+                return data;
 
             default:
                 #ifndef NDEBUG
@@ -238,6 +259,15 @@ void Bus::cpuWriteReg(uword address, byte data)
                 cpu_suspend_cycles = 514;
                 ppu_latch = data;
                 break;
+
+            case 0x4016: // Joypad 1 input + general output port
+                poll_inputs = static_cast<bool>(data & 0x01);
+                // TODO expansion ports (if I ever get there)
+                ppu_latch &= 0xF8;
+                ppu_latch |= (data & 0x07);
+                break;
+
+            // TODO $4017 
 
             default:
                 #ifndef NDEBUG
