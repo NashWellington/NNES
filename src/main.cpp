@@ -9,7 +9,7 @@
 #include "savestate.h"
 
 #ifndef NDEBUG
-#define ERROR_LOG_FILENAME "../build/log/error.log"
+#define ERROR_LOG_FILENAME "./log/error.log"
 #endif
 
 // TODO find better way of handling args

@@ -9,7 +9,7 @@ PPU::PPU()
 
 void PPU::loadSystemPalette()
 {
-    std::ifstream file("../build/palettes/ntsc.pal", std::ios::binary); // TODO put name in config file
+    std::ifstream file("./palettes/ntsc.pal", std::ios::binary); // TODO put name in config file
     if (!file.is_open())
     {
         std::cerr << "Error opening palette file" << std::endl;
