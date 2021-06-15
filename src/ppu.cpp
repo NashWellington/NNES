@@ -355,7 +355,7 @@ void PPU::getSmallSprite(uint spr_i)
 void PPU::displayPalette(uint pal_i)
 {
     getPalette(curr_palette, pal_i);
-    display.addPalette(reinterpret_cast<ubyte*>(&curr_palette), pal_i);
+    display.pal_tex[pal_i].update(4, 1, reinterpret_cast<void*>(&curr_palette));
 }
 
 void PPU::displayPatternTable(uint pt_i, uint palette_index)
@@ -364,13 +364,13 @@ void PPU::displayPatternTable(uint pt_i, uint palette_index)
     std::array<Pixel,4> palette;
     getPalette(palette, palette_index);
     getPatternTable(pt_i, palette);
-    display.addPatternTable(reinterpret_cast<ubyte*>(&pattern_table), pt_i);
+    display.pt_tex[pt_i].update(128, 128, reinterpret_cast<void*>(&pattern_table));
 }
 
 void PPU::displayNametable(uint nt_i)
 {
     getNametable(nt_i, bus.reg_ppu_ctrl.b);
-    display.addNametable(reinterpret_cast<ubyte*>(&nametable), nt_i);
+    display.nt_tex[nt_i].update(256, 240, reinterpret_cast<void*>(&nametable));
 }
 
 void PPU::displaySprites()
@@ -381,7 +381,7 @@ void PPU::displaySprites()
         {
             getSmallSprite(i);
         }
-        display.addSprites(reinterpret_cast<ubyte*>(&small_sprites), 8);
+        display.spr_tex.update(64, 64, reinterpret_cast<void*>(&small_sprites));
     }
     else // 8x16 sprites
     {
@@ -389,7 +389,7 @@ void PPU::displaySprites()
         {
             getBigSprite(i);
         }
-        display.addSprites(reinterpret_cast<ubyte*>(&big_sprites), 16);
+        display.spr_tex.update(64, 128, reinterpret_cast<void*>(&big_sprites));
     }
 }
 #endif
@@ -413,5 +413,5 @@ Pixel PPU::getColor(byte color_byte)
 
 void PPU::sendFrame()
 {
-    display.addFrame(reinterpret_cast<ubyte*>(&frame), 256, 240);
+    display.frame_tex.update(256, 240, reinterpret_cast<void*>(&frame));
 }

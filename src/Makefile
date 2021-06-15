@@ -3,9 +3,9 @@ objects =  main.o boot.o cpu.o ppu.o apu.o bus.o $(mapper_objects) isa.o mode.o 
 mapper_objects = mapper000.o mapper001.o
 
 flags = -g -std=c++17 -Wall -Werror -Wextra
-flags += -I/usr/include/SDL2
+flags += -I/usr/include/SDL2 -I/usr/include/freetype2
 
-libs = -lGLEW -lGL -lGLU -lSDL2 -lSDL2_ttf
+libs = -lGLEW -lGL -lGLU -lSDL2 -lfreetype
 
 project = NNES
 

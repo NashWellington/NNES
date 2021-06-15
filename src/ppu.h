@@ -90,7 +90,7 @@ private:
 
 #ifdef DEBUGGER
 private: // Debugging tools
-    std::array<Pixel,4> curr_palette = {};
+    std::array<Pixel,4> curr_palette = {}; // Holds the pixels for the next palette to be displayed
     Table<240,256> nametable = {};
     Table<128,128> pattern_table = {};
     std::array<std::array<Pixel,64>,64> small_sprites = {};

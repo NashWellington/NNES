@@ -3,8 +3,7 @@
 Display display;
 
 // TODO move these to their own files
-
-const char* vertexShaderSource = 
+const char* frame_vert_source = 
 R"glsl(
     #version 330 core
 
@@ -12,14 +11,16 @@ R"glsl(
     in vec2 texCoord;
     out vec2 TexCoord;
 
+    uniform mat4 transformation;
+
     void main()
     {
-        gl_Position = vec4(position, 0.0, 1.0);
+        gl_Position = transformation * vec4(position, 0.0, 1.0);
         TexCoord = texCoord;
     }
 )glsl";
 
-const char* fragmentShaderSource = 
+const char* frame_frag_source = 
 R"glsl(
     #version 330 core
     
@@ -34,6 +35,41 @@ R"glsl(
     }
 )glsl";
 
+// TODO move text shader to own file
+const char* text_vert_source = 
+R"glsl(
+    #version 330 core
+
+    in vec2 position;
+    in vec2 texCoords;
+    out vec2 TexCoords;
+    
+    uniform mat4 projection;
+
+    void main()
+    {
+        gl_Position = projection * vec4(position, 0.0, 1.0);
+        TexCoords = texPos;
+    }
+
+)glsl";
+
+const char* text_frag_source =
+R"glsl(
+    #version 330 core
+
+    in vec2 TexCoords;
+    out vec4 color;
+
+    uniform sampler2D text;
+
+    void main()
+    {
+        vec4 sampled = vec4(1.0, 1.0, 1.0, texture(text, TexCoords).r);
+        color = vec4(1.0, 1.0, 1.0, 1.0) * sampled;
+    }
+)glsl";
+
 const GLfloat vertices[] = 
 {
     -1.0f,  1.0f,    0.0f, 0.0f,      // Top left
@@ -42,11 +78,157 @@ const GLfloat vertices[] =
     -1.0f, -1.0f,    0.0f, 1.0f       // Bottom left
 };
 
-const GLint indices[] = 
+const GLuint indices[] = 
 {
     0, 1, 2,
     2, 3, 0
 };
+
+
+Font::Font(FT_Library* ft, std::string family, std::string style)
+{
+    // Load font from file
+    std::string path = "./fonts/";
+    path += family + '/';
+    path += family + '-' + style;
+    path += ".ttf";
+    FT_Face face;
+    if (FT_New_Face(*ft, path.c_str(), 0, &face))
+    {
+        std::cerr << "Error loading font: " << family << ' ' << style << std::endl;
+        throw std::exception();
+    }
+    FT_Set_Pixel_Sizes(face, 0, 64);
+
+    // Load all char glyphs as bmps
+    for (unsigned char c = 0; c < 128; c++)
+    {
+        if (FT_Load_Char(face, c, FT_LOAD_RENDER))
+        {
+            std::cerr << "Error loading char " << c <<  " from font " << family << ' ' << style << std::endl;
+            throw std::exception();
+        }
+        GLuint texture;
+        glGenTextures(1, &texture);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, face->glyph->bitmap.width, face->glyph->bitmap.rows, 0, GL_RED, GL_UNSIGNED_BYTE, face->glyph->bitmap.buffer);
+        
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+
+        Character character = 
+        {
+            texture,
+            glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
+            glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
+            // TODO
+            static_cast<uint>(face->glyph->advance.x)
+        };
+        characters[c] = character;
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    FT_Done_Face(face);
+}
+
+void renderText(Shader& shader, std::string text, float x, float y, float scale)
+{
+    shader.use();
+    for (auto iter = text.begin(); iter != text.end(); iter++)
+    {
+
+    }
+}
+
+Shader::Shader(const char* vert_source, const char* frag_source, int total_attr_size)
+: total_attr_size(total_attr_size)
+{
+    GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vert_shader, 1, &vert_source, NULL);
+    glCompileShader(vert_shader);
+    GLenum error;
+    if ((error = glGetError()))
+    {
+        std::cerr << "Error compiling vertex shader" << std::endl;
+        throw std::exception();
+    }
+    GLint status;
+    glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &status);
+    char buffer[512];
+    glGetShaderInfoLog(vert_shader, 512, NULL, buffer);
+    if (buffer[0] != '\0')
+    {
+        std::cerr << "Vertex shader log: " << std::endl;
+        std::cerr << buffer << std::endl;
+        throw std::exception();
+    }
+
+    GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(frag_shader, 1, &frag_source, NULL);
+    glCompileShader(frag_shader);
+    if ((error = glGetError()))
+    {
+        std::cerr << "Error compiling vertex shader" << std::endl;
+        throw std::exception();
+    }
+    glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &status);
+    glGetShaderInfoLog(frag_shader, 512, NULL, buffer);
+    if (buffer[0] != '\0')
+    {
+        std::cerr << "Fragment shader Log:" << std::endl;
+        std::cerr << buffer << std::endl;
+        throw std::exception();
+    }
+
+    shader_program = glCreateProgram();
+    glAttachShader(shader_program, vert_shader);
+    glAttachShader(shader_program, frag_shader);
+
+    glLinkProgram(shader_program);
+}
+
+void Shader::use()
+{
+    glUseProgram(shader_program);
+}
+
+void Shader::addAttribute(const char* name, int attr_size)
+{
+    assert(attr_index + attr_size <= total_attr_size);
+    GLint attribute = glGetAttribLocation(shader_program, name);
+    glVertexAttribPointer(attribute, attr_size, GL_FLOAT, GL_TRUE, total_attr_size * sizeof(float), reinterpret_cast<void*>(attr_index * sizeof(float)));
+    glEnableVertexAttribArray(attribute);
+    attr_index += attr_size;
+}
+
+void Shader::transform(const char* name, glm::mat4* trans)
+{
+    uint transformLoc = glGetUniformLocation(shader_program, name);
+    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(*trans));
+}
+
+Texture::Texture(int width, int height, GLint filter)
+: width(width), height(height)
+{
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+}
+
+void Texture::update(int width, int height, void* pixels)
+{
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    this->width = width;
+    this->height = height;
+}
 
 Display::Display()
 {
@@ -69,6 +251,16 @@ Display::Display()
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
 
+    FT_Library ft;
+    if (FT_Init_FreeType(&ft))
+    {
+        std::cerr << "Error: could not init FreeType" << std::endl;
+        throw std::exception();
+    }
+    roboto_black = Font(&ft, {"Roboto"}, {"Black"});
+    // Other fonts if used
+    FT_Done_FreeType(ft);
+
     // Setup GLEW
     glewExperimental = GL_TRUE;
     if (glewInit() != GLEW_OK)
@@ -83,7 +275,7 @@ Display::Display()
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
-    io.IniFilename = NULL;
+    io.IniFilename = "./cfg/imgui.ini";
     //io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     ImGui::StyleColorsDark();                                    // Dark theme
@@ -112,96 +304,17 @@ Display::Display()
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-    GLenum error;
-    if ((error = glGetError()))
-    {
-        std::cerr << "Error compiling vertex shader" << std::endl;
-        throw std::exception();
-    }
-    GLint status;
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
-    char buffer[512];
-    glGetShaderInfoLog(vertexShader, 512, NULL, buffer);
-    if (buffer[0] != '\0')
-    {
-        std::cerr << "Vertex shader log: " << std::endl;
-        std::cerr << buffer << std::endl;
-        throw std::exception();
-    }
+    frame_shader = Shader(frame_vert_source, frame_frag_source, 4);
+    frame_shader.addAttribute("position", 2);
+    frame_shader.addAttribute("texCoord", 2);
+    // TODO matrix projection
 
-    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-    if ((error = glGetError()))
-    {
-        std::cerr << "Error compiling vertex shader" << std::endl;
-        throw std::exception();
-    }
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
-    glGetShaderInfoLog(fragmentShader, 512, NULL, buffer);
-    if (buffer[0] != '\0')
-    {
-        std::cerr << "Fragment shader Log:" << std::endl;
-        std::cerr << buffer << std::endl;
-        throw std::exception();
-    }
-
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-
-    glLinkProgram(shaderProgram);
-    glUseProgram(shaderProgram);
-
-    GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
-    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_TRUE, 4 * sizeof(float), 0);
-    glEnableVertexAttribArray(posAttrib);
-
-    GLint texAttrib = glGetAttribLocation(shaderProgram, "texCoord");
-    glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_TRUE, 4 * sizeof(float), (void*) (2 * sizeof(float)));
-    glEnableVertexAttribArray(texAttrib);
-
-    glGenTextures(1, &frame_tex);
-    glBindTexture(GL_TEXTURE_2D, frame_tex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
+    frame_tex = Texture(256, 240, GL_NEAREST);
 #ifdef DEBUGGER
-    glGenTextures(1, &pt_tex[0]);
-    glBindTexture(GL_TEXTURE_2D, pt_tex[0]);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    glGenTextures(1, &pt_tex[1]);
-    glBindTexture(GL_TEXTURE_2D, pt_tex[1]);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    for (int i = 0; i < 4; i++)
-    {
-        glGenTextures(1, &nt_tex[i]);
-        glBindTexture(GL_TEXTURE_2D, nt_tex[i]);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    }
-
-    for (int i = 0; i < 8; i++)
-    {
-        glGenTextures(1, &pal_tex[i]);
-        glBindTexture(GL_TEXTURE_2D, pal_tex[i]);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    }
-
-    glGenTextures(1, &spr_tex);
-    glBindTexture(GL_TEXTURE_2D, spr_tex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    glBindTexture(GL_TEXTURE_2D, 0);
+    for (int i = 0; i < 2; i++) pt_tex[i]  = Texture(128, 128, GL_NEAREST);
+    for (int i = 0; i < 4; i++) nt_tex[i]  = Texture(256, 240, GL_NEAREST);
+    for (int i = 0; i < 8; i++) pal_tex[i] = Texture(4, 1, GL_NEAREST);
+    spr_tex = Texture(64, 64, GL_NEAREST);
 #endif
 }
 
@@ -213,6 +326,8 @@ Display::~Display()
     ImGui::DestroyContext();
     #endif
 
+    // TODO destroy textures?
+
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
     SDL_Quit();
@@ -220,21 +335,7 @@ Display::~Display()
 
 void Display::displayFrame(RunFlags& run_flags)
 {
-#ifndef DEBUGGER
-    // Draw frame
-    glClearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
-    glClear(GL_COLOR_BUFFER_BIT);
-    int window_w = 0;
-    int window_h = 0;
-    SDL_GetWindowSize(window, &window_w, &window_h);
-    int frame_h = window_h;
-    int frame_w = frame_h * 256 / 240;
-    glViewport(window_w/2 - frame_w/2, 0, frame_w, frame_h);
-    glBindTexture(GL_TEXTURE_2D, frame_tex);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    SDL_GL_SwapWindow(window);
-#else
+#ifdef DEBUGGER
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame(window);
     ImGui::NewFrame();
@@ -260,9 +361,9 @@ void Display::displayFrame(RunFlags& run_flags)
         for (int i = 0; i < 8; i++)
         {
             if (i == palette_selected)
-                ImGui::Image((void*)(intptr_t)pal_tex[i], size, uv_min, uv_max, tint, border_selected);
+                ImGui::Image((ImTextureID)(intptr_t)pal_tex[i].texture, size, uv_min, uv_max, tint, border_selected);
             else
-                ImGui::Image((void*)(intptr_t)pal_tex[i], size, uv_min, uv_max, tint, border_unselected);
+                ImGui::Image((ImTextureID)(intptr_t)pal_tex[i].texture, size, uv_min, uv_max, tint, border_unselected);
             ImGui::SameLine();
         }
         ImGui::End();
@@ -275,12 +376,12 @@ void Display::displayFrame(RunFlags& run_flags)
         ImVec2 uv_max = ImVec2(1.0f, 1.0f);
         ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
         ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
-        float width = 256.0f;
-        float height = 256.0f;
-        ImVec2 size = ImVec2(width, height);
         for (int i = 0; i < 2; i++)
         {
-            ImGui::Image((void*)(intptr_t)pt_tex[i], size, uv_min, uv_max, tint, border);
+            float width = static_cast<float>(2 * pt_tex[i].width);
+            float height = static_cast<float>(2 * pt_tex[i].height);
+            ImVec2 size = ImVec2(width, height);
+            ImGui::Image((ImTextureID)(intptr_t)pt_tex[i].texture, size, uv_min, uv_max, tint, border);
             if (ImGui::IsItemHovered())
             {
                 ImGui::BeginTooltip();
@@ -294,7 +395,7 @@ void Display::displayFrame(RunFlags& run_flags)
                 else if (region_y > height - region_sz) region_y = height - region_sz;
                 ImVec2 uv0 = ImVec2((region_x) / width, (region_y) / height);
                 ImVec2 uv1 = ImVec2((region_x + region_sz) / width, (region_y + region_sz) / height);
-                ImGui::Image((void*)(intptr_t)pt_tex[i], ImVec2(region_sz * zoom, region_sz * zoom), uv0, uv1, tint, border);
+                ImGui::Image((ImTextureID)(intptr_t)pt_tex[i].texture, ImVec2(region_sz * zoom, region_sz * zoom), uv0, uv1, tint, border);
                 ImGui::EndTooltip();
             }
             ImGui::SameLine();
@@ -309,12 +410,12 @@ void Display::displayFrame(RunFlags& run_flags)
         ImVec2 uv_max = ImVec2(1.0f, 1.0f);
         ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
         ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
-        float width = 256.0f;
-        float height = 240.0f;
-        ImVec2 size = ImVec2(width, height);
         for (int i = 0; i < 4; i++)
         {
-            ImGui::Image((void*)(intptr_t)nt_tex[i], size, uv_min, uv_max, tint, border);
+            float width = static_cast<float>(nt_tex[i].width);
+            float height = static_cast<float>(nt_tex[i].height);
+            ImVec2 size = ImVec2(width, height);
+            ImGui::Image((ImTextureID)(intptr_t)nt_tex[i].texture, size, uv_min, uv_max, tint, border);
             if (ImGui::IsItemHovered())
             {
                 ImGui::BeginTooltip();
@@ -328,7 +429,7 @@ void Display::displayFrame(RunFlags& run_flags)
                 else if (region_y > height - region_sz) region_y = height - region_sz;
                 ImVec2 uv0 = ImVec2((region_x) / width, (region_y) / height);
                 ImVec2 uv1 = ImVec2((region_x + region_sz) / width, (region_y + region_sz) / height);
-                ImGui::Image((void*)(intptr_t)nt_tex[i], ImVec2(region_sz * zoom, region_sz * zoom), uv0, uv1, tint, border);
+                ImGui::Image((ImTextureID)(intptr_t)nt_tex[i].texture, ImVec2(region_sz * zoom, region_sz * zoom), uv0, uv1, tint, border);
                 ImGui::EndTooltip();
             }
             if (i%2 == 0) ImGui::SameLine();
@@ -342,8 +443,8 @@ void Display::displayFrame(RunFlags& run_flags)
         ImVec2 uv_max = ImVec2(1.0f, 1.0f);
         ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
         ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
-        ImVec2 size = ImVec2(256.0f, static_cast<float>(8 * spr_h * 4));
-        ImGui::Image((void*)(intptr_t)spr_tex, size, uv_min, uv_max, tint, border);
+        ImVec2 size = ImVec2(static_cast<float>(4 * spr_tex.width), static_cast<float>(4 * spr_tex.height)); // TODO
+        ImGui::Image((ImTextureID)(intptr_t)spr_tex.texture, size, uv_min, uv_max, tint, border);
         ImGui::End();
     }
     // Registers
@@ -418,68 +519,31 @@ void Display::displayFrame(RunFlags& run_flags)
 
     // Render
     ImGui::Render();
-    int disp_w = io.DisplaySize.x;
-    int disp_h = io.DisplaySize.y;
-    glViewport(0, 0, disp_w, disp_h);
+#endif
+    int window_w, window_h = 0;
+    SDL_GetWindowSize(window, &window_w, &window_h);
+    glViewport(0, 0, window_w, window_h);
     glClearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
     glClear(GL_COLOR_BUFFER_BIT);
 
     // Draw frame
-    int frame_h = disp_h;
-    int frame_w = frame_h * 256 / 240;
-    glViewport(0, 0, frame_w, frame_h);
-    glBindTexture(GL_TEXTURE_2D, frame_tex);
+    frame_shader.use();
+    glm::mat4 trans = glm::mat4(1.0f);
+    float frame_w = static_cast<float>(window_h) * 256.0f / 240.0f;
+    float x_scale = frame_w / static_cast<float>(window_w);
+#ifdef DEBUGGER
+    float x_trans = (frame_w - static_cast<float>(window_w)) / (static_cast<float>(window_w));
+    trans = glm::translate(trans, glm::vec3(x_trans, 0.0f, 0.0f));
+#endif
+    trans = glm::scale(trans, glm::vec3(x_scale, 1.0f, 0.0f));
+    frame_shader.transform("transformation", &trans);
+    glBindTexture(GL_TEXTURE_2D, frame_tex.texture);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     // Draw ImGui elements
-    glViewport(0, 0, disp_w, disp_h);
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    SDL_GL_SwapWindow(window);
-#endif
-}
-
 #ifdef DEBUGGER
-void Display::addPatternTable(ubyte* pt, int pt_i)
-{
-    assert((pt_i >= 0) && (pt_i < 2));
-    glBindTexture(GL_TEXTURE_2D, pt_tex[pt_i]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 128, 128, 0, GL_RGB, GL_UNSIGNED_BYTE, pt);
-    glBindTexture(GL_TEXTURE_2D, 0);
-}
-
-void Display::addNametable(ubyte* nt, int nt_i)
-{
-    assert((nt_i >= 0) && (nt_i < 4));
-    glBindTexture(GL_TEXTURE_2D, nt_tex[nt_i]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256, 240, 0, GL_RGB, GL_UNSIGNED_BYTE, nt);
-    glBindTexture(GL_TEXTURE_2D, 0);
-}
-
-void Display::addPalette(ubyte* pal, int pal_i)
-{
-    assert(pal_i >= 0 && pal_i < 8);
-    glBindTexture(GL_TEXTURE_2D, pal_tex[pal_i]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 4, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, pal);
-    glBindTexture(GL_TEXTURE_2D, 0);
-}
-
-void Display::addSprites(ubyte* sprites, int height)
-{
-    assert(height == 8 || height == 16);
-    spr_h = height;
-    glBindTexture(GL_TEXTURE_2D, spr_tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 64, 8*height, 0, GL_RGB, GL_UNSIGNED_BYTE, sprites);
-    glBindTexture(GL_TEXTURE_2D, 0);
-}
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 #endif
-
-void Display::addFrame(ubyte* frame, int width, int height)
-{
-    assert(width > 0 && height > 0);
-    glBindTexture(GL_TEXTURE_2D, frame_tex);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // To solve alignment in the case of frame width not aligning to 4 bytes
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, frame);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    SDL_GL_SwapWindow(window);
 }
