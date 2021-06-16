@@ -516,8 +516,6 @@ void Display::displayFrame(RunFlags& run_flags)
         if (ImGui::Button("Program Counter")) disassemble_mode = FOLLOW_PC;
         ImGui::SameLine();
         if (ImGui::Button("Select Address")) disassemble_mode = SELECT_ADDRESS;
-        if (run_flags.paused) ImGui::Text("Paused"); // TODO move somewhere else
-        else ImGui::Text(" ");
         uword addr = 0; 
         if (disassemble_mode == FOLLOW_PC) addr = debug_state.registers.reg_pc;
         else if (disassemble_mode == SELECT_ADDRESS) addr = mem_address;
