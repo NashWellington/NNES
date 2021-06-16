@@ -7,7 +7,7 @@
 
 // Comment this out if building as NNES
 // Uncomment this out if building as NNES - debugger
-// TODO change this (and NDEBUG) to bemake flags or something
+// TODO change this (and NDEBUG) to be make flags or something
 #ifndef DEBUGGER
 #define DEBUGGER
 #endif
