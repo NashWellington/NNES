@@ -15,8 +15,9 @@ This is a rough order of things I am planning to implement or change:
 
 ## Compiling
 NNES requires a C++17 compiler, as well as the following dependencies:
-* GLEW (package: libglew-dev)
-* SDL2 (package: libsdl2-dev)
+* GLEW      (Debian package: libglew-dev)
+* SDL2      (Debian package: libsdl2-dev)
+* FreeType2 (Debian package: libfreetype-dev)
 
 To compile, navigate to the src/ directory and run "make". The executable will be compiled as "NNES" in the build/ directory.
 
