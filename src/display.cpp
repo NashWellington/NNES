@@ -44,12 +44,12 @@ R"glsl(
     in vec2 texCoords;
     out vec2 TexCoords;
     
-    uniform mat4 projection;
+    uniform mat4 transformation;
 
     void main()
     {
-        gl_Position = projection * vec4(position, 0.0, 1.0);
-        TexCoords = texPos;
+        gl_Position = transformation * vec4(position, 0.0, 1.0);
+        TexCoords = texCoords;
     }
 
 )glsl";
@@ -99,6 +99,7 @@ Font::Font(FT_Library* ft, std::string family, std::string style)
         throw std::exception();
     }
     FT_Set_Pixel_Sizes(face, 0, 64);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
     // Load all char glyphs as bmps
     for (unsigned char c = 0; c < 128; c++)
@@ -118,30 +119,77 @@ Font::Font(FT_Library* ft, std::string family, std::string style)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-
         Character character = 
         {
             texture,
-            glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
-            glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
-            // TODO
-            static_cast<uint>(face->glyph->advance.x)
+            glm::fvec2(static_cast<float>(face->glyph->bitmap.width),   static_cast<float>(face->glyph->bitmap.rows)),
+            glm::fvec2(static_cast<float>(face->glyph->bitmap_left),    static_cast<float>(face->glyph->bitmap_top)),
+            glm::fvec2(static_cast<float>(face->glyph->advance.x >> 6), static_cast<float>(face->glyph->advance.y >> 6))
         };
         characters[c] = character;
 
         glBindTexture(GL_TEXTURE_2D, 0);
     }
-
     FT_Done_Face(face);
+    //glGenBuffers(1, &font_vbo);
+    //glBindBuffer(GL_ARRAY_BUFFER, font_vbo);
+    //glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * 4, NULL, GL_DYNAMIC_DRAW);
+    //glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void renderText(Shader& shader, std::string text, float x, float y, float scale)
+void Font::renderText(Shader& shader, std::string text, float window_w, float window_h, float x, float y, float scale, bool align_left)
 {
     shader.use();
-    for (auto iter = text.begin(); iter != text.end(); iter++)
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    y -= characters[text[0]].advance.y / 2.0f;
+    if (align_left)
     {
+        for (auto iter = text.begin(); iter != text.end(); iter++)
+        {
+            Character c = characters[*iter];
 
+            float c_x = x + (c.size.x/2.0f + c.bearing.x) * scale;
+            float c_y = y - (c.size.y/2.0f + (c.size.y - c.bearing.y)) * scale;
+
+            float c_w = c.size.x * scale;
+            float c_h = c.size.y * scale;
+
+            glBindTexture(GL_TEXTURE_2D, c.texture_id);
+
+            glm::mat4 trans = glm::mat4(1.0f);
+            trans = glm::translate(trans, glm::vec3(c_x*2.0f / window_w - 1.0f, c_y*2.0f / window_h - 1.0f, 0.0f));
+            trans = glm::scale(trans, glm::vec3(c_w / window_w, c_h / window_h, 0.0f));
+            shader.transform("transformation", &trans);
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+            x += c.advance.x * scale;
+        }
     }
+    else
+    {
+        for (auto iter = text.rbegin(); iter != text.rend(); iter++)
+        {
+            Character c = characters[*iter];
+            
+            x -= c.advance.x * scale;
+            float c_x = x + (c.size.x/2.0f + c.bearing.x) * scale;
+            float c_y = y - (c.size.y/2.0f + (c.size.y - c.bearing.y)) * scale;
+
+            float c_w = c.size.x * scale;
+            float c_h = c.size.y * scale;
+
+            glBindTexture(GL_TEXTURE_2D, c.texture_id);
+
+            glm::mat4 trans = glm::mat4(1.0f);
+            trans = glm::translate(trans, glm::vec3(c_x*2.0f / window_w - 1.0f, c_y*2.0f / window_h - 1.0f, 0.0f));
+            trans = glm::scale(trans, glm::vec3(c_w / window_w, c_h / window_h, 0.0f));
+            shader.transform("transformation", &trans);
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        }
+    }
+    //glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDisable(GL_BLEND);
 }
 
 Shader::Shader(const char* vert_source, const char* frag_source, int total_attr_size)
@@ -251,16 +299,6 @@ Display::Display()
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
 
-    FT_Library ft;
-    if (FT_Init_FreeType(&ft))
-    {
-        std::cerr << "Error: could not init FreeType" << std::endl;
-        throw std::exception();
-    }
-    roboto_black = Font(&ft, {"Roboto"}, {"Black"});
-    // Other fonts if used
-    FT_Done_FreeType(ft);
-
     // Setup GLEW
     glewExperimental = GL_TRUE;
     if (glewInit() != GLEW_OK)
@@ -290,24 +328,36 @@ Display::Display()
     // TODO Stats?
 
     // Setup OpenGL
-    GLuint vao;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
-    GLuint vbo;
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); // TODO experiment w/ dynamic
 
-    GLuint ebo;
     glGenBuffers(1, &ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
+    FT_Library ft;
+    if (FT_Init_FreeType(&ft))
+    {
+        std::cerr << "Error: could not init FreeType" << std::endl;
+        throw std::exception();
+    }
+    roboto_black = Font(&ft, {"Roboto"}, {"Black"});
+    // Other fonts if used
+    FT_Done_FreeType(ft);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
     frame_shader = Shader(frame_vert_source, frame_frag_source, 4);
     frame_shader.addAttribute("position", 2);
     frame_shader.addAttribute("texCoord", 2);
-    // TODO matrix projection
+
+    text_shader = Shader(text_vert_source, text_frag_source, 4);
+    text_shader.addAttribute("position", 2);
+    text_shader.addAttribute("texCoord", 2);
 
     frame_tex = Texture(256, 240, GL_NEAREST);
 #ifdef DEBUGGER
@@ -537,9 +587,16 @@ void Display::displayFrame(RunFlags& run_flags)
 #endif
     trans = glm::scale(trans, glm::vec3(x_scale, 1.0f, 0.0f));
     frame_shader.transform("transformation", &trans);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBindTexture(GL_TEXTURE_2D, frame_tex.texture);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
+
+    if (run_flags.paused)
+    {
+        roboto_black.renderText(text_shader, {"PAUSED"}, (float)window_w, (float)window_h, (float)window_w, (float)window_h, (float)window_h/1000.0f, false);
+        frame_shader.use();
+    }
 
     // Draw ImGui elements
 #ifdef DEBUGGER

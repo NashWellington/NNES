@@ -39,25 +39,6 @@ struct Pixel
     ubyte b = 0;
 };
 
-struct Font
-{
-public:
-    Font() {}
-    Font(FT_Library* ft, std::string family, std::string style);
-    void renderText(GLuint shader, std::string text, float x, float y, float scale);
-
-private:
-    struct Character
-    {
-        uint texture_id = 0;
-        glm::ivec2 size = {};
-        glm::ivec2 bearing = {};
-        uint advance = 0;
-    };
-
-    std::array<Character, 128> characters = {};
-};
-
 struct Shader
 {
 public:
@@ -83,6 +64,28 @@ public:
     int width = 0;
     int height = 0;
     GLuint texture = 0;
+};
+
+struct Font
+{
+public:
+    Font() {}
+    Font(FT_Library* ft, std::string family, std::string style);
+    void renderText(Shader& shader, std::string text, 
+        float window_w, float window_h, float x, float y, float scale, 
+        bool align_left = true);
+
+private:
+    struct Character
+    {
+        uint texture_id = 0;
+        glm::fvec2 size = {};
+        glm::fvec2 bearing = {};
+        glm::fvec2 advance = {};
+    };
+
+    std::array<Character, 128> characters = {};
+    GLuint font_vbo = 0;
 };
 
 class Display
@@ -115,6 +118,9 @@ private:
     float clear_color[4] = {0.0f, 0.0f, 0.0f, 1.0f};
     Shader frame_shader;
     Shader text_shader;
+    GLuint vao = 0;
+    GLuint vbo = 0;
+    GLuint ebo = 0;
 
 // SDL variables
     SDL_WindowFlags window_flags = {};
