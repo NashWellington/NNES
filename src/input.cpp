@@ -47,30 +47,30 @@ void Input::pollInputs(RunFlags& run_flags)
                         break;
                     case SDLK_g:
                         run_flags.paused = false;
-                        run_flags.step = true;
+                        run_flags.steps += 1;
+                        break;
+                    case SDLK_8: // Execute 2^8 instructions
+                        run_flags.paused = false;
+                        run_flags.steps += 0x0100;
                         break;
                     // TODO make these only work if Memory window is hovered/selected
                     case SDLK_UP:
-                        display.mem_address -= 16;
-                        if (display.mem_address < 0x8000) display.mem_address += 0x8000;
+                        display.mem_addrs.addrs[display.mem_addrs.device] -= 16;
                         break;
                     case SDLK_DOWN:
-                        display.mem_address += 16;
-                        if (display.mem_address < 0x8000) display.mem_address += 0x8000;
+                        display.mem_addrs.addrs[display.mem_addrs.device] += 16;
                         break;
                     case SDLK_LEFT:
-                        display.mem_address--;
-                        if (display.mem_address < 0x8000) display.mem_address += 0x8000;
+                        display.mem_addrs.addrs[display.mem_addrs.device]--;
                         break;
                     case SDLK_RIGHT:
-                        display.mem_address++;
-                        if (display.mem_address < 0x8000) display.mem_address += 0x8000;
+                        display.mem_addrs.addrs[display.mem_addrs.device]++;
                         break;
                     case SDLK_PAGEUP:
-                        display.mem_address -= 16 * 16;
+                        display.mem_addrs.addrs[display.mem_addrs.device] -= 16 * 16;
                         break;
                     case SDLK_PAGEDOWN:
-                        display.mem_address += 16 * 16;
+                        display.mem_addrs.addrs[display.mem_addrs.device] += 16 * 16;
                         break;
                     #endif
 
@@ -146,6 +146,38 @@ void Input::pollInputs(RunFlags& run_flags)
                 break;
         }
     }
-
+    #ifdef DEBUGGER
+    uint device = display.mem_addrs.device;
+    assert (device <= 3);
+    switch (device)
+    {
+        case 0: // zpg
+            if (display.mem_addrs.addrs[device] >= 0x0100)
+                display.mem_addrs.addrs[device] %= 0x0100;
+            break;
+        case 1: // stack
+            if (display.mem_addrs.addrs[device] < 0x0100)
+                display.mem_addrs.addrs[device] += 0x0100;
+            else if (display.mem_addrs.addrs[device] >= 0x0200)
+                display.mem_addrs.addrs[device] %= 0x0100;
+            break;
+        case 2: // ram
+            if (display.mem_addrs.addrs[device] < 0x0200)
+                display.mem_addrs.addrs[device] += 0x0400;
+            else if (display.mem_addrs.addrs[device] >= 0x0800)
+            {
+                display.mem_addrs.addrs[device] -= 0x0200;
+                display.mem_addrs.addrs[device] %= 0x0600;
+                display.mem_addrs.addrs[device] += 0x0200;
+            }
+            break;
+        case 3: // PRG_ROM
+            if (display.mem_addrs.addrs[device] < 0x8000)
+                display.mem_addrs.addrs[device] += 0x8000;
+            break;
+        default:
+            break;
+    }
+    #endif
     bus.joypad_data[0] = joypad_1;
 }

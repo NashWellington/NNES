@@ -24,7 +24,7 @@ struct RunFlags
 
     #ifdef DEBUGGER
     bool tick = false;      // If true, execute one cpu cycle (& 3 ppu cycles)
-    bool step = false;      // If true, execute one cpu instruction
+    uint steps = 0;         // Number of cpu instructions to execute
     bool frame = false;     // Cycles until the end of the frame
     #endif
 };
@@ -98,7 +98,18 @@ public:
 
 #ifdef DEBUGGER
     int palette_selected = 0;
-    uword mem_address = 0x8000; // Address in memory to be displayed by the "Memory" window
+    struct
+    {
+        std::array<uword, 4> addrs = 
+        {
+            0x0000,     // zpg
+            0x0100,     // stack
+            0x0200,     // ram
+            0x8000      // prg_rom
+        };
+
+        uint device = 3; // 
+    } mem_addrs = {};
     enum
     {
         FOLLOW_PC,              // Starts at the address pointed to by the Program Counter

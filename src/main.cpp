@@ -80,13 +80,16 @@ int main(int argc, char ** argv)
                     run_flags.tick = false;
                     ppu.addDebug();
                 }
-                else if (run_flags.step)
+                else if (run_flags.steps > 0)
                 {
                     if (stepped)
                     {
-                        run_flags.paused = true;
-                        run_flags.step = false;
-                        ppu.addDebug();
+                        run_flags.steps--;
+                        if (run_flags.steps == 0)
+                        {
+                            run_flags.paused = true;
+                            ppu.addDebug();
+                        }
                     }
                 }
                 #else

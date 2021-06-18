@@ -518,7 +518,7 @@ void Display::displayFrame(RunFlags& run_flags)
         if (ImGui::Button("Select Address")) disassemble_mode = SELECT_ADDRESS;
         uword addr = 0; 
         if (disassemble_mode == FOLLOW_PC) addr = debug_state.registers.reg_pc;
-        else if (disassemble_mode == SELECT_ADDRESS) addr = mem_address;
+        else if (disassemble_mode == SELECT_ADDRESS) addr = mem_addrs.addrs[mem_addrs.device];
         int lines = 10;
         std::optional<std::string> line;
         for (int i = 0; i < lines; i++)
@@ -539,12 +539,48 @@ void Display::displayFrame(RunFlags& run_flags)
     // TODO add tabs or buttons to switch between memory fields
     {
         ImGui::Begin("Memory");
-        ImGui::Text("PRG-ROM:");
-        uword addr = (mem_address & 0xFFF0) - 8 * 16;
+        if (ImGui::Button("Zero Page")) mem_addrs.device = 0;
+        ImGui::SameLine();
+        if (ImGui::Button("Stack")) mem_addrs.device = 1;
+        ImGui::SameLine();
+        if (ImGui::Button("RAM")) mem_addrs.device = 2;
+        ImGui::SameLine();
+        if (ImGui::Button("PRG ROM")) mem_addrs.device = 3;
+        uword addr = (mem_addrs.addrs[mem_addrs.device] & 0xFFF0) - 8 * 16;
         for (int i = 0; i < 16; i++) // Display 9 lines
         {
-            if (addr < 0x8000) ImGui::Text(" ");
-            else ImGui::Text("%s", peekMem(addr).c_str());
+            bool show = true;
+            switch (mem_addrs.device)
+            {
+                case 0: // zpg
+                    if (addr >= 0x0100) 
+                    {
+                        ImGui::Text(" ");
+                        show = false;
+                    }
+                    break;
+                case 1: // stack
+                    if (addr < 0x0100 || addr >= 0x0200) 
+                    {
+                        ImGui::Text(" ");
+                        show = false;
+                    }
+                    break;
+                case 2: // RAM
+                    if (addr < 0x0200 || addr >= 0x0800) 
+                    {
+                        ImGui::Text(" ");
+                        show = false;
+                    }
+                    break;
+                case 3: // PRG ROM
+                    if (addr < 0x8000) 
+                    {
+                        ImGui::Text(" ");
+                        show = false;
+                    }
+            }
+            if (show) ImGui::Text("%s", peekMem(addr).c_str());
             addr += 16;
         }
         ImGui::End();
