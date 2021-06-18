@@ -158,21 +158,13 @@ public:
     {
         struct
         {
-            union
-            {
-                unsigned nn : 2; // nametable index
-                struct
-                {
-                    unsigned x : 1; // x scroll pos
-                    unsigned y : 1; // y scroll pos
-                };
-            };
-            unsigned i : 1;
-            unsigned s : 1;
-            unsigned b : 1;
-            unsigned h : 1;
-            unsigned p : 1;
-            unsigned v : 1;
+            unsigned nn : 2;
+            unsigned i  : 1;
+            unsigned s  : 1;
+            unsigned b  : 1;
+            unsigned h  : 1;
+            unsigned p  : 1;
+            unsigned v  : 1;
         };
         byte reg;
     } reg_ppu_ctrl { .reg = 0 };
