@@ -100,15 +100,16 @@ public:
     int palette_selected = 0;
     struct
     {
-        std::array<uword, 4> addrs = 
+        std::array<uword, 5> addrs = 
         {
-            0x0000,     // zpg
-            0x0100,     // stack
-            0x0200,     // ram
-            0x8000      // prg_rom
+            0x0000,     // Zero Page
+            0x0100,     // Stack
+            0x0200,     // RAM
+            0x6000,     // PRG RAM
+            0x8000      // PRG ROM
         };
 
-        uint device = 3; // 
+        uint device = 4; // 
     } mem_addrs = {};
     enum
     {

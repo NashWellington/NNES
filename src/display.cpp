@@ -531,8 +531,10 @@ void Display::displayFrame(RunFlags& run_flags)
             }
             else i = lines;
         }
-        ImGui::Text("PPU cycle: %6i", debug_state.ppu_cycle);
         ImGui::Text("CPU cycle: %6i", debug_state.ppu_cycle/3);
+        ImGui::Text("PPU cycle: %6i", debug_state.ppu_cycle);
+        ImGui::Text("Pixel:     %6i", debug_state.pixel);
+        ImGui::Text("Scanline:  %6i", debug_state.scanline);
     ImGui::End();
     }
     // Memory
@@ -545,7 +547,9 @@ void Display::displayFrame(RunFlags& run_flags)
         ImGui::SameLine();
         if (ImGui::Button("RAM")) mem_addrs.device = 2;
         ImGui::SameLine();
-        if (ImGui::Button("PRG ROM")) mem_addrs.device = 3;
+        if (ImGui::Button("PRG RAM")) mem_addrs.device = 3;
+        ImGui::SameLine();
+        if (ImGui::Button("PRG ROM")) mem_addrs.device = 4;
         uword addr = (mem_addrs.addrs[mem_addrs.device] & 0xFFF0) - 8 * 16;
         for (int i = 0; i < 16; i++) // Display 9 lines
         {
@@ -573,12 +577,22 @@ void Display::displayFrame(RunFlags& run_flags)
                         show = false;
                     }
                     break;
-                case 3: // PRG ROM
+                case 3: // PRG RAM
+                    if (addr < 0x6000 || addr >= 0x8000)
+                    {
+                        ImGui::Text(" ");
+                        show = false;
+                    }
+                    break;
+                case 4: // PRG ROM
                     if (addr < 0x8000) 
                     {
                         ImGui::Text(" ");
                         show = false;
                     }
+                    break;
+                default:
+                    break;
             }
             if (show) ImGui::Text("%s", peekMem(addr).c_str());
             addr += 16;

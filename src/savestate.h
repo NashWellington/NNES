@@ -21,6 +21,9 @@ struct Savestate
     uint32_t ppu_cycle = 0;
 
     #ifdef DEBUGGER
+    int pixel = 0;
+    int scanline = 0;
+
     std::string filename = "";
     std::string header_type = "";
     int mapper = -1;

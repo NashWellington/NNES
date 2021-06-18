@@ -72,28 +72,24 @@ int main(int argc, char ** argv)
             ppu.tick();
             if ((ppu_cycle % 3) == 2) 
             {
+                cpu.tick();
+
                 #ifdef DEBUGGER
-                bool stepped = cpu.tick();
                 if (run_flags.tick)
                 {
                     run_flags.paused = true;
                     run_flags.tick = false;
                     ppu.addDebug();
                 }
-                else if (run_flags.steps > 0)
+                if (run_flags.steps > 0 && cpu.ready())
                 {
-                    if (stepped)
+                    run_flags.steps--;
+                    if (run_flags.steps == 0)
                     {
-                        run_flags.steps--;
-                        if (run_flags.steps == 0)
-                        {
-                            run_flags.paused = true;
-                            ppu.addDebug();
-                        }
+                        run_flags.paused = true;
+                        ppu.addDebug();
                     }
                 }
-                #else
-                cpu.tick();
                 #endif
             }
             ppu_cycle++;

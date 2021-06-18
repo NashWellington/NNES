@@ -148,20 +148,20 @@ void Input::pollInputs(RunFlags& run_flags)
     }
     #ifdef DEBUGGER
     uint device = display.mem_addrs.device;
-    assert (device <= 3);
+    assert (device <= 4);
     switch (device)
     {
-        case 0: // zpg
+        case 0: // Zero Page
             if (display.mem_addrs.addrs[device] >= 0x0100)
                 display.mem_addrs.addrs[device] %= 0x0100;
             break;
-        case 1: // stack
+        case 1: // Stack
             if (display.mem_addrs.addrs[device] < 0x0100)
                 display.mem_addrs.addrs[device] += 0x0100;
             else if (display.mem_addrs.addrs[device] >= 0x0200)
                 display.mem_addrs.addrs[device] %= 0x0100;
             break;
-        case 2: // ram
+        case 2: // RAM
             if (display.mem_addrs.addrs[device] < 0x0200)
                 display.mem_addrs.addrs[device] += 0x0400;
             else if (display.mem_addrs.addrs[device] >= 0x0800)
@@ -171,7 +171,15 @@ void Input::pollInputs(RunFlags& run_flags)
                 display.mem_addrs.addrs[device] += 0x0200;
             }
             break;
-        case 3: // PRG_ROM
+        case 3: // PRG RAM
+            if (display.mem_addrs.addrs[device] < 0x6000 
+                || display.mem_addrs.addrs[device] >= 0x8000)
+            {
+                display.mem_addrs.addrs[device] %= 0x2000;
+                display.mem_addrs.addrs[device] += 0x6000;
+            }
+            break;
+        case 4: // PRG ROM
             if (display.mem_addrs.addrs[device] < 0x8000)
                 display.mem_addrs.addrs[device] += 0x8000;
             break;

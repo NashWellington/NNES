@@ -178,6 +178,10 @@ void PPU::tick()
     {
         scanline -= SCANLINES_PER_FRAME;
     }
+    #ifdef DEBUGGER
+    debug_state.pixel = cycle;
+    debug_state.scanline = scanline;
+    #endif
 }
 
 void PPU::pushPixels()
