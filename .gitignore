@@ -1,6 +1,7 @@
 .vscode/*
 build/log/*
 build/NNES
+build/NNES-debug
 roms/*
 testing/*
 design.txt
