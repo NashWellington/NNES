@@ -88,9 +88,9 @@ bool CPU::tick()
 void CPU::step()
 {
     // Check for interrupts
-    if (bus.getInterrupt())
+    if (InterruptType i = bus.getInterrupt())
     {
-        cycle += handleInterrupt(bus.getInterrupt());
+        cycle += handleInterrupt(i);
         bus.clearInterrupt();
     }
     
@@ -141,6 +141,7 @@ void CPU::addInterrupt(InterruptType interrupt)
     bus.addInterrupt(interrupt);
 }
 
+// TODO emulate interrupt hijacking
 int CPU::handleInterrupt(InterruptType type)
 {
     assert(type != NO_INTERRUPT);
@@ -174,7 +175,6 @@ int CPU::handleInterrupt(InterruptType type)
     reg_sr.i = true;
 
     // Load the address of the interrupt handling routine to PC
-    // TODO figure out how to log these to the debugger
     switch (type)
     {
         case IRQ:

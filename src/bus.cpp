@@ -267,7 +267,12 @@ void Bus::cpuWriteReg(uword address, byte data)
                 ppu_latch |= (data & 0x07);
                 break;
 
-            // TODO $4017 
+            case 0x4017: // Joypad 2 input + APU Frame Counter
+                // TODO Expand on this once I implement the APU
+                apu_frame_counter.reg = data & 0xC0;
+                if (!apu_frame_counter.i) addInterrupt(IRQ);
+                ppu_latch = apu_frame_counter.reg;
+                break;
 
             default:
                 #ifndef NDEBUG
@@ -331,4 +336,19 @@ void Bus::clearInterrupt()
 void Bus::setMapper(std::shared_ptr<Mapper> m)
 {
     mapper = m;
+}
+
+void Bus::start()
+{
+    cpu_suspend_cycles = 0;
+    joypad_data[0] = 0;
+    joypad_data[1] = 0;
+    reg_input[0] = {};
+    reg_input[1] = {};
+    // TODO APU + I/O regs
+}
+
+void Bus::reset()
+{
+    // TODO APU + I/O regs
 }

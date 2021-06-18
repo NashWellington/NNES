@@ -67,6 +67,8 @@ public:
     void setMapper(std::shared_ptr<Mapper> m);
 
     //TODO start() and reset()
+    void start();
+    void reset();
 
 private:
     std::shared_ptr<Mapper> mapper;
@@ -306,7 +308,29 @@ public:
             unsigned    : 3;
         };
         byte reg;
-    } reg_input[2] = {};
+    } reg_input[2] {{.reg = 0}, {.reg = 0}};
+
+    /* APU Frame Counter
+    * $4017
+    * 
+    * 7 6 5 4   3 2 1 0
+    * M I
+    * 
+    * I - Interrupt inhibit flag
+    *     Clears the frame interrupt flag if set
+    * M - Sequencer mode
+    *     0 = 4-step sequence, 1 = 5-step sequence
+    */
+    union
+    {
+        struct
+        {
+            unsigned   : 6;
+            unsigned i : 1; // Interrupt inhibit flag
+            unsigned m : 1; // Sequencer mode
+        };
+        byte reg;
+    } apu_frame_counter {.reg = 0};
 
 // PPU Object Attribute Memory
     std::array<std::array<byte,4>,64> oam = {}; // Contains 64 4-byte sprites
