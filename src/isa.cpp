@@ -2,6 +2,44 @@
 
 // TODO clean up code so it's simpler and formatted better
 
+int ISA::IRQ()
+{
+    if (cpu.reg_sr.i) return 0;
+    else
+    {
+        ubyte pch = static_cast<ubyte>((cpu.reg_pc & 0xFF00) >> 8);
+        ubyte pcl = static_cast<ubyte>(cpu.reg_pc & 0x00FF);
+
+        cpu.push(pch);
+        cpu.push(pcl);
+        cpu.push(cpu.reg_sr.reg & 0xEF); // Push SR with break flag clear
+
+        cpu.reg_sr.i = true;
+        pcl = cpu.read(0xFFFE);
+        pch = cpu.read(0xFFFF);
+
+        cpu.reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
+        return 7;
+    }
+}
+
+int ISA::NMI()
+{
+    ubyte pch = static_cast<ubyte>((cpu.reg_pc & 0xFF00) >> 8);
+    ubyte pcl = static_cast<ubyte>(cpu.reg_pc & 0x00FF);
+
+    cpu.push(pch);
+    cpu.push(pcl);
+    cpu.push(cpu.reg_sr.reg & 0xEF); // Push SR with break flag clear
+    
+    cpu.reg_sr.i = true;
+    pcl = cpu.read(0xFFFA);
+    pch = cpu.read(0xFFFB);
+
+    cpu.reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
+    return 7;
+}
+
 int ISA::executeOpcode(ubyte instr)
 {
     // declare return values
@@ -1452,21 +1490,24 @@ int ISA::BRK()
     // read and throw away the next byte
     cpu.nextByte();
 
-    uword pc = cpu.reg_pc;
-    ubyte pcl = static_cast<ubyte>(pc & 0x00FF);
-    ubyte pch = static_cast<ubyte>((pc & 0xFF00) >> 8);
+    if (cpu.reg_sr.i) return 0;
+    else
+    {
+        uword pc = cpu.reg_pc;
+        ubyte pcl = static_cast<ubyte>(pc & 0x00FF);
+        ubyte pch = static_cast<ubyte>((pc & 0xFF00) >> 8);
 
-    cpu.push(pch);
-    cpu.push(pcl);
-    cpu.push(cpu.reg_sr.reg | 0x10); // push SR w/ B flag set
+        cpu.push(pch);
+        cpu.push(pcl);
+        cpu.push(cpu.reg_sr.reg | 0x10); // push SR w/ B flag set
 
-    cpu.reg_sr.i = true;
+        cpu.reg_sr.i = true;
 
-    pcl = cpu.read(0xFFFE);
-    pch = cpu.read(0xFFFF);
-    cpu.reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
-
-    return 7;
+        pcl = cpu.read(0xFFFE);
+        pch = cpu.read(0xFFFF);
+        cpu.reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
+        return 7;
+    }
 }
 
 int ISA::BVC(int cycles, uword address)

@@ -9,6 +9,12 @@ class CPU;
 
 namespace ISA
 {
+// Interrupts
+
+    int IRQ();
+    int NMI();
+
+// Instructions
 
     int executeOpcode(ubyte instr);
 

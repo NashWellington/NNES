@@ -2,11 +2,6 @@
 
 CPU cpu;
 
-// Addresses of interrupt handling routine vectors
-const uword IRQ_ADDRESS = 0xFFFE;
-const uword NMI_ADDRESS = 0xFFFA;
-const uword RESET_ADDRESS = 0xFFFC;
-
 // Address of the stack (used for push and pop)
 const uword STACK_START = 0x0100;
 
@@ -102,18 +97,22 @@ void CPU::step()
 
 void CPU::start()
 {
-    ubyte pcl = bus.cpuRead(RESET_ADDRESS);
-    ubyte pch = bus.cpuRead(RESET_ADDRESS + 1);
+    ubyte pcl = bus.cpuRead(0xFFFC);
+    ubyte pch = bus.cpuRead(0xFFFD);
     reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
     bus.start();
-    cycle += 7;
+    cycle = 7;
 }
 
 void CPU::reset()
 {
+    ubyte pcl = bus.cpuRead(0xFFFC);
+    ubyte pch = bus.cpuRead(0xFFFD);
+    reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
     reg_sp -= 3;
     reg_sr.i = true;     // I flag
     bus.reset();
+    cycle = 7;
 }
 
 void CPU::save(Savestate& savestate)
@@ -150,57 +149,17 @@ int CPU::handleInterrupt(InterruptType type)
 {
     assert(type != NO_INTERRUPT);
 
-    // If IRQ, check for interrupt disable flag
-    if ((type == IRQ) && reg_sr.i) return 0;
-
-    ubyte pch = 0;
-    ubyte pcl = 0;
-
-    // Default behavior of IRQ and NMI
-    if (type != RESET)
-    {
-        // Push PC (high byte), PC (low byte), and SR onto stack
-        pch = byte((reg_pc & 0xF0) >> 4);
-        pcl = byte(reg_pc & 0x0F);
-        push(pch);
-        push(pcl);
-        push(reg_sr.reg);
-    }
-    /* Emulate post-reset memory state according to:
-    * http://wiki.nesdev.com/w/index.php/CPU_power_up_state#After_reset
-    */
-    else
-    {
-        // Reset registers
-        reset();
-    }
-
-    // Set interrupt disable flag
-    reg_sr.i = true;
-
-    // Load the address of the interrupt handling routine to PC
     switch (type)
     {
         case IRQ:
-            pcl = static_cast<ubyte>(bus.cpuRead(IRQ_ADDRESS));
-            pch = static_cast<ubyte>(bus.cpuRead(IRQ_ADDRESS + 1));
-            reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
-            break;
-        
+            return ISA::IRQ();
         case NMI:
-            pcl = static_cast<ubyte>(bus.cpuRead(NMI_ADDRESS));
-            pch = static_cast<ubyte>(bus.cpuRead(NMI_ADDRESS + 1));
-            reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
-            break;
-
+            return ISA::NMI();
         case RESET:
-            pcl = static_cast<ubyte>(bus.cpuRead(RESET_ADDRESS));
-            pch = static_cast<ubyte>(bus.cpuRead(RESET_ADDRESS + 1));
-            reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
+            reset();
             break;
-
         default:
             break;
     }
-    return 7;
+    return 0;
 }
