@@ -1458,12 +1458,19 @@ int ISA::BRK()
     // read and throw away the next byte
     cpu.nextByte();
 
-    // TODO handle break flag shenanigans here
-    // Force NMI
-    cpu.addInterrupt(NMI);
+    uword pc = cpu.reg_pc;
+    ubyte pcl = static_cast<ubyte>(pc & 0x00FF);
+    ubyte pch = static_cast<ubyte>((pc & 0xFF00) >> 8);
 
-    // Set flags
-    cpu.reg_sr.b = 1;
+    cpu.push(pch);
+    cpu.push(pcl);
+    cpu.push(cpu.reg_sr.reg | 0x10); // push SR w/ B flag set
+
+    cpu.reg_sr.i = true;
+
+    pcl = cpu.read(0xFFFE);
+    pch = cpu.read(0xFFFF);
+    cpu.reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
 
     return 7;
 }
