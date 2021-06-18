@@ -62,7 +62,7 @@ namespace Mode
     std::pair<byte,int> immediate();
 
     /* Calculates the address the PC should branch to
-    * cycles: 3 (minimum) //TODO conflicting sources say either 2 or 3
+    * cycles: 3 (minimum)
     *           +1 if branch is taken - external
     *               extra +1 if page cross - internal
     */

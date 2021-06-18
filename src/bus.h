@@ -249,11 +249,13 @@ public:
     */
     struct
     {
-        std::array<byte, 2> buffer = {};
+        ubyte x = 0; // ubytes so I don't have to deal w/ sign extension
+        ubyte y = 0;
         unsigned int i = 0;
         void write (byte data)
         {
-            buffer[i] = data;
+            if (i == 0) x = static_cast<ubyte>(data);
+            else y = static_cast<ubyte>(data);
             i++;
             i %= 2;
         }

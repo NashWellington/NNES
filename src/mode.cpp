@@ -85,7 +85,7 @@ std::pair<byte,int> Mode::immediate()
 
 std::pair<uword,int> Mode::relative()
 {
-    int cycles = 3;     // TODO is this really 2?
+    int cycles = 2;
     byte offset = static_cast<byte>(cpu.nextByte());
     uword pc = cpu.reg_pc;
 

@@ -25,8 +25,10 @@ public:
     */
     int executeInstruction();
 
-    // Returns true if step() was called
-    bool tick();
+    // Returns true if CPU is ready to execute another instruction
+    bool ready();
+
+    void tick();
 
     /* Execute 1 instruction or handle 1 interrupt
     */

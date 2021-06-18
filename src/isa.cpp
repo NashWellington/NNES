@@ -39,6 +39,7 @@ int ISA::executeOpcode(ubyte instr)
         case 0x06: // ASL zpg
             std::tie(address, cycles) = Mode::zeroPage(0);
             val = cpu.read(address);
+            cycles += 2;
             return ASL(cycles, address, val, false);
 
         // Unofficial
@@ -109,12 +110,13 @@ int ISA::executeOpcode(ubyte instr)
 
         case 0x15: // ORA zpg,X
             std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            cycles += 1;
             val = cpu.read(address);
             return ORA(cycles, val);
 
         case 0x16: // ASL zpg,X
             std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
-            cycles += 2;
+            cycles += 3;
             val = cpu.read(address);
             return ASL(cycles, address, val, false);
 
@@ -270,6 +272,7 @@ int ISA::executeOpcode(ubyte instr)
         case 0x35: // AND zpg,X
             std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
             val = cpu.read(address);
+            cycles += 1;
             return AND(cycles, val);
 
         case 0x36: // ROL zpg,X
@@ -1216,7 +1219,7 @@ int ISA::executeOpcode(ubyte instr)
 
         case 0xF6: // INC zpg,X
             std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
-            cycles += 1;
+            cycles += 3;
             return INC(cycles, address);
 
         // Unofficial
@@ -1258,7 +1261,7 @@ int ISA::executeOpcode(ubyte instr)
 
         case 0xFE: // INC abs,X
             std::tie(address, cycles) = Mode::absolute(cpu.reg_x, true);
-            cycles += 1;
+            cycles += 4;
             return INC(cycles, address);
 
         // Unofficial
@@ -1269,14 +1272,11 @@ int ISA::executeOpcode(ubyte instr)
 
         default:
             std::cerr << "Error: invalid opcode " << hex(instr) << std::endl;
+            uword pc = cpu.reg_pc - 1;
+            std::cerr << "PC: " << hex(pc) << std::endl;
             throw std::exception();
             break;
     }
-    /* This won't ever execute, 
-    * but I get an annoying warning from the compiler
-    * if I don't have it
-    */
-    return 0;
 }
 
 int ISA::ADC(int cycles, byte val)
@@ -1348,8 +1348,7 @@ int ISA::BCC(int cycles, uword address)
     }
     else
     {
-        // TODO verify
-        cycles = 3;
+        cycles = 2;
     }
 
     return cycles;
@@ -1364,8 +1363,7 @@ int ISA::BCS(int cycles, uword address)
     }
     else
     {
-        // TODO verify
-        cycles = 3;
+        cycles = 2;
     }
 
     return cycles;
@@ -1380,8 +1378,7 @@ int ISA::BEQ(int cycles, uword address)
     }
     else
     {
-        // TODO verify
-        cycles = 3;
+        cycles = 2;
     }
 
     return cycles;
@@ -1414,8 +1411,7 @@ int ISA::BMI(int cycles, uword address)
     }
     else
     {
-        // TODO verify
-        cycles = 3;
+        cycles = 2;
     }
 
     return cycles;
@@ -1430,8 +1426,7 @@ int ISA::BNE(int cycles, uword address)
     }
     else
     {
-        // TODO verify
-        cycles = 3;
+        cycles = 2;
     }
 
     return cycles;
@@ -1446,8 +1441,7 @@ int ISA::BPL(int cycles, uword address)
     }
     else
     {
-        // TODO figure out if this is 3 or 2
-        cycles = 3;
+        cycles = 2;
     }
 
     return cycles;
@@ -1484,8 +1478,7 @@ int ISA::BVC(int cycles, uword address)
     }
     else
     {
-        // TODO double check this val
-        cycles = 3;
+        cycles = 2;
     }
 
     return cycles;
@@ -1500,8 +1493,7 @@ int ISA::BVS(int cycles, uword address)
     }
     else
     {
-        // TODO verify
-        cycles = 3;
+        cycles = 2;
     }
 
     return cycles;

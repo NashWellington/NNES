@@ -69,20 +69,22 @@ int CPU::executeInstruction()
     return ISA::executeOpcode(instruction);
 }
 
-bool CPU::tick()
+bool CPU::ready()
 {
-    bool stepped = false;
+    return cycle == 0;
+}
+
+void CPU::tick()
+{
     if (cycle == 0)
     {
         if (!bus.oamWrite(odd_cycle)) 
         {
             step();
-            stepped = true;
         }
     }
-    else cycle--; // TODO ?
+    if (cycle > 0) cycle--;
     odd_cycle = !odd_cycle;
-    return stepped;
 }
 
 void CPU::step()
@@ -103,13 +105,15 @@ void CPU::start()
     ubyte pcl = bus.cpuRead(RESET_ADDRESS);
     ubyte pch = bus.cpuRead(RESET_ADDRESS + 1);
     reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
+    bus.start();
+    cycle += 7;
 }
 
 void CPU::reset()
 {
     reg_sp -= 3;
     reg_sr.i = true;     // I flag
-    // TODO APU/IO register reset stuff
+    bus.reset();
 }
 
 void CPU::save(Savestate& savestate)
