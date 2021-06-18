@@ -62,15 +62,15 @@ void PPU::tick()
                 {
                     uword nt_addr_base = 0x2000 
                         + (static_cast<uword>(bus.reg_ppu_ctrl.nn) * 0x0400);
-                    uword at_col = reg_nt_col / 2;
-                    uword at_row = reg_nt_row / 2;
+                    uword at_col = reg_nt_col / 4;
+                    uword at_row = reg_nt_row / 4;
                     at_byte = bus.ppuRead(nt_addr_base + 0x3C0 + at_row * 8 + at_col);
 
                     // TODO figure out if I need to do this now or later
                     // get palette info from attribute depending on quadrant
                     uint offset = 0;
-                    if (reg_nt_col % 2 == 0) offset += 2;       // left quadrants -> 1100 0000 or 0000 1100
-                    if (reg_nt_row % 2 == 1) offset += 4;       // bottom quadrants -> 1100 000 or 0011 0000
+                    if ((reg_nt_col/2) % 2 == 1) offset += 2;       // right quadrants -> 1100 0000 or 0000 1100
+                    if ((reg_nt_row/2) % 2 == 1) offset += 4;       // bottom quadrants -> 1100 000 or 0011 0000
                     at_byte = ((at_byte & (0x03 << offset)) >> offset);
                     break;
                 }
@@ -276,10 +276,10 @@ void PPU::getNTTile(uint nt_col, uint nt_row, uint nt_i, uint pt_i)
     ubyte palette_index = 0;
 
     // get a byte from the attribute table used to find the palette index
-    attribute = bus.ppuRead(0x2000 + 0x0400 * nt_i + 0x03C0 + ((nt_col/2) % 8) + (8 * (nt_row/2)));
+    attribute = bus.ppuRead(0x2000 + 0x0400 * nt_i + 0x03C0 + nt_col/4 + 8 * (nt_row/4));
 
     // get palette info from attribute depending on quadrant
-    if (((nt_col / 2) % 2) == 0) offset += 2; // left quadrants -> 1100 0000 or 0000 1100
+    if (((nt_col / 2) % 2) == 1) offset += 2; // right quadrants -> 1100 0000 or 0000 1100
     if (((nt_row / 2) % 2) == 1) offset += 4; // bottom quadrants -> 1100 000 or 0011 0000
     palette_index = ((attribute & (0x03 << offset)) >> offset);
 
