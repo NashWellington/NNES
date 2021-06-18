@@ -7,7 +7,7 @@ flags += -I/usr/include/SDL2 -I/usr/include/freetype2
 
 libs = -lGLEW -lGL -lGLU -lSDL2 -lfreetype
 
-project = NNES
+project = NNES-debug
 
 $(project) : $(objects)
 		g++ $(flags) $(objects) -o ../build/$(project) $(libs)
