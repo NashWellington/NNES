@@ -112,11 +112,11 @@ void PPU::tick()
         else if (cycle == 257)
         {
             // TODO I forgot what else I'm supposed to do this cycle
-            bus.ppuWrite(0x2003, 0);
+            bus.cpuWrite(0x2003, 0);
         }
         else if ((cycle >= 258) && (cycle <= 320)) // Idle cycles
         {
-            bus.ppuWrite(0x2003, 0);
+            bus.cpuWrite(0x2003, 0);
         }
         else if ((cycle == 338) || (cycle == 340)) // Unused NT fetches
         {
