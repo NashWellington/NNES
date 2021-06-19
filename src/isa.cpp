@@ -1,6 +1,7 @@
 #include "isa.h"
 
 // TODO clean up code so it's simpler and formatted better
+// TODO IRQ, NMI, RESET, BRK dummy CPU reads w/o incrementing
 
 int ISA::IRQ()
 {
@@ -1929,7 +1930,7 @@ int ISA::ROR(int cycles, uword address, byte val, bool flag_accumulator)
 int ISA::RTI()
 {
     // Read next byte and throw away
-    cpu.reg_pc++;
+    cpu.nextByte();
     
     // Pull SR, set bits 5 and 4 to 1 and 0
     cpu.reg_sr.reg = cpu.pop();
@@ -1946,6 +1947,9 @@ int ISA::RTI()
 
 int ISA::RTS()
 {
+    // Dummy CPU read
+    cpu.nextByte();
+
     // Pull PC and increment
     ubyte pcl = static_cast<ubyte>(cpu.pop());
     ubyte pch = static_cast<ubyte>(cpu.pop());
