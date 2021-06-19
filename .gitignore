@@ -6,6 +6,5 @@ roms/*
 testing/*
 design.txt
 TODOS.txt
-src/imgui.ini
 src/*.o
-src/test_roms/ppu_tests/240p_test_suite/*
+test_roms/ppu_tests/240p_test_suite/*
