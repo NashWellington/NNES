@@ -49,9 +49,9 @@
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 
-// SDL // TODO change these back once I unfuck the makefile
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_syswm.h>
+// SDL
+#include <SDL.h>
+#include <SDL_syswm.h>
 #if defined(__APPLE__)
 #include "TargetConditionals.h"
 #endif
