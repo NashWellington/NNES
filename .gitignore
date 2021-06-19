@@ -3,7 +3,7 @@ build/log/*
 build/NNES
 build/NNES-debug
 roms/*
-testing/*
+sandbox/*
 design.txt
 TODOS.txt
 src/*.o
