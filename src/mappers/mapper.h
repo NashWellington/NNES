@@ -1,6 +1,6 @@
 #pragma once
 
-#pragma GCC diagnostic warning "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 
 #include "../globals.h"
 #include "../savestate.h"
