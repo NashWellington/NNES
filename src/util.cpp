@@ -164,9 +164,9 @@ std::optional<std::string> disassemble(uword& address)
 {
     uword start_address = address;
     std::string line = hex(address) + ": ";
-    byte instr = bus.cpuRead(address++);
+    ubyte instr = static_cast<ubyte>(bus.cpuRead(address++));
     line += instructions[instr];
-    line += disassembleMode(address, static_cast<ubyte>(instr));
+    line += disassembleMode(address, instr);
     if (start_address > (address - 1)) return {};
     for (int i = 0; i < (20 - static_cast<int>(line.size())); i++) line += ' ';
     return line;
