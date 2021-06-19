@@ -5,8 +5,6 @@
 
 #include <map>
 
-extern std::map<byte,std::string> instructions;
-
 // Disassemble one line (1-3 bytes)
 std::optional<std::string> disassemble(uword& address);
 

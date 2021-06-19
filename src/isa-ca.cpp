@@ -1,7 +1,7 @@
 #include "isa-ca.h"
 
 // TODO delete this once I copy all the instructions to instructions
-std::array<std::function<void(byte)>,256> instructions = 
+const std::array<std::function<void(byte)>,256> instructions = 
 {
 //      X0         X1         X2         X3         X4         X5         X6         X7         X8         X9         XA         XB         XC         XD         XE         XF
     &ISA::BRK, &ISA::ORA, &ISA::STP, &ISA::SLO, &ISA::NOP, &ISA::ORA, &ISA::ASL, &ISA::SLO, &ISA::PHP, &ISA::ORA, &ISA::ASL, &ISA::ANC, &ISA::NOP, &ISA::ORA, &ISA::ASL, &ISA::SLO, // 0X
@@ -23,7 +23,7 @@ std::array<std::function<void(byte)>,256> instructions =
 };
 
 // NOTE: instructions with no addressing mode (e.g. STP) had their modes set to "impl"
-std::array<std::function<void(ISA::InstrType)>,256> modes =
+const std::array<std::function<void(ISA::InstrType)>,256> modes =
 {
 //      X0          X1          X2          X3          X4          X5          X6          X7          X8          X9          XA          XB          XC          XD          XE          XF
     &ISA::impl, &ISA::indX, &ISA::impl, &ISA::indX, &ISA::zpg,  &ISA::zpg,  &ISA::zpg,  &ISA::zpg,  &ISA::impl, &ISA::imm,  &ISA::acc,  &ISA::imm,  &ISA::abs,  &ISA::abs,  &ISA::abs,  &ISA::abs,  // 0X
