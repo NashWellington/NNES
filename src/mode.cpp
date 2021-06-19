@@ -1,5 +1,6 @@
 #include "mode.h"
 
+// TODO dummy reads for indexed instructions
 
 std::pair<uword,int> Mode::zeroPage(byte offset)
 {
@@ -7,7 +8,7 @@ std::pair<uword,int> Mode::zeroPage(byte offset)
     return std::make_pair(address, 3);
 }
 
-std::pair<uword,int> Mode::absolute(byte offset, bool read_instr)
+std::pair<uword,int> Mode::absolute(std::optional<byte> offset, bool read_instr)
 {
     int cycles = 3;
 
@@ -16,15 +17,22 @@ std::pair<uword,int> Mode::absolute(byte offset, bool read_instr)
     ubyte bb = cpu.nextByte();
 
     // Combine ubytes into uword w/ format bbaa to get un-indexed address
-    uword unindexed_addr = (static_cast<uword>(bb) << 8) + static_cast<uword>(aa);
+    uword address = (static_cast<uword>(bb) << 8) + static_cast<uword>(aa);
 
-    // add or subtract offset
-    uword address = unindexed_addr;
-    address += static_cast<uword>(static_cast<ubyte>(offset));
+    // Indexed
+    if (offset)
+    {
+        address += static_cast<uword>(static_cast<ubyte>(offset.value()));
 
-    // add one cycle if read instr and page cross
-    if (read_instr && (address >> 8 != unindexed_addr >> 8))
-        cycles += 1;
+        // Dummy read of address pre-fixing of high byte
+        aa += offset.value();
+        uword pre_fixed_addr = (static_cast<uword>(bb) << 8) + static_cast<uword>(aa);
+        cpu.read(pre_fixed_addr);
+
+        // add one cycle if read instr and page cross
+        if (address != pre_fixed_addr)
+            if (read_instr) cycles += 1;
+    }
 
     return std::make_pair(address, cycles);
 }

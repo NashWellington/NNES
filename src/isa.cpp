@@ -104,25 +104,25 @@ int ISA::executeOpcode(ubyte instr)
 
         // Unofficial
         case 0x0C: // NOP abs
-            std::tie(address, cycles) = Mode::absolute(0, true);
+            std::tie(address, cycles) = Mode::absolute({}, true);
             cycles += 1;
             return cycles;
 
         case 0x0D: // ORA abs
-            std::tie(address, cycles) = Mode::absolute(0, true);
+            std::tie(address, cycles) = Mode::absolute({}, true);
             cycles += 1;
             val = cpu.read(address);
             return ORA(cycles, val);
 
         case 0x0E: // ASL abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             cycles += 3;
             val = cpu.read(address);
             return ASL(cycles, address, val, false);
 
         // Unofficial
         case 0x0F: // SLO abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             cycles += 3;
             return SLO(cycles, address);
 
@@ -209,7 +209,7 @@ int ISA::executeOpcode(ubyte instr)
             return SLO(cycles, address);
 
         case 0x20: // JSR abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             cycles += 3;
             return JSR(address);
 
@@ -264,26 +264,26 @@ int ISA::executeOpcode(ubyte instr)
             return ANC(cycles, val);
 
         case 0x2C: // BIT abs
-            std::tie(address, cycles) = Mode::absolute(0, true);
+            std::tie(address, cycles) = Mode::absolute({}, true);
             cycles += 1;
             val = cpu.read(address);
             return BIT(cycles, val);
 
         case 0x2D: // AND abs
-            std::tie(address, cycles) = Mode::absolute(0, true);
+            std::tie(address, cycles) = Mode::absolute({}, true);
             cycles += 1;
             val = cpu.read(address);
             return AND(cycles, val);
 
         case 0x2E: // ROL abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             cycles += 3;
             val = cpu.read(address);
             return ROL(cycles, address, val, false);
 
         // Unofficial
         case 0x2F: // RLA abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             cycles += 3;
             return RLA(cycles, address);
 
@@ -424,24 +424,24 @@ int ISA::executeOpcode(ubyte instr)
             return ALR(cycles, val);
 
         case 0x4C: // JMP abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             return JMP(cycles, address);
 
         case 0x4D: // EOR abs
-            std::tie(address, cycles) = Mode::absolute(0, true);
+            std::tie(address, cycles) = Mode::absolute({}, true);
             cycles += 1;
             val = cpu.read(address);
             return EOR(cycles, val);
 
         case 0x4E: // LSR abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             cycles += 3;
             val = cpu.read(address);
             return LSR(cycles, address, val, false);
 
         // Unofficial
         case 0x4F: // SRE abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             cycles += 3;
             return SRE(cycles, address);
 
@@ -586,20 +586,20 @@ int ISA::executeOpcode(ubyte instr)
             return JMP(cycles, address);
 
         case 0x6D: // ADC abs
-            std::tie(address, cycles) = Mode::absolute(0, true);
+            std::tie(address, cycles) = Mode::absolute({}, true);
             cycles += 1;
             val = cpu.read(address);
             return ADC(cycles, val);
 
         case 0x6E: // ROR abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             cycles += 3;
             val = cpu.read(address);
             return ROR(cycles, address, val, false);
 
         // Unofficial
         case 0x6F: // RRA abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             cycles += 3;
             return RRA(cycles, address);
 
@@ -735,23 +735,23 @@ int ISA::executeOpcode(ubyte instr)
             return TXA();
 
         case 0x8C: // STY abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             cycles += 1;
             return STY(cycles, address);
 
         case 0x8D: // STA abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             cycles += 1;
             return STA(cycles, address);
 
         case 0x8E: // STX abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             cycles += 1;
             return STX(cycles, address);
 
         // Unofficial
         case 0x8F: // SAX abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             cycles += 1;
             return SAX(cycles, address);
         
@@ -888,26 +888,26 @@ int ISA::executeOpcode(ubyte instr)
             return LXA(cycles, val);
 
         case 0xAC: // LDY abs
-            std::tie(address, cycles) = Mode::absolute(0, true);
+            std::tie(address, cycles) = Mode::absolute({}, true);
             cycles += 1;
             val = cpu.read(address);
             return LDY(cycles, val);
 
         case 0xAD: // LDA abs
-            std::tie(address, cycles) = Mode::absolute(0, true);
+            std::tie(address, cycles) = Mode::absolute({}, true);
             cycles += 1;
             val = cpu.read(address);
             return LDA(cycles, val);
 
         case 0xAE: // LDX abs
-            std::tie(address, cycles) = Mode::absolute(0, true);
+            std::tie(address, cycles) = Mode::absolute({}, true);
             cycles += 1;
             val = cpu.read(address);
             return LDX(cycles, val);
 
         // Unofficial
         case 0xAF: // LAX abs
-            std::tie(address, cycles) = Mode::absolute(0, true);
+            std::tie(address, cycles) = Mode::absolute({}, true);
             cycles += 1;
             val = cpu.read(address);
             return LAX(cycles, val);
@@ -1047,25 +1047,25 @@ int ISA::executeOpcode(ubyte instr)
             return AXS(cycles, val);
 
         case 0xCC: // CPY abs
-            std::tie(address, cycles) = Mode::absolute(0, true);
+            std::tie(address, cycles) = Mode::absolute({}, true);
             cycles += 1;
             val = cpu.read(address);
             return CPY(cycles, val);
 
         case 0xCD: // CMP abs
-            std::tie(address, cycles) = Mode::absolute(0, true);
+            std::tie(address, cycles) = Mode::absolute({}, true);
             cycles += 1;
             val = cpu.read(address);
             return CMP(cycles, val);
 
         case 0xCE: // DEC abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             cycles += 3;
             return DEC(cycles, address);
 
         // Unofficial
         case 0xCF: // DCP abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             cycles += 3;
             return DCP(cycles, address);
 
@@ -1207,25 +1207,25 @@ int ISA::executeOpcode(ubyte instr)
             return SBC(cycles, val);
 
         case 0xEC: // CPX abs
-            std::tie(address, cycles) = Mode::absolute(0, true);
+            std::tie(address, cycles) = Mode::absolute({}, true);
             cycles += 1;
             val = cpu.read(address);
             return CPX(cycles, val);
 
         case 0xED: // SBC abs
-            std::tie(address, cycles) = Mode::absolute(0, true);
+            std::tie(address, cycles) = Mode::absolute({}, true);
             cycles += 1;
             val = cpu.read(address);
             return SBC(cycles, val);
 
         case 0xEE: // INC abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             cycles += 3;
             return INC(cycles, address);
 
         // Unofficial
         case 0xEF: // ISC abs
-            std::tie(address, cycles) = Mode::absolute(0, false);
+            std::tie(address, cycles) = Mode::absolute({}, false);
             cycles += 3;
             return ISC(cycles, address);
 

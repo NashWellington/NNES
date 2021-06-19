@@ -25,18 +25,18 @@ namespace Mode
     std::pair<uword,int> zeroPage(byte offset);
 
     /* Returns a memory address specified by two operands
-    * For un-indexed, offset = 0
+    * For un-indexed, offset = {}    (default constructor for optional, reads as false)
     * For indexed, offset = X or Y
     * cycles: 3 (minimum) - internal
     *           +0 if JMP instr
     *           +1 if read instr - external
-    *               extra +1 if indexed AND page cross - internal (only add if page cross)
+    *               extra +1 if indexed AND page cross
     *           +1 if write instr - external
     *               extra +1 if indexed - external
     *           +3 if read-modify-write instr - external
     *               extra +1 if indexed - external
     */
-    std::pair<uword,int> absolute(byte offset, bool read_instr);
+    std::pair<uword,int> absolute(std::optional<byte> offset, bool read_instr);
 
     /* Returns a memory address specified indirectly by two operands
     * Read the docs to understand
