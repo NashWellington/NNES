@@ -10,3 +10,6 @@ std::optional<std::string> disassemble(uword& address);
 
 // Get 16 bytes of memory to display on a line
 std::string peekMem(uword address);
+
+// Reverse the order of bits in a byte
+ubyte reverseByte(ubyte b);
