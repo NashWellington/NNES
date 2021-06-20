@@ -1,13 +1,13 @@
 #include "input.h"
 
-#define BUT_A       0x01
-#define BUT_B       0x02
-#define BUT_SELECT  0x04
-#define BUT_START   0x08
-#define BUT_UP      0x10
-#define BUT_DOWN    0x20
-#define BUT_LEFT    0x40
-#define BUT_RIGHT   0x80
+#define BUT_A       0x80
+#define BUT_B       0x40
+#define BUT_SELECT  0x20
+#define BUT_START   0x10
+#define BUT_UP      0x08
+#define BUT_DOWN    0x04
+#define BUT_LEFT    0x02
+#define BUT_RIGHT   0x01
 
 Input input = {};
 
@@ -187,5 +187,5 @@ void Input::pollInputs(RunFlags& run_flags)
             break;
     }
     #endif
-    bus.joypad_data[0] = joypad_1;
+    bus.joypad_data_buffer[0] = joypad_1;
 }

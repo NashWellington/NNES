@@ -124,9 +124,9 @@ byte Bus::cpuReadReg(uword address)
                 return ppu_latch;
             
             case 0x2004: // OAM data
-                data = oam[oam_addr/4][oam_addr%4];
-                ppu_latch = data;
-                return data;
+                //data = primary_oam[oam_addr/4].data[oam_addr%4];
+                ppu_latch = oam_data;
+                return oam_data;
             
             case 0x2005: // PPU scroll
                 return ppu_latch;
@@ -154,23 +154,17 @@ byte Bus::cpuReadReg(uword address)
                 return ppu_latch;
 
             case 0x4016: // Input port 1
-                if (poll_inputs)
-                {
-                    reg_input[0].d0 = joypad_data[0] & 0x01;
-                    joypad_data[0] >>= 1;
-                    joypad_data[0] |= 0x80; // All bits after the first 8 read as 1
-                }
+                reg_input[0].d0 = (joypad_data[0] & 0x80) >> 7;
+                joypad_data[0] <<= 1;
+                joypad_data[0] |= 0x01; // All bits after the first 8 read as 1
                 data = reg_input[0].reg & 0x1F;
                 reg_input[0].reg = 0; 
                 return data;
 
             case 0x4017: // Input port 2
-                if (poll_inputs)
-                {
-                    reg_input[1].d0 = joypad_data[1] & 0x01;
-                    joypad_data[1] >>= 1;
-                    joypad_data[1] |= 0x80;
-                }
+                reg_input[1].d0 = (joypad_data[1] & 0x80) >> 7;
+                joypad_data[1] <<= 1;
+                joypad_data[1] |= 0x01;
                 data = reg_input[1].reg & 0x1F;
                 reg_input[1].reg = 0;
                 return data;
@@ -223,8 +217,9 @@ void Bus::cpuWriteReg(uword address, byte data)
 
             // TODO no writing during vblank + more
             case 0x2004: // OAM data
-                oam[oam_addr/4][oam_addr%4] = data;
+                primary_oam[oam_addr/4].data[oam_addr%4] = data;
                 oam_addr++;
+                oam_data = data;
                 ppu_latch = data;
                 break;
 
@@ -261,7 +256,11 @@ void Bus::cpuWriteReg(uword address, byte data)
                 break;
 
             case 0x4016: // Joypad 1 input + general output port
-                poll_inputs = static_cast<bool>(data & 0x01);
+                if (data & 0x01)
+                {
+                    joypad_data[0] = joypad_data_buffer[0];
+                    joypad_data[1] = joypad_data_buffer[1];
+                }
                 // TODO expansion ports (if I ever get there)
                 ppu_latch &= 0xF8;
                 ppu_latch |= (data & 0x07);
@@ -299,7 +298,7 @@ bool Bus::oamWrite(bool odd_cycle)
         }
         else
         {
-            oam[oam_addr/4][oam_addr%4] = oam_data;
+            primary_oam[oam_addr/4].data[oam_addr%4] = oam_data;
         }
     }
     cpu_suspend_cycles -= 1;

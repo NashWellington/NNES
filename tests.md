@@ -22,7 +22,7 @@ Note: "240p test suite" is not included, and has been added to .gitignore, becau
 | Instruction Test v5 | blargg | 11/11 | Passes all 11 individual tests, but exhibits weird behavior when running the combined test ROMs that needs to be investigated |
 | Instruction Timing Tests | blargg | 0/2 | Test 1 fails #5; Test 2 fails |
 | Interrupt Test v2 | blargg | 0/5 | Test 1 fails #3; Tests 2-5 fails |
-| nestest | kevtris | 1/1 | Passes all tests when PC is set to C000, but since input doesn't currently work, it can't be run normally |
+| nestest | kevtris | 1/1 | |
 
 ## PPU Tests
 
@@ -33,11 +33,11 @@ Note: "240p test suite" is not included, and has been added to .gitignore, becau
 | Full Palette Test | blargg | 0/3 | full_palette and full_palette_smooth only show black screens; flowing_palette crashes because its PRG-RAM size is larger than the maximum PRG-RAM size for mapper 0 |
 | Misc PPU Tests | blargg | 1/5 | power_up_palette fails #2; sprite_ram fails #6; vbl_clear_time fails #3; vram_access fails #6 |
 | NMI Sync Test | blargg | 0/1 | Only shows a black screen |
-| NTSC Torture Test | rainwarrior | ?/1 | Can't be completed without input |
+| NTSC Torture Test | rainwarrior | 0?/1 | Inputs don't seem to change anything on screen |
 | OAM Read Test | blargg | 0/1 | |
 | OAM Stress Test | blargg | 0/1 | |
 | OAM Test 3 | lidnariq | 0/1 | No support for mapper 7 yet |
-| Palette Test | rainwarrior | ?/1 | Can't be completed without input |
+| Palette Test | rainwarrior | ?/1 | Inputs don't seem to change anything on screen |
 | PPU Open Bus Test | blargg | 0/1 | Fails #4 |
 | PPU Read Buffer Test | bisqwit | 0/1 | No support for mapper 3 yet |
 | Scanline Test | Quietust | 0/1 | |

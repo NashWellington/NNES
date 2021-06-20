@@ -283,6 +283,12 @@ public:
 // I/O registers
     bool poll_inputs = false;
 
+    /* Inputs go through this buffer first
+    * They get transferred to joypad_data when the CPU writes
+    * to $4016 with bit 0 set to 1
+    */
+    ubyte joypad_data_buffer[2] = {};
+
     // 8 inputs from joypads 1 and 2
     // NOTE: I made this a ubyte so I don't have to deal w/ ASR/LSR bs
     ubyte joypad_data[2] = {};
@@ -327,7 +333,18 @@ public:
     } apu_frame_counter {.reg = 0};
 
 // PPU Object Attribute Memory
-    std::array<std::array<byte,4>,64> oam = {}; // Contains 64 4-byte sprites
+    struct Sprite
+    {
+        std::array<ubyte,4> data = {};
+        ubyte& y            = data[0]; // top pixels
+        ubyte& tile_i       = data[1];
+        ubyte& attributes   = data[2];
+        ubyte& x            = data[3]; // left pixels
+    };
+
+    // Holds 8 4-byte sprites for the next scanline
+    std::array<Sprite,8> secondary_oam = {};
+    std::array<Sprite,64> primary_oam = {}; // Contains 64 4-byte sprites
 
     /* OAM address
     * $2003
@@ -336,7 +353,12 @@ public:
     */
     ubyte oam_addr = 0;
 
-    /* Stores the byte to be transferred from CPU memory to OAM between reads/writes
+    /* OAM Data
+    * $2004
+    * This is the value returned if register $2004 is read.
+    * Details on what the value should be on a given cycle are detailed here:
+    * http://wiki.nesdev.com/w/index.php/PPU_sprite_evaluation
+    * On boot & reset: ?
     */
     byte oam_data = 0;
 
