@@ -40,6 +40,7 @@ struct Header
 class Mapper
 {
 public:
+    virtual ~Mapper();
     virtual std::optional<byte> cpuRead(uword address) = 0;
     virtual bool cpuWrite(uword address, byte data) = 0;
     virtual std::optional<byte> ppuRead(uword address) = 0;
