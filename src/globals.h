@@ -1,5 +1,8 @@
 #pragma once
 
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic warning "-Wsign-conversion"
+
 // Uncomment this in release builds to prevent assertions and cerr logging
 //#ifndef NDEBUG
 //#define NDEBUG
@@ -7,18 +10,18 @@
 
 // Comment this out if building as NNES
 // Uncomment this out if building as NNES - debugger
-// TODO change this (and NDEBUG) to be make flags or something
+// TODO cmake argument
 #ifndef DEBUGGER
-#define DEBUGGER
+//#define DEBUGGER
 #endif
 
 #include <iostream>         // Used for logging errors etc.
-#include <stdexcept>        // exceptions
-#include <assert.h>         // assertions
-#include <fstream>          // Used for reading files
-#include <chrono>           // Used for clocking
+#include <stdexcept>        
+#include <assert.h>         
+#include <fstream>          
+#include <chrono>           
 #include <memory>           // Needed for shared_ptr
-#include <vector>           // needed for dynamic memory allocation
+#include <vector>           
 #include <optional>         
 #include <queue>
 
@@ -35,8 +38,21 @@ enum InterruptType
     RESET
 };
 
-std::string hex(uword x);
-std::string hex(ubyte x);
-std::string hex(byte x);
+template<typename T>
+std::string hex(const T x)
+{
+    std::string hex_string = {};
+    sprintf(hex_string.data(), "%0*X", static_cast<int>(2*sizeof(T)), x);
+    return hex_string;
+}
 
-std::string binary(byte x);
+template<typename T>
+std::string binary(const T x)
+{
+    std::string bin_str = "";
+    for (int i = 0; i < static_cast<int>(8*sizeof(T)); i++)
+    {
+        bin_str += (x & (1 << static_cast<int>(8*sizeof(T)-1-i)) ? '1' : '0');
+    }
+    return bin_str;
+}
