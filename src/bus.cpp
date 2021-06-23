@@ -295,10 +295,12 @@ bool Bus::oamWrite(bool odd_cycle)
         if (!(cpu_suspend_cycles % 2))
         {
             oam_data = cpuRead(dma_addr);
+            dma_addr++;
         }
         else
         {
             primary_oam[oam_addr/4].data[oam_addr%4] = oam_data;
+            oam_addr++;
         }
     }
     cpu_suspend_cycles -= 1;

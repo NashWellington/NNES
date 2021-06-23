@@ -13,7 +13,7 @@
 const int SCANLINES_PER_FRAME = 262;
 const int VISIBLE_SCANLINE_START = 0;   // scanlines 0-239
 const int POST_RENDER_START = 240;      // scanlines 240-260
-const int PRE_RENDER_START = -1;       // scanline  261
+const int PRE_RENDER_START = -1;        // scanline  261
 const int CYCLES_PER_SCANLINE = 341;    
 const int PIXELS_PER_SCANLINE = 256;
 const int FRAME_WIDTH = 256;
@@ -79,6 +79,7 @@ private:
     std::array<ubyte,8> spr_at_byte = {};       // Attribute bytes
     std::array<ubyte,8> spr_pt_byte_low = {};
     std::array<ubyte,8> spr_pt_byte_high = {};  
+    std::array<bool,8> show_spr = {};           // Toggles to false if sprite data not loaded from secondary oam
     std::queue<std::optional<Pixel>> spr_pipeline = {};
 
     uint32_t pixel_i = 0;                   // Index in the frame array

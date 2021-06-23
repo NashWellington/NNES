@@ -5,6 +5,15 @@ PPU ppu;
 PPU::PPU() 
 {
     loadSystemPalette();
+
+    /* Initializing to a # larger than the width of the screen so sprite pixels
+    * don't get drawn on screen
+    */
+    spr_x_pos.fill(0x00FF);
+    spr_at_byte.fill(0xFF);
+    spr_pt_byte_low.fill(0xFF);
+    spr_pt_byte_high.fill(0xFF);
+    show_spr.fill(false);
 }
 
 void PPU::loadSystemPalette()
@@ -57,7 +66,8 @@ void PPU::tick()
                     uword nt_addr_base = 0x2000 
                         + (static_cast<uword>(bus.reg_ppu_ctrl.nn) * 0x0400);
                     bg_nt_byte = bus.ppuRead(nt_addr_base + 32 * reg_nt_row + reg_nt_col);
-                    pushSpritePixels();
+                    if (scanline != PRE_RENDER_START && scanline < 239 && cycle <= 256)
+                        pushSpritePixels(); // TODO don't do this when pre-render or scanline 239
                     break;
                 }
                 case 4: // AT byte
@@ -117,9 +127,11 @@ void PPU::tick()
                 {
                     for (uint j = 0; j < 4; j++)
                     {
+                        // Clear secondary OAM
                         bus.secondary_oam[i].data[j] = 0xFF;
                     }
                 }
+
                 bus.oam_data = 0xFF;
             }
             else if (cycle >= 2 && cycle <= 64 && scanline != PRE_RENDER_START)
@@ -169,40 +181,51 @@ void PPU::tick()
             // TODO make this cycle-accurate
             if (scanline != PRE_RENDER_START && scanline < 239 && cycle == 257)
             {
+                show_spr.fill(false); // Sprites are not shown by default
                 ubyte y_range = bus.reg_ppu_ctrl.h ? 16 : 8;
                 for (uint i = 0; i < 8; i++)
                 {
-                    ubyte pt_y = scanline+1 - bus.secondary_oam[i].y; // y coord within the pattern table tile
-                    ubyte attributes = bus.secondary_oam[i].attributes;
-                    if (attributes & 0x80) pt_y = y_range - pt_y - 1; // Flip vertically
-
-                    uword pt_addr = static_cast<uword>(bus.secondary_oam[i].tile_i) * 16;
-                    if (y_range == 8) 
+                    ubyte y = bus.secondary_oam[i].y;
+                    if (y >= scanline+1 && y < scanline+1 + y_range) 
                     {
-                        pt_addr += bus.reg_ppu_ctrl.s * 0x1000;
-                        pt_addr += pt_y;
-                    }
-                    else
-                    {
-                        pt_addr %= 16;
-                        pt_addr += (bus.secondary_oam[i].tile_i & 0x01) * 0x1000;
-                        pt_addr += pt_y % 8;
-                        if (pt_y >= 8) pt_addr += 16;
-                    }
+                        show_spr[i] = true;
+                        ubyte pt_y = y - (scanline+1); // y coord within the pattern table tile
+                        ubyte attributes = bus.secondary_oam[i].attributes;
+                        if (attributes & 0x80) 
+                            pt_y = y_range - pt_y - 1; // Flip vertically
 
-                    ubyte pt_low = bus.ppuRead(pt_addr);
-                    ubyte pt_high = bus.ppuRead(pt_addr + 8);
+                        uword pt_addr = static_cast<uword>(bus.secondary_oam[i].tile_i);
+                        uword pt_i;
+                        if (y_range == 8) 
+                        {
+                            pt_addr *= 16;
+                            pt_i = bus.reg_ppu_ctrl.s * 0x1000;
+                            pt_addr += pt_i;
+                            pt_addr += pt_y;
+                        }
+                        else
+                        {
+                            pt_i = (pt_addr & 0x01) * 0x1000;
+                            pt_addr &= 0xFFFE;
+                            pt_addr *= 16;
+                            pt_addr += pt_y % 8;
+                            if (pt_y >= 8) pt_addr += 16;
+                        }
 
-                    if (attributes & 0x40) // Flip horizontally
-                    {
-                        pt_low = reverseByte(pt_low);
-                        pt_high = reverseByte(pt_high);
+                        ubyte pt_low = bus.ppuRead(pt_addr);
+                        ubyte pt_high = bus.ppuRead(pt_addr + 8);
+
+                        if (attributes & 0x40) // Flip horizontally
+                        {
+                            pt_low = reverseByte(pt_low);
+                            pt_high = reverseByte(pt_high);
+                        }
+
+                        spr_x_pos[i] = static_cast<int>(bus.secondary_oam[i].x);
+                        spr_at_byte[i] = attributes;
+                        spr_pt_byte_low[i] = pt_low;
+                        spr_pt_byte_high[i] = pt_high;
                     }
-
-                    spr_x_pos[i] = static_cast<int>(bus.secondary_oam[i].x);
-                    spr_at_byte[i] = attributes;
-                    spr_pt_byte_low[i] = pt_low;
-                    spr_pt_byte_high[i] = pt_high;
                 }
             }
             bus.cpuWrite(0x2003, 0);
@@ -287,6 +310,7 @@ void PPU::pushBackgroundPixels()
     }
 }
 
+// FIXME find a way to not draw some pixels
 // FIXME fix transparency
 void PPU::pushSpritePixels()
 {
@@ -298,25 +322,25 @@ void PPU::pushSpritePixels()
 
         for (int j = 7; j >= 0; j--) // Iterates in reverse because lower index sprites have higher priority
         {
-            if (spr_x_pos[j] > 0)
-                spr_x_pos[j]--;
-            else if (spr_x_pos[j] > -8) 
+            if (show_spr[j])
             {
-                uint px = 0;
-                px = (spr_pt_byte_low[j] & 0x80) >> 7;
-                px += (spr_pt_byte_high[j] & 0x80) >> 6;
-                spr_pt_byte_low[j] <<= 1;
-                spr_pt_byte_high[j] <<= 1;
-                // TODO are bg-priority sprites considered?
-                if (px > 0 && (spr_at_byte[j] & 0x20) == 0)
+                if (spr_x_pos[j] > 0)
+                    spr_x_pos[j]--;
+                else if (spr_x_pos[j] > -8) 
                 {
-                    spr_color_i = px;
-                    spr_pal_i = (spr_at_byte[j] & 0x03) | 4;
+                    uint px = 0;
+                    px = (spr_pt_byte_low[j] & 0x80) >> 7;
+                    px += (spr_pt_byte_high[j] & 0x80) >> 6;
+                    spr_pt_byte_low[j] <<= 1;
+                    spr_pt_byte_high[j] <<= 1;
+                    // TODO are bg-priority sprites considered?
+                    if (px > 0 && (spr_at_byte[j] & 0x20) == 0)
+                    {
+                        spr_color_i = px;
+                        spr_pal_i = (spr_at_byte[j] & 0x03) | 4;
+                    }
                 }
-            }
-            else
-            {
-                spr_x_pos[j] = 255;
+                else spr_x_pos[j] = 0x00FF;
             }
         }
         if (spr_color_i != 0)
