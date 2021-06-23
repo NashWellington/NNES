@@ -534,7 +534,6 @@ void Display::displayFrame(RunFlags& run_flags)
     ImGui::End();
     }
     // Memory
-    // TODO add tabs or buttons to switch between memory fields
     {
         ImGui::Begin("Memory");
         if (ImGui::Button("Zero Page")) mem_addrs.device = 0;

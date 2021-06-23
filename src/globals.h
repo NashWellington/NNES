@@ -1,7 +1,9 @@
 #pragma once
 
+// These catch a lot of false positives from integer promotion
+// Switch these from "ignored" to "warning" every once in a while to catch bugs
 #pragma GCC diagnostic ignored "-Wconversion"
-#pragma GCC diagnostic warning "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
 
 // Uncomment this in release builds to prevent assertions and cerr logging
 //#ifndef NDEBUG
@@ -12,7 +14,7 @@
 // Uncomment this out if building as NNES - debugger
 // TODO cmake argument
 #ifndef DEBUGGER
-//#define DEBUGGER
+#define DEBUGGER
 #endif
 
 #include <iostream>         // Used for logging errors etc.
@@ -43,7 +45,7 @@ std::string hex(const T x)
 {
     std::string hex_string = {};
     sprintf(hex_string.data(), "%0*X", static_cast<int>(2*sizeof(T)), x);
-    return hex_string;
+    return {hex_string.data()};
 }
 
 template<typename T>
