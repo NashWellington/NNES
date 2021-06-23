@@ -45,17 +45,19 @@ void PPU::tick()
     // TODO check if background/sprites should be loaded
     // TODO sprite checking/resolution/whatever
 
-    if ((scanline>= 0 && scanline < POST_RENDER_START) || (scanline == PRE_RENDER_START)) // pre-render + visible
+    if ((scanline >= 0 && scanline < POST_RENDER_START) || (scanline == PRE_RENDER_START)) // pre-render + visible
     {
         if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) // Get table bytes
         {
+            // Background tile evaluation
             switch (cycle%8)
             {
                 case 2: // NT byte
                 {
                     uword nt_addr_base = 0x2000 
                         + (static_cast<uword>(bus.reg_ppu_ctrl.nn) * 0x0400);
-                    nt_byte = bus.ppuRead(nt_addr_base + 32 * reg_nt_row + reg_nt_col);
+                    bg_nt_byte = bus.ppuRead(nt_addr_base + 32 * reg_nt_row + reg_nt_col);
+                    pushSpritePixels();
                     break;
                 }
                 case 4: // AT byte
@@ -64,36 +66,36 @@ void PPU::tick()
                         + (static_cast<uword>(bus.reg_ppu_ctrl.nn) * 0x0400);
                     uword at_col = reg_nt_col / 4;
                     uword at_row = reg_nt_row / 4;
-                    at_byte = bus.ppuRead(nt_addr_base + 0x3C0 + at_row * 8 + at_col);
+                    bg_at_byte = bus.ppuRead(nt_addr_base + 0x3C0 + at_row * 8 + at_col);
 
                     // TODO figure out if I need to do this now or later
                     // get palette info from attribute depending on quadrant
                     uint offset = 0;
                     if ((reg_nt_col/2) % 2 == 1) offset += 2;       // right quadrants -> 1100 0000 or 0000 1100
                     if ((reg_nt_row/2) % 2 == 1) offset += 4;       // bottom quadrants -> 1100 000 or 0011 0000
-                    at_byte = ((at_byte & (0x03 << offset)) >> offset);
+                    bg_at_byte = ((bg_at_byte & (0x03 << offset)) >> offset);
                     break;
                 }
                 case 6: // Low PT byte
                 {
-                    uword pt_addr = bus.reg_ppu_ctrl.b * 0x1000 + (static_cast<uword>(nt_byte) << 4);
+                    uword pt_addr = bus.reg_ppu_ctrl.b * 0x1000 + (static_cast<uword>(bg_nt_byte) << 4);
                     uword y_offset = scanline;
                     if (cycle >= 256) y_offset++;
                     y_offset %= 8;
-                    pt_byte_low = bus.ppuRead(pt_addr + y_offset);
+                    bg_pt_byte_low = bus.ppuRead(pt_addr + y_offset);
                     break;
                 }
                 case 0: // High PT byte + inc hori
                 {
-                    uword pt_addr = bus.reg_ppu_ctrl.b * 0x1000 + (static_cast<uword>(nt_byte) << 4);
+                    uword pt_addr = bus.reg_ppu_ctrl.b * 0x1000 + (static_cast<uword>(bg_nt_byte) << 4);
                     uword y_offset = scanline;
                     if (cycle >= 256) y_offset++;
                     y_offset %= 8;
-                    pt_byte_high = bus.ppuRead(pt_addr + y_offset + 8);
+                    bg_pt_byte_high = bus.ppuRead(pt_addr + y_offset + 8);
                     if ((scanline != PRE_RENDER_START && cycle <= 240) 
                         || (cycle >= 321 && scanline != 239)) 
                     {
-                        pushPixels();
+                        pushBackgroundPixels();
                         reg_nt_col++;
                         if (cycle == 240)
                         {
@@ -108,14 +110,101 @@ void PPU::tick()
                 default:
                     break;
             }
+            // Sprite clear
+            if (cycle == 1 && scanline != PRE_RENDER_START)
+            {
+                for (uint i = 0; i < 8; i++)
+                {
+                    for (uint j = 0; j < 4; j++)
+                    {
+                        bus.secondary_oam[i].data[j] = 0xFF;
+                    }
+                }
+                bus.oam_data = 0xFF;
+            }
+            else if (cycle >= 2 && cycle <= 64 && scanline != PRE_RENDER_START)
+            {
+                // TODO not sure if more than one of these is necessary
+                bus.oam_data = 0xFF;
+            }
+            // Sprite evaluation
+            // Note: for now, this does it all in one go
+            // TODO: make this cycle-accurate
+            // TODO: emulate sprite overflow bug
+            else if (cycle == 65 && scanline != PRE_RENDER_START) // cycles 65 to 256
+            {
+                uint sec_oam_i = 0; // Secondary OAM index
+                ubyte y_range = bus.reg_ppu_ctrl.h ? 16 : 8;
+                for (uint n = 0; n < 64; n++) // Primary oam index
+                {
+                    if (sec_oam_i < 8)
+                    {
+                        ubyte y = bus.primary_oam[n].y;
+                        bus.secondary_oam[sec_oam_i].y = y;
+                        if (y >= scanline+1 && y < scanline+1 + y_range)
+                        {
+                            bus.secondary_oam[sec_oam_i].x = bus.primary_oam[n].x;
+                            bus.secondary_oam[sec_oam_i].tile_i = bus.primary_oam[n].tile_i;
+                            bus.secondary_oam[sec_oam_i].attributes = bus.primary_oam[n].attributes;
+                            sec_oam_i++;
+                        }
+                    }
+                    else
+                    {
+                        for (uint m = 0; m < 4; m++) // m increment is a hardware bug
+                        {
+                            ubyte y = bus.primary_oam[n].data[m];
+                            if (y >= scanline && y < scanline + y_range)
+                            {
+                                bus.reg_ppu_status.o = true;
+                            }
+                        }
+                    }
+                }
+            }
         }
-        else if (cycle == 257)
+        else if ((cycle >= 257) && (cycle <= 320))
         {
-            // TODO I forgot what else I'm supposed to do this cycle
-            bus.cpuWrite(0x2003, 0);
-        }
-        else if ((cycle >= 258) && (cycle <= 320)) // Idle cycles
-        {
+            // Load secondary OAM data into latches, shift regs, etc.
+            // TODO make this cycle-accurate
+            if (scanline != PRE_RENDER_START && scanline < 239 && cycle == 257)
+            {
+                ubyte y_range = bus.reg_ppu_ctrl.h ? 16 : 8;
+                for (uint i = 0; i < 8; i++)
+                {
+                    ubyte pt_y = scanline+1 - bus.secondary_oam[i].y; // y coord within the pattern table tile
+                    ubyte attributes = bus.secondary_oam[i].attributes;
+                    if (attributes & 0x80) pt_y = y_range - pt_y - 1; // Flip vertically
+
+                    uword pt_addr = static_cast<uword>(bus.secondary_oam[i].tile_i) * 16;
+                    if (y_range == 8) 
+                    {
+                        pt_addr += bus.reg_ppu_ctrl.s * 0x1000;
+                        pt_addr += pt_y;
+                    }
+                    else
+                    {
+                        pt_addr %= 16;
+                        pt_addr += (bus.secondary_oam[i].tile_i & 0x01) * 0x1000;
+                        pt_addr += pt_y % 8;
+                        if (pt_y >= 8) pt_addr += 16;
+                    }
+
+                    ubyte pt_low = bus.ppuRead(pt_addr);
+                    ubyte pt_high = bus.ppuRead(pt_addr + 8);
+
+                    if (attributes & 0x40) // Flip horizontally
+                    {
+                        pt_low = reverseByte(pt_low);
+                        pt_high = reverseByte(pt_high);
+                    }
+
+                    spr_x_pos[i] = static_cast<int>(bus.secondary_oam[i].x);
+                    spr_at_byte[i] = attributes;
+                    spr_pt_byte_low[i] = pt_low;
+                    spr_pt_byte_high[i] = pt_high;
+                }
+            }
             bus.cpuWrite(0x2003, 0);
         }
         else if ((cycle == 338) || (cycle == 340)) // Unused NT fetches
@@ -124,8 +213,10 @@ void PPU::tick()
         }
         if (scanline == PRE_RENDER_START)
         {
-            if (cycle == 1) // clear vblank, //TODO clear sprite 0 & overflow?
+            if (cycle == 1) // clear vblank, sprite 0 hit, and sprite overflow
             {
+                bus.reg_ppu_status.o = 0;
+                bus.reg_ppu_status.s = 0;
                 bus.reg_ppu_status.v = 0;
                 pixel_i = 0;
             }
@@ -144,11 +235,6 @@ void PPU::tick()
         {
             addPixels();
         }
-        else if (cycle == 261)
-        {
-            assert(pixel_pipeline.empty());
-            assert(pixel_pipeline.size() == 0);
-        }
     }
     else // post-render
     {
@@ -158,11 +244,6 @@ void PPU::tick()
             assert(reg_nt_row == 30);
             assert(reg_nt_col == 0);
             reg_nt_row = 0;
-            // Clear extra pixels in the pipeline
-            while (!pixel_pipeline.empty())
-            {
-                pixel_pipeline.pop();
-            }
             bus.reg_ppu_status.v = 1;
             if (bus.reg_ppu_ctrl.v) bus.addInterrupt(NMI);
             sendFrame();
@@ -184,43 +265,93 @@ void PPU::tick()
     #endif
 }
 
-void PPU::pushPixels()
+// TODO fine x scrolling
+void PPU::pushBackgroundPixels()
 {
-    std::array<Pixel,4> palette;
-    getPalette(palette, at_byte);
-    uint pal_i = 0;
-    for (int i = 0; i < 8; i++)
+    uint  bg_pal_i = bg_at_byte; // Palette RAM index (i.e. which palette is selected)
+    uint  bg_color_i = 0;        // Color index (i.e. which one of four colors is selected)
+    bool show_bg = (bus.reg_ppu_mask.left_background || (pixel_i % 256) >= 8) && bus.reg_ppu_mask.show_background;
+
+    std::array<Pixel,4> palette = {};
+    getPalette(palette, bg_pal_i);
+    for (uint i = 0; i < 8; i++)
     {
-        pal_i = (pt_byte_low & (0x80 >> i)) >> (7-i);
-        pal_i += ((pt_byte_high & (0x80 >> i)) >> (7-i)) << 1;
-        pixel_pipeline.push(palette[pal_i]);
+        if (show_bg)
+        {
+            bg_color_i = (bg_pt_byte_low & (0x80 >> i)) >> (7-i);
+            bg_color_i += ((bg_pt_byte_high & (0x80 >> i)) >> (7-i)) << 1;
+        }
+        else bg_color_i = 0;
+
+        bg_pipeline.push(palette[bg_color_i]);
     }
 }
 
-// TODO figure out sprite shenanigans
+// FIXME fix transparency
+void PPU::pushSpritePixels()
+{
+    std::array<Pixel,4> palette = {};
+    for (uint i = 0; i < 8; i++)
+    {
+        uint spr_pal_i = 0;
+        uint spr_color_i = 0;
+
+        for (int j = 7; j >= 0; j--) // Iterates in reverse because lower index sprites have higher priority
+        {
+            if (spr_x_pos[j] > 0)
+                spr_x_pos[j]--;
+            else if (spr_x_pos[j] > -8) 
+            {
+                uint px = 0;
+                px = (spr_pt_byte_low[j] & 0x80) >> 7;
+                px += (spr_pt_byte_high[j] & 0x80) >> 6;
+                spr_pt_byte_low[j] <<= 1;
+                spr_pt_byte_high[j] <<= 1;
+                // TODO are bg-priority sprites considered?
+                if (px > 0 && (spr_at_byte[j] & 0x20) == 0)
+                {
+                    spr_color_i = px;
+                    spr_pal_i = (spr_at_byte[j] & 0x03) | 4;
+                }
+            }
+            else
+            {
+                spr_x_pos[j] = 255;
+            }
+        }
+        if (spr_color_i != 0)
+        {
+            assert(spr_pal_i < 8);
+            assert(spr_color_i < 4);
+            getPalette(palette, spr_pal_i);
+            spr_pipeline.push(palette[spr_color_i]);
+        }
+        else
+        {
+            spr_pipeline.push({});
+        }
+    }
+}
+
 void PPU::addPixels()
 {
-    // Render background
-    if ((bus.reg_ppu_mask.left_background || ((pixel_i % 256) >= 8)) 
-        && bus.reg_ppu_mask.show_background)
+    for (uint i = 0; i < 8; i++)
     {
-        for (int i = 0; i < 8; i++)
+        std::optional<Pixel> spr_px;
+        if (!spr_pipeline.empty()) 
         {
-            frame[pixel_i] = pixel_pipeline.front();
-            pixel_pipeline.pop();
-            pixel_i++;
+            spr_px = spr_pipeline.front();
+            spr_pipeline.pop();
         }
+        else spr_px = {};
+
+        Pixel bg_px = bg_pipeline.front();
+        bg_pipeline.pop();
+
+        if (spr_px) frame[pixel_i] = spr_px.value();
+        else frame[pixel_i] = bg_px;
+        pixel_i++;
     }
-    else // Don't render background
-    {
-        for (int i = 0; i < 8; i++)
-        {
-            frame[pixel_i] = {0, 0, 0};
-            pixel_pipeline.pop();
-            pixel_i++;
-        }
-    }
-    
 }
 
 #ifdef DEBUGGER
@@ -228,8 +359,8 @@ void PPU::addDebug()
 {
     displayPatternTable(0, display.palette_selected);
     displayPatternTable(1, display.palette_selected);
-    for (int i = 0; i < 4; i++) displayNametable(i);
-    for (int i = 0; i < 8; i++) displayPalette(i);
+    for (uint i = 0; i < 4; i++) displayNametable(i);
+    for (uint i = 0; i < 8; i++) displayPalette(i);
     displaySprites();
 }
 
@@ -237,14 +368,14 @@ Tile PPU::getPTTile(uword address, std::array<Pixel,4>& palette)
 {
     Tile tile = {};
     // Iterate thru 8 (x2) bytes per tile
-    for (int y = 0; y < 8; y++)
+    for (uint y = 0; y < 8; y++)
     {
         // TODO pattern table index
         ubyte pattern_lsb = bus.ppuRead(address + y);
         ubyte pattern_msb = bus.ppuRead(address + y + 8);
 
         // Iterate thru bits in each byte
-        for (int x = 0; x < 8; x++)
+        for (uint x = 0; x < 8; x++)
         {
             ubyte pattern = (pattern_lsb & 0x01) + ((pattern_msb & 0x01) << 1);
             tile[y][7-x] = palette[pattern];
@@ -286,7 +417,7 @@ void PPU::getNTTile(uint nt_col, uint nt_row, uint nt_i, uint pt_i)
     getPalette(palette, palette_index);
 
     // get tile coords from nametable(i,j)
-    ubyte pt_coords = static_cast<ubyte>(bus.ppuRead(0x2000 + 0x0400 * nt_i + nt_col + 32 * nt_row));
+    ubyte pt_coords = bus.ppuRead(0x2000 + 0x0400 * nt_i + nt_col + 32 * nt_row);
     uword pt_address = pt_i * 0x1000 + (static_cast<uword>(pt_coords) << 4) /*TODO + fine y offset*/;
 
     nametable.addTile(getPTTile(pt_address, palette), nt_row, nt_col);
@@ -305,23 +436,22 @@ void PPU::getNametable(uint nt_i, uint pt_i)
 
 void PPU::getBigSprite(uint spr_i)
 {
-    ubyte spr_index = bus.oam[spr_i][1];
+    ubyte spr_index = bus.primary_oam[spr_i].data[1];
     uword pt_addr = static_cast<uword>(spr_index & 0x01) << 12;
     pt_addr += static_cast<uword>(spr_index & 0xFE);
-    ubyte attributes = bus.oam[spr_i][2];
-    uint pal_i = (attributes & 0x03) + 4;
+    ubyte attributes = bus.primary_oam[spr_i].data[2];
+    uint pal_i = (attributes & 0x03) | 4;
     std::array<Pixel,4> palette = {};
     getPalette(palette, pal_i);
     bool flip_hori = attributes & 0x40;
     bool flip_vert = attributes & 0x80;
     Tile pt_tiles[2] = {getPTTile(pt_addr, palette), getPTTile(pt_addr+1, palette)};
-    int spr_x = 0;
-    int spr_y = 0;
-    for (int y = 0; y < 16; y++)
+    uint spr_x = 0;
+    uint spr_y = 0;
+    for (uint y = 0; y < 16; y++)
     {
-        if (flip_vert) spr_y = 16-y;
-        else spr_y = y;
-        for (int x = 0; x < 8; x++)
+        spr_y = flip_vert ? 16-y : y;
+        for (uint x = 0; x < 8; x++)
         {
             if (flip_hori) spr_x = 8-x;
             else spr_x = x;
@@ -333,21 +463,20 @@ void PPU::getBigSprite(uint spr_i)
 void PPU::getSmallSprite(uint spr_i)
 {
     uword pt_addr = static_cast<uword>(bus.reg_ppu_ctrl.s) << 12; // Palette index (0 or 1)
-    pt_addr += static_cast<uword>(bus.oam[spr_i][1]);
-    ubyte attributes = bus.oam[spr_i][2];
-    uint pal_i = (attributes & 0x03) + 4;
+    pt_addr += static_cast<uword>(bus.primary_oam[spr_i].data[1]);
+    ubyte attributes = bus.primary_oam[spr_i].data[2];
+    uint pal_i = (attributes & 0x03) | 4;
     std::array<Pixel,4> palette = {};
     getPalette(palette, pal_i);
     bool flip_hori = static_cast<bool>((attributes & 0x40) >> 6);
     bool flip_vert = static_cast<bool>((attributes & 0x80) >> 7);
     Tile pt_tile = getPTTile(pt_addr, palette);
-    int spr_x = 0;
-    int spr_y = 0;
-    for (int y = 0; y < 8; y++)
+    uint spr_x = 0;
+    uint spr_y = 0;
+    for (uint y = 0; y < 8; y++)
     {
-        if (flip_vert) spr_y = 8-y;
-        else spr_y = y;
-        for (int x = 0; x < 8; x++)
+        spr_y = flip_vert ? 16-y : y;
+        for (uint x = 0; x < 8; x++)
         {
             if (flip_hori) spr_x = 8-x;
             else spr_x = x;
@@ -381,7 +510,7 @@ void PPU::displaySprites()
 {
     if (!bus.reg_ppu_ctrl.h) // 8x8 sprites
     {
-        for (int i = 0; i < 64; i++)
+        for (uint i = 0; i < 64; i++)
         {
             getSmallSprite(i);
         }
@@ -389,7 +518,7 @@ void PPU::displaySprites()
     }
     else // 8x16 sprites
     {
-        for (int i = 0; i < 64; i++)
+        for (uint i = 0; i < 64; i++)
         {
             getBigSprite(i);
         }
@@ -409,9 +538,9 @@ void PPU::getPalette(std::array<Pixel,4>& palette, uint palette_index)
 }
 
 // TODO grayscale + color emphasis PPUMASK flags
-Pixel PPU::getColor(byte color_byte)
+Pixel PPU::getColor(ubyte color_byte)
 {
-    assert(static_cast<ubyte>(color_byte) < 0x40);
+    assert(color_byte < 0x40);
     return system_palette[color_byte];
 }
 

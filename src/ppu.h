@@ -4,6 +4,7 @@
 #include "bus.h"
 #include "display.h"
 #include "savestate.h"
+#include "util.h"
 
 // TODO implement PAL/Dendy vals
 
@@ -24,11 +25,11 @@ template <size_t H, size_t W>
 struct Table
 {
     std::array<std::array<Pixel,W>,H> tiles = {};
-    void addTile(Tile tile, int row, int col)
+    void addTile(Tile tile, uint row, uint col)
     {
-        for (int y = 0; y < 8; y++)
+        for (uint y = 0; y < 8; y++)
         {
-            for (int x = 0; x < 8; x++)
+            for (uint x = 0; x < 8; x++)
             {
                 tiles[8*row + y][8*col + x] = tile[y][x];
             }
@@ -46,23 +47,15 @@ public:
 
     void tick();
 
-    // Push 8 pixels to the pixel pipeline
-    void pushPixels();
-
-    // Add a horizontal line of 8 pixels to the frame
-    void addPixels();
-
     /* Initialize palette
     */
     void loadSystemPalette();
 
-    void save(Savestate& savestate);
-    void load(Savestate& savestate);
+    // void save(Savestate& savestate);
+    // void load(Savestate& savestate);
 
 private:
     std::array<Pixel, 64> system_palette = {};
-
-    std::array<std::array<byte,4>,8> secondary_oam = {};
 
     // The current cycle (resets at the start of a new scanline)
     int cycle = 0;
@@ -74,19 +67,34 @@ private:
     uword reg_nt_row = 0;
     uword reg_nt_col = 0;
 
-    // Values fetched during rendering
-    ubyte nt_byte = 0;      // Nametable byte
-    ubyte at_byte = 0;      // Attribute table byte
-    ubyte pt_byte_low = 0;  // Background pattern table bytes
-    ubyte pt_byte_high = 8;
-    std::queue<Pixel> pixel_pipeline = {};  // Should hold at most 16px at a time
+    // Background pixel latches, shift registers, etc.
+    ubyte bg_nt_byte = 0;      // Nametable byte
+    ubyte bg_at_byte = 0;      // Attribute table byte
+    ubyte bg_pt_byte_low = 0;  // Background pattern table bytes
+    ubyte bg_pt_byte_high = 8;
+    std::queue<Pixel> bg_pipeline = {}; // Holds the palette index and the palette ram index
+
+    // Sprite pixel latches, shift registers, etc.
+    std::array<int,8> spr_x_pos = {};
+    std::array<ubyte,8> spr_at_byte = {};       // Attribute bytes
+    std::array<ubyte,8> spr_pt_byte_low = {};
+    std::array<ubyte,8> spr_pt_byte_high = {};  
+    std::queue<std::optional<Pixel>> spr_pipeline = {};
+
     uint32_t pixel_i = 0;                   // Index in the frame array
-    std::array<Pixel,61440> frame = {};     // TODO change to variables for PAL support
+    std::array<Pixel,61440> frame = {};          // TODO change to variables for PAL support
 
     bool odd_frame = false;
 
+    // Push 8 pixels to a pipeline (queue)
+    void pushBackgroundPixels();
+    void pushSpritePixels();
+
+    // Add a horizontal line of 8 pixels from the pipeline to the frame
+    void addPixels();
+
     void getPalette(std::array<Pixel,4>& palette, uint palette_index);
-    Pixel getColor(byte color_byte);
+    Pixel getColor(ubyte color_byte);
 
 #ifdef DEBUGGER
 private: // Debugging tools
