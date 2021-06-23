@@ -1476,8 +1476,7 @@ int ISA::BRK()
     // read and throw away the next byte
     cpu.nextByte();
 
-    if (cpu.reg_sr.i) return 0;
-    else
+    if (!cpu.reg_sr.i)
     {
         uword pc = cpu.reg_pc;
         ubyte pcl = static_cast<ubyte>(pc & 0x00FF);
@@ -1492,8 +1491,8 @@ int ISA::BRK()
         pcl = cpu.read(0xFFFE);
         pch = cpu.read(0xFFFF);
         cpu.reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
-        return 7;
     }
+    return 7;
 }
 
 int ISA::BVC(int cycles, uword address)
