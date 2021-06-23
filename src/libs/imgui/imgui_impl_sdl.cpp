@@ -59,6 +59,16 @@
 #define SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE    SDL_VERSION_ATLEAST(2,0,4)
 #define SDL_HAS_VULKAN                      SDL_VERSION_ATLEAST(2,0,6)
 
+// NNES
+// GCC Warning Suppression
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wuseless-cast"
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#endif
+
 // Data
 static SDL_Window*  g_Window = NULL;
 static Uint64       g_Time = 0;
@@ -376,3 +386,10 @@ void ImGui_ImplSDL2_NewFrame(SDL_Window* window)
     // Update game controllers (if enabled and available)
     ImGui_ImplSDL2_UpdateGamepads();
 }
+
+
+// NNES
+// GCC
+#if defined (__GNUC__)
+#pragma GCC diagnostic pop
+#endif
