@@ -2,9 +2,9 @@
 build/log/*
 build/NNES
 build/NNES-debug
-roms/*
+roms/games/*
+roms/tests/ppu_tests/240p_test_suite/*
 sandbox/*
 design.txt
 TODOS.txt
 src/*.o
-test_roms/ppu_tests/240p_test_suite/*
