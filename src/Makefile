@@ -14,7 +14,7 @@ flags += -I/usr/include/SDL2 -I/usr/include/freetype2
 
 libs = -lGLEW -lGL -lGLU -lSDL2 -lfreetype
 
-target = NNES
+target = NNES-debug
 
 $(target) : $(objects)
 		$(compiler) $(flags) $(objects) -o ../build/$(target) $(libs)
