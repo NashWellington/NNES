@@ -30,7 +30,7 @@ Mapper000::Mapper000(Header& header, std::ifstream& rom)
     assert(header.prg_rom_size == prg_rom.size());
 }
 
-std::optional<byte> Mapper000::cpuRead(uword address)
+std::optional<ubyte> Mapper000::cpuRead(uword address)
 {
     if (address < 0x6000) return {};
     else if (address < 0x8000) // PRG RAM
@@ -51,7 +51,7 @@ std::optional<byte> Mapper000::cpuRead(uword address)
     }
 }
 
-bool Mapper000::cpuWrite(uword address, byte data)
+bool Mapper000::cpuWrite(uword address, ubyte data)
 {
     if (address < 0x6000) return false;
     else if (address < 0x8000)
@@ -74,13 +74,13 @@ bool Mapper000::cpuWrite(uword address, byte data)
     }
 }
 
-std::optional<byte> Mapper000::ppuRead(uword address)
+std::optional<ubyte> Mapper000::ppuRead(uword address)
 {
     if (address >= 0x2000) return {};
     else return chr_mem[address];
 }
 
-bool Mapper000::ppuWrite(uword address, byte data)
+bool Mapper000::ppuWrite(uword address, ubyte data)
 {
     if (address >= 0x2000) return false;
     else

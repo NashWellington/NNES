@@ -11,10 +11,10 @@ struct Savestate
     {
         uword reg_pc = 0;
         ubyte reg_sp = 0;
-        byte reg_a = 0;
-        byte reg_x = 0;
-        byte reg_y = 0;
-        byte reg_sr = 0;
+        ubyte reg_a = 0;
+        ubyte reg_x = 0;
+        ubyte reg_y = 0;
+        ubyte reg_sr = 0;
     } registers = {};
     int cpu_cycles_left = 0;
     bool cpu_odd_cycle = false;
@@ -26,12 +26,12 @@ struct Savestate
 
     std::string filename = "";
     std::string header_type = "";
-    int mapper = -1;
-    int submapper = -1;
-    int64_t prg_rom_size = -1;
-    int64_t prg_ram_size = -1;
-    int64_t chr_rom_size = -1;
-    int64_t chr_ram_size = -1;
+    uint mapper = 0;
+    uint submapper = 0;
+    uint64_t prg_rom_size = 0;
+    uint64_t prg_ram_size = 0;
+    uint64_t chr_rom_size = 0;
+    uint64_t chr_ram_size = 0;
     #endif
 };
 

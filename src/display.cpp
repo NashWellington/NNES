@@ -112,7 +112,7 @@ Font::Font(FT_Library* ft, std::string family, std::string style)
         GLuint texture;
         glGenTextures(1, &texture);
         glBindTexture(GL_TEXTURE_2D, texture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, face->glyph->bitmap.width, face->glyph->bitmap.rows, 0, GL_RED, GL_UNSIGNED_BYTE, face->glyph->bitmap.buffer);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, static_cast<GLsizei>(face->glyph->bitmap.width), static_cast<GLsizei>(face->glyph->bitmap.rows), 0, GL_RED, GL_UNSIGNED_BYTE, face->glyph->bitmap.buffer);
         
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -131,10 +131,6 @@ Font::Font(FT_Library* ft, std::string family, std::string style)
         glBindTexture(GL_TEXTURE_2D, 0);
     }
     FT_Done_Face(face);
-    //glGenBuffers(1, &font_vbo);
-    //glBindBuffer(GL_ARRAY_BUFFER, font_vbo);
-    //glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * 4, NULL, GL_DYNAMIC_DRAW);
-    //glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void Font::renderText(Shader& shader, std::string text, float window_w, float window_h, float x, float y, float scale, bool align_left)
@@ -192,8 +188,8 @@ void Font::renderText(Shader& shader, std::string text, float window_w, float wi
     glDisable(GL_BLEND);
 }
 
-Shader::Shader(const char* vert_source, const char* frag_source, int total_attr_size)
-: total_attr_size(total_attr_size)
+Shader::Shader(const char* vert_source, const char* frag_source, int _total_attr_size)
+: total_attr_size(_total_attr_size)
 {
     GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vert_shader, 1, &vert_source, NULL);
@@ -259,8 +255,8 @@ void Shader::transform(const char* name, glm::mat4* trans)
     glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(*trans));
 }
 
-Texture::Texture(int width, int height, GLint filter)
-: width(width), height(height)
+Texture::Texture(int _width, int _height, GLint filter)
+: width(_width), height(_height)
 {
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -268,14 +264,14 @@ Texture::Texture(int width, int height, GLint filter)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
 }
 
-void Texture::update(int width, int height, void* pixels)
+void Texture::update(int _width, int _height, void* pixels)
 {
     glBindTexture(GL_TEXTURE_2D, texture);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
     glBindTexture(GL_TEXTURE_2D, 0);
-    this->width = width;
-    this->height = height;
+    width = _width;
+    height = _height;
 }
 
 Display::Display()
@@ -293,7 +289,7 @@ Display::Display()
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1); // TODO research
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24); // TODO research
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8); // TODO research
-    window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI); // TODO research DPI
+    window_flags = static_cast<SDL_WindowFlags>(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI); // TODO research DPI
     window = SDL_CreateWindow("NNES", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags); // TODO change title to "NNES - {game title}"
     gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
@@ -408,12 +404,12 @@ void Display::displayFrame(RunFlags& run_flags)
         ImVec4 border_unselected = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
         ImVec4 border_selected = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
         ImVec2 size = ImVec2(58.0f, 14.5f);
-        for (int i = 0; i < 8; i++)
+        for (uint i = 0; i < 8; i++)
         {
             if (i == palette_selected)
-                ImGui::Image((ImTextureID)(intptr_t)pal_tex[i].texture, size, uv_min, uv_max, tint, border_selected);
+                ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(pal_tex[i].texture)), size, uv_min, uv_max, tint, border_selected);
             else
-                ImGui::Image((ImTextureID)(intptr_t)pal_tex[i].texture, size, uv_min, uv_max, tint, border_unselected);
+                ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(pal_tex[i].texture)), size, uv_min, uv_max, tint, border_unselected);
             ImGui::SameLine();
         }
         ImGui::End();
@@ -426,12 +422,12 @@ void Display::displayFrame(RunFlags& run_flags)
         ImVec2 uv_max = ImVec2(1.0f, 1.0f);
         ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
         ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
-        for (int i = 0; i < 2; i++)
+        for (uint i = 0; i < 2; i++)
         {
             float width = static_cast<float>(2 * pt_tex[i].width);
             float height = static_cast<float>(2 * pt_tex[i].height);
             ImVec2 size = ImVec2(width, height);
-            ImGui::Image((ImTextureID)(intptr_t)pt_tex[i].texture, size, uv_min, uv_max, tint, border);
+            ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(pt_tex[i].texture)), size, uv_min, uv_max, tint, border);
             if (ImGui::IsItemHovered())
             {
                 ImGui::BeginTooltip();
@@ -445,7 +441,7 @@ void Display::displayFrame(RunFlags& run_flags)
                 else if (region_y > height - region_sz) region_y = height - region_sz;
                 ImVec2 uv0 = ImVec2((region_x) / width, (region_y) / height);
                 ImVec2 uv1 = ImVec2((region_x + region_sz) / width, (region_y + region_sz) / height);
-                ImGui::Image((ImTextureID)(intptr_t)pt_tex[i].texture, ImVec2(region_sz * zoom, region_sz * zoom), uv0, uv1, tint, border);
+                ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(pt_tex[i].texture)), ImVec2(region_sz * zoom, region_sz * zoom), uv0, uv1, tint, border);
                 ImGui::EndTooltip();
             }
             ImGui::SameLine();
@@ -460,12 +456,12 @@ void Display::displayFrame(RunFlags& run_flags)
         ImVec2 uv_max = ImVec2(1.0f, 1.0f);
         ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
         ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
-        for (int i = 0; i < 4; i++)
+        for (uint i = 0; i < 4; i++)
         {
             float width = static_cast<float>(nt_tex[i].width);
             float height = static_cast<float>(nt_tex[i].height);
             ImVec2 size = ImVec2(width, height);
-            ImGui::Image((ImTextureID)(intptr_t)nt_tex[i].texture, size, uv_min, uv_max, tint, border);
+            ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(nt_tex[i].texture)), size, uv_min, uv_max, tint, border);
             if (ImGui::IsItemHovered())
             {
                 ImGui::BeginTooltip();
@@ -479,7 +475,7 @@ void Display::displayFrame(RunFlags& run_flags)
                 else if (region_y > height - region_sz) region_y = height - region_sz;
                 ImVec2 uv0 = ImVec2((region_x) / width, (region_y) / height);
                 ImVec2 uv1 = ImVec2((region_x + region_sz) / width, (region_y + region_sz) / height);
-                ImGui::Image((ImTextureID)(intptr_t)nt_tex[i].texture, ImVec2(region_sz * zoom, region_sz * zoom), uv0, uv1, tint, border);
+                ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(nt_tex[i].texture)), ImVec2(region_sz * zoom, region_sz * zoom), uv0, uv1, tint, border);
                 ImGui::EndTooltip();
             }
             if (i%2 == 0) ImGui::SameLine();
@@ -494,7 +490,7 @@ void Display::displayFrame(RunFlags& run_flags)
         ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
         ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
         ImVec2 size = ImVec2(static_cast<float>(4 * spr_tex.width), static_cast<float>(4 * spr_tex.height)); // TODO
-        ImGui::Image((ImTextureID)(intptr_t)spr_tex.texture, size, uv_min, uv_max, tint, border);
+        ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(spr_tex.texture)), size, uv_min, uv_max, tint, border);
         ImGui::End();
     }
     // Registers
@@ -507,7 +503,7 @@ void Display::displayFrame(RunFlags& run_flags)
         ImGui::Text("Register Y:        %s", hex(debug_state.registers.reg_y).c_str());
         ImGui::Text("Status Register:   %s", hex(debug_state.registers.reg_sr).c_str());
         ImGui::Text("NV BDIZC");
-        ImGui::Text("%s", binary(debug_state.registers.reg_sr).c_str());
+        ImGui::Text("%s", binary<ubyte>(debug_state.registers.reg_sr).c_str());
         ImGui::End();
     }
     // Disassembler
@@ -519,9 +515,9 @@ void Display::displayFrame(RunFlags& run_flags)
         uword addr = 0; 
         if (disassemble_mode == FOLLOW_PC) addr = debug_state.registers.reg_pc;
         else if (disassemble_mode == SELECT_ADDRESS) addr = mem_addrs.addrs[mem_addrs.device];
-        int lines = 10;
+        uint lines = 10;
         std::optional<std::string> line;
-        for (int i = 0; i < lines; i++)
+        for (uint i = 0; i < lines; i++)
         {
             line = disassemble(addr);
             if (line)
@@ -551,7 +547,7 @@ void Display::displayFrame(RunFlags& run_flags)
         ImGui::SameLine();
         if (ImGui::Button("PRG ROM")) mem_addrs.device = 4;
         uword addr = (mem_addrs.addrs[mem_addrs.device] & 0xFFF0) - 8 * 16;
-        for (int i = 0; i < 16; i++) // Display 9 lines
+        for (uint i = 0; i < 16; i++) // Display 9 lines
         {
             bool show = true;
             switch (mem_addrs.device)
@@ -642,7 +638,7 @@ void Display::displayFrame(RunFlags& run_flags)
 
     if (run_flags.paused)
     {
-        roboto_black.renderText(text_shader, {"PAUSED"}, (float)window_w, (float)window_h, (float)window_w, (float)window_h, (float)window_h/1000.0f, false);
+        roboto_black.renderText(text_shader, {"PAUSED"}, static_cast<float>(window_w), static_cast<float>(window_h), static_cast<float>(window_w), static_cast<float>(window_h), static_cast<float>(window_h)/1000.0f, false);
         frame_shader.use();
     }
 

@@ -1,6 +1,7 @@
 #pragma once
 
-#pragma GCC diagnostic ignored "-Wunused-parameter"
+// TODO clang, MSVC, etc.
+#pragma GCC diagnostic warning "-Wunused-parameter"
 
 #include "../globals.h"
 #include "../savestate.h"
@@ -40,13 +41,13 @@ struct Header
 class Mapper
 {
 public:
-    virtual ~Mapper();
-    virtual std::optional<byte> cpuRead(uword address) = 0;
-    virtual bool cpuWrite(uword address, byte data) = 0;
-    virtual std::optional<byte> ppuRead(uword address) = 0;
-    virtual bool ppuWrite(uword address, byte data) = 0;
-    bool save(Savestate& savestate) { return false; } // Most mappers won't need these
-    bool load(Savestate& savestate) { return false; }
+    virtual ~Mapper() {}
+    virtual std::optional<ubyte> cpuRead(uword address) = 0;
+    virtual bool cpuWrite(uword address, ubyte data) = 0;
+    virtual std::optional<ubyte> ppuRead(uword address) = 0;
+    virtual bool ppuWrite(uword address, ubyte data) = 0;
+    // virtual bool save(Savestate& savestate) = 0; // Most mappers won't need these
+    // virtual bool load(Savestate& savestate) = 0;
     MirrorType mirroring = MirrorType::HORIZONTAL;
 };
 
@@ -57,10 +58,10 @@ class Mapper000 : public Mapper
 {
 public:
     Mapper000(Header& header, std::ifstream& rom);
-    std::optional<byte> cpuRead(uword address);
-    bool cpuWrite(uword address, byte data);
-    std::optional<byte> ppuRead(uword address);
-    bool ppuWrite(uword address, byte data);
+    std::optional<ubyte> cpuRead(uword address);
+    bool cpuWrite(uword address, ubyte data);
+    std::optional<ubyte> ppuRead(uword address);
+    bool ppuWrite(uword address, ubyte data);
 private:
     /* Program RAM
     * NOTE: only available in Family Basic mode
@@ -69,7 +70,7 @@ private:
     * window:   $2000
     * location: $6000
     */
-    std::vector<byte> prg_ram = {};
+    std::vector<ubyte> prg_ram = {};
     bool prg_ram_enabled = false;
 
     /* Program ROM
@@ -77,14 +78,14 @@ private:
     * window:   $8000
     * location: $8000
     */
-    std::vector<byte> prg_rom = {};
+    std::vector<ubyte> prg_rom = {};
 
     /* Character ROM or RAM
     * capacity: $2000
     * window:   $2000
     * location: $0000
     */
-    std::array<byte, 0x2000> chr_mem = {};
+    std::array<ubyte, 0x2000> chr_mem = {};
 
     /* Determines if chr_mem acts as CHR-RAM
     * Used for compatibility with some test roms and homebrew games
@@ -99,10 +100,10 @@ class Mapper001 : public Mapper
 {
 public:
     Mapper001(Header& header, std::ifstream& rom);
-    std::optional<byte> cpuRead(uword address);
-    bool cpuWrite(uword address, byte data);
-    std::optional<byte> ppuRead(uword address);
-    bool ppuWrite(uword address, byte data);
+    std::optional<ubyte> cpuRead(uword address);
+    bool cpuWrite(uword address, ubyte data);
+    std::optional<ubyte> ppuRead(uword address);
+    bool ppuWrite(uword address, ubyte data);
 private:
     uint submapper = 0;
 
@@ -177,7 +178,7 @@ private:
             };
             unsigned : 3; // unused
         };
-        byte reg = 0;
+        ubyte reg = 0;
     } chr_bank[2] {};
 
 // Banks
@@ -187,7 +188,7 @@ private:
     * window:   $2000
     * location: $6000
     */
-    std::vector<std::array<byte,0x2000>> prg_ram = {};
+    std::vector<std::array<ubyte,0x2000>> prg_ram = {};
     bool prg_ram_enabled = false;
 
     /* Program ROM
@@ -196,7 +197,7 @@ private:
     * window:   $4000 x 2
     * location: $8000
     */
-    std::vector<std::array<byte,0x4000>> prg_rom = {};
+    std::vector<std::array<ubyte,0x4000>> prg_rom = {};
 
     /* Character ROM/RAM
     * capacity: $2000 to $20000 (8-128KiB)
@@ -204,7 +205,7 @@ private:
     * window:   $1000 x 2
     * location: $0000
     */
-    std::vector<std::array<byte,0x1000>> chr_mem = {};
+    std::vector<std::array<ubyte,0x1000>> chr_mem = {};
 
     bool chr_ram = false;
 };

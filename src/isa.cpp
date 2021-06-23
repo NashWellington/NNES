@@ -45,7 +45,7 @@ int ISA::executeOpcode(ubyte instr)
 {
     // declare return values
     uword address;
-    byte val;
+    ubyte val;
     int cycles;
 
     switch (instr)
@@ -143,25 +143,25 @@ int ISA::executeOpcode(ubyte instr)
 
         // Unofficial
         case 0x14: // NOP zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 1;
             return cycles;
 
         case 0x15: // ORA zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 1;
             val = cpu.read(address);
             return ORA(cycles, val);
 
         case 0x16: // ASL zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 3;
             val = cpu.read(address);
             return ASL(cycles, address, val, false);
 
         // Unofficial
         case 0x17: // SLO zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 3;
             return SLO(cycles, address);
 
@@ -304,25 +304,25 @@ int ISA::executeOpcode(ubyte instr)
 
         // Unofficial
         case 0x34: // NOP zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 1;
             return cycles;
 
         case 0x35: // AND zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             val = cpu.read(address);
             cycles += 1;
             return AND(cycles, val);
 
         case 0x36: // ROL zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 3;
             val = cpu.read(address);
             return ROL(cycles, address, val, false);
 
         // Unofficial
         case 0x37: // RLA zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 3;
             return RLA(cycles, address);
 
@@ -462,25 +462,25 @@ int ISA::executeOpcode(ubyte instr)
 
         // Unofficial
         case 0x54: // NOP zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 1;
             return cycles;
 
         case 0x55: // EOR zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 1;
             val = cpu.read(address);
             return EOR(cycles, val);
 
         case 0x56: // LSR zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 3;
             val = cpu.read(address);
             return LSR(cycles, address, val, false);
 
         // Unofficial
         case 0x57: // SRE zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 3;
             return SRE(cycles, address);
 
@@ -620,25 +620,25 @@ int ISA::executeOpcode(ubyte instr)
 
         // Unofficial
         case 0x74: // NOP zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 1;
             return cycles;
 
         case 0x75: // ADC zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 1;
             val = cpu.read(address);
             return ADC(cycles, val);
 
         case 0x76: // ROR zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 3;
             val = cpu.read(address);
             return ROR(cycles, address, val, false);
 
         // Unofficial
         case 0x77: // RRA zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 3;
             return RRA(cycles, address);
 
@@ -770,23 +770,23 @@ int ISA::executeOpcode(ubyte instr)
             return SHA(cycles, address);
 
         case 0x94: // STY zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 1;
             return STY(cycles, address);
 
         case 0x95: // STA zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 1;
             return STA(cycles, address);
 
         case 0x96: // STX zpg,Y
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_y);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_y));
             cycles += 1;
             return STX(cycles, address);
 
         // Unofficial
         case 0x97: // SAX zpg,Y
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_y);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_y));
             cycles += 1;
             return SAX(cycles, address);
 
@@ -928,26 +928,26 @@ int ISA::executeOpcode(ubyte instr)
             return LAX(cycles, val);
 
         case 0xB4: // LDY zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 1;
             val = cpu.read(address);
             return LDY(cycles, val);
 
         case 0xB5: // LDA zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 1;
             val = cpu.read(address);
             return LDA(cycles, val);
 
         case 0xB6: // LDX zpg,Y
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_y);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_y));
             cycles += 1;
             val = cpu.read(address);
             return LDX(cycles, val);
 
         // Unofficial
         case 0xB7: // LAX zpg,Y
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_y);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_y));
             cycles += 1;
             val = cpu.read(address);
             return LAX(cycles, val);
@@ -1086,24 +1086,24 @@ int ISA::executeOpcode(ubyte instr)
 
         // Unofficial
         case 0xD4: // NOP zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 1;
             return cycles;
 
         case 0xD5: // CMP zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 1;
             val = cpu.read(address);
             return CMP(cycles, val);
 
         case 0xD6: // DEC zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 3;
             return DEC(cycles, address);
 
         // Unofficial
         case 0xD7: // DCP zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 3;
             return DCP(cycles, address);
 
@@ -1246,24 +1246,24 @@ int ISA::executeOpcode(ubyte instr)
 
         // Unofficial
         case 0xF4: // NOP zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 1;
             return cycles;
 
         case 0xF5: // SBC zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 1;
             val = cpu.read(address);
             return SBC(cycles, val);
 
         case 0xF6: // INC zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 3;
             return INC(cycles, address);
 
         // Unofficial
         case 0xF7: // ISC zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu.reg_x);
+            std::tie(address, cycles) = Mode::zeroPage(static_cast<byte>(cpu.reg_x));
             cycles += 3;
             return ISC(cycles, address);
 
@@ -1318,15 +1318,15 @@ int ISA::executeOpcode(ubyte instr)
     }
 }
 
-int ISA::ADC(int cycles, byte val)
+int ISA::ADC(int cycles, ubyte val)
 {
-    byte a = cpu.reg_a;
+    ubyte a = cpu.reg_a;
     ubyte c = static_cast<ubyte>(cpu.reg_sr.c);
-    byte sum = a + val + c;
+    ubyte sum = a + val + c;
 
     // 16-bit addition result (used to determine if carry flag is set)
-    uword big_sum = static_cast<uword>(static_cast<ubyte>(a)) 
-        + static_cast<uword>(static_cast<ubyte>(val)) + static_cast<uword>(c);
+    uword big_sum = static_cast<uword>(a) 
+        + static_cast<uword>(val) + static_cast<uword>(c);
 
     // Set accumulator
     cpu.reg_a = sum;
@@ -1338,24 +1338,24 @@ int ISA::ADC(int cycles, byte val)
     cpu.reg_sr.v = static_cast<bool>((a ^ sum) & (val ^ sum) & 0x80);
 
     cpu.reg_sr.z = (sum == 0);
-    cpu.reg_sr.n = (sum < 0);
+    cpu.reg_sr.n = (static_cast<byte>(sum) < 0);
 
     return cycles;
 }
 
-int ISA::AND(int cycles, byte val)
+int ISA::AND(int cycles, ubyte val)
 {
     val &= cpu.reg_a;
     cpu.reg_sr.z = (val == 0);
-    cpu.reg_sr.n = (val < 0);
+    cpu.reg_sr.n = (static_cast<byte>(val) < 0);
     cpu.reg_a = val;
     return cycles;
 }
 
-int ISA::ASL(int cycles, uword address, byte val, bool flag_accumulator)
+int ISA::ASL(int cycles, uword address, ubyte val, bool flag_accumulator)
 {
     // Set carry flag to true if left-most bit (bit 7) is 1, false if not
-    cpu.reg_sr.c = (val < 0);
+    cpu.reg_sr.c = (static_cast<byte>(val) < 0);
 
     // Shift left 1 bit
     val = val << 1;
@@ -1364,17 +1364,14 @@ int ISA::ASL(int cycles, uword address, byte val, bool flag_accumulator)
     cpu.reg_sr.z = (val == 0);
 
     // Set negative flag to true if val is negative, false if not
-    cpu.reg_sr.n = (val < 0);
+    cpu.reg_sr.n = (static_cast<byte>(val) < 0);
 
     // Store val to accumulator or cpu
     if (flag_accumulator)
-    {
         cpu.reg_a = val;
-    }
     else
-    {
         cpu.write(address, val);
-    }
+    
     return cycles;
 }
 
@@ -1415,28 +1412,25 @@ int ISA::BEQ(int cycles, uword address)
         cpu.reg_pc = address;
         cycles += 1;
     }
-    else
-    {
-        cycles = 2;
-    }
+    else cycles = 2;
 
     return cycles;
 }
 
-int ISA::BIT(int cycles, byte val)
+int ISA::BIT(int cycles, ubyte val)
 {
     // Value that results from ANDing the cpu value and the accumulator value
-    byte result = cpu.reg_a & val;
+    ubyte result = cpu.reg_a & val;
 
     // Z flag => true if result is 0, false if not
     cpu.reg_sr.z = (result == 0);
 
     // N flag => bit 7 of result
-    cpu.reg_sr.n = (val < 0);
+    cpu.reg_sr.n = (static_cast<byte>(val) < 0);
 
     // V flag => bit 6 of result
     val <<= 1;
-    cpu.reg_sr.v = val < 0;
+    cpu.reg_sr.v = static_cast<byte>(val) < 0;
 
     return cycles;
 }
@@ -1448,10 +1442,7 @@ int ISA::BMI(int cycles, uword address)
         cpu.reg_pc = address;
         cycles += 1;
     }
-    else
-    {
-        cycles = 2;
-    }
+    else cycles = 2;
 
     return cycles;
 }
@@ -1463,10 +1454,7 @@ int ISA::BNE(int cycles, uword address)
         cpu.reg_pc = address;
         cycles += 1;
     }
-    else
-    {
-        cycles = 2;
-    }
+    else cycles = 2;
 
     return cycles;
 }
@@ -1478,10 +1466,7 @@ int ISA::BPL(int cycles, uword address)
         cpu.reg_pc = address;
         cycles += 1;
     }
-    else
-    {
-        cycles = 2;
-    }
+    else cycles = 2;
 
     return cycles;
 }
@@ -1518,10 +1503,7 @@ int ISA::BVC(int cycles, uword address)
         cpu.reg_pc = address;
         cycles += 1;
     }
-    else
-    {
-        cycles = 2;
-    }
+    else cycles = 2;
 
     return cycles;
 }
@@ -1533,10 +1515,7 @@ int ISA::BVS(int cycles, uword address)
         cpu.reg_pc = address;
         cycles += 1;
     }
-    else
-    {
-        cycles = 2;
-    }
+    else cycles = 2;
 
     return cycles;
 }
@@ -1566,24 +1545,24 @@ int ISA::CLV()
     return 2;
 }
 
-int ISA::CMP(int cycles, byte val)
+int ISA::CMP(int cycles, ubyte val)
 {
-    byte a = cpu.reg_a;
+    ubyte a = cpu.reg_a;
     byte result = a - val;
-    cpu.reg_sr.c = static_cast<ubyte>(a) >= static_cast<ubyte>(val);
+    cpu.reg_sr.c = a >= val;
     cpu.reg_sr.z = (result == 0);
     cpu.reg_sr.n = (result < 0);
 
     return cycles;
 }
 
-int ISA::CPX(int cycles, byte val)
+int ISA::CPX(int cycles, ubyte val)
 {
-    byte x = cpu.reg_x;
+    ubyte x = cpu.reg_x;
     byte result = x - val;
 
     // C flag => true if X >= M
-    cpu.reg_sr.c = static_cast<ubyte>(x) >= static_cast<ubyte>(val);
+    cpu.reg_sr.c = x >= val;
 
     // Z flag => true if X == M
     cpu.reg_sr.z = x == val;
@@ -1594,13 +1573,13 @@ int ISA::CPX(int cycles, byte val)
     return cycles;
 }
 
-int ISA::CPY(int cycles, byte val)
+int ISA::CPY(int cycles, ubyte val)
 {
-    byte y = cpu.reg_y;
+    ubyte y = cpu.reg_y;
     byte result = y - val;
 
     // C flag => true if Y >= M
-    cpu.reg_sr.c = static_cast<ubyte>(y) >= static_cast<ubyte>(val);
+    cpu.reg_sr.c = y >= val;
 
     // Z flag => true if Y == M
     cpu.reg_sr.z = y == val;
@@ -1614,7 +1593,7 @@ int ISA::CPY(int cycles, byte val)
 int ISA::DEC(int cycles, uword address)
 {
     // Decrement value in cpu
-    byte val = cpu.read(address);
+    ubyte val = cpu.read(address);
     val -= 1;
     cpu.write(address, val);
 
@@ -1622,7 +1601,7 @@ int ISA::DEC(int cycles, uword address)
     cpu.reg_sr.z = val == 0;
 
     // N flag => true if the value is negative, false if not
-    cpu.reg_sr.n = (val < 0);
+    cpu.reg_sr.n = (static_cast<byte>(val) < 0);
 
     return cycles;
 }
@@ -1630,7 +1609,7 @@ int ISA::DEC(int cycles, uword address)
 int ISA::DEX()
 {
     // Decrement X value
-    byte val = cpu.reg_x;
+    ubyte val = cpu.reg_x;
     val -= 1;
     cpu.reg_x = val;
 
@@ -1638,7 +1617,7 @@ int ISA::DEX()
     cpu.reg_sr.z = val == 0;
 
     // N flag => true if the value is negative, false if not
-    cpu.reg_sr.n = (val < 0);
+    cpu.reg_sr.n = static_cast<byte>(val) < 0;
 
     return 2;
 }
@@ -1646,7 +1625,7 @@ int ISA::DEX()
 int ISA::DEY()
 {
     // Decrement Y value
-    byte val = cpu.reg_y;
+    ubyte val = cpu.reg_y;
     val -= 1;
     cpu.reg_y = val;
 
@@ -1654,21 +1633,21 @@ int ISA::DEY()
     cpu.reg_sr.z = val == 0;
 
     // N flag => true if the value is negative, false if not
-    cpu.reg_sr.n = (val < 0);
+    cpu.reg_sr.n = static_cast<byte>(val) < 0;
 
     return 2;
 }
 
-int ISA::EOR(int cycles, byte val)
+int ISA::EOR(int cycles, ubyte val)
 {
     // A EOR M
-    byte result = cpu.reg_a ^ val;
+    ubyte result = cpu.reg_a ^ val;
 
     // Z flag => true if the result is 0, false if not
     cpu.reg_sr.z = result == 0;
 
     // N flag => true if the result is negative, false if not
-    cpu.reg_sr.n = (result < 0);
+    cpu.reg_sr.n = static_cast<byte>(result) < 0;
 
     // Store result in accumulator
     cpu.reg_a = result;
@@ -1679,7 +1658,7 @@ int ISA::EOR(int cycles, byte val)
 int ISA::INC(int cycles, uword address)
 {
     // Increment value in cpu
-    byte val = cpu.read(address);
+    ubyte val = cpu.read(address);
     val += 1;
     cpu.write(address, val);
 
@@ -1687,7 +1666,7 @@ int ISA::INC(int cycles, uword address)
     cpu.reg_sr.z = val == 0;
 
     // N flag => true if the value is negative
-    cpu.reg_sr.n = (val < 0);
+    cpu.reg_sr.n = static_cast<byte>(val) < 0;
 
     return cycles;
 }
@@ -1695,15 +1674,15 @@ int ISA::INC(int cycles, uword address)
 int ISA::INX()
 {
     // Decrement X value
-    byte val = cpu.reg_x;
+    ubyte val = cpu.reg_x;
     val += 1;
     cpu.reg_x = val;
 
     // Z flag => true if the value is 0
-    cpu.reg_sr.z = (val == 0);
+    cpu.reg_sr.z = val == 0;
 
     // N flag => true if the value is negative
-    cpu.reg_sr.n = (val < 0);
+    cpu.reg_sr.n = static_cast<byte>(val) < 0;
 
     return 2;
 }
@@ -1711,15 +1690,15 @@ int ISA::INX()
 int ISA::INY()
 {
     // Increment Y value
-    byte val = cpu.reg_y;
+    ubyte val = cpu.reg_y;
     val += 1;
     cpu.reg_y = val;
 
     // Z flag => true if the value is 0
-    cpu.reg_sr.z = (val == 0);
+    cpu.reg_sr.z = val == 0;
 
     // N flag => true if the value is negative
-    cpu.reg_sr.n = (val < 0);
+    cpu.reg_sr.n = static_cast<byte>(val) < 0;
 
     return 2;
 }
@@ -1744,7 +1723,7 @@ int ISA::JSR(uword address)
     return 6;
 }
 
-int ISA::LDA(int cycles, byte val)
+int ISA::LDA(int cycles, ubyte val)
 {
     // Load Accumulator with value
     cpu.reg_a = val;
@@ -1753,40 +1732,40 @@ int ISA::LDA(int cycles, byte val)
     cpu.reg_sr.z = (val == 0);
 
     // N flag => true if the value is negative, false if not
-    cpu.reg_sr.n = (val < 0);
+    cpu.reg_sr.n = (static_cast<byte>(val) < 0);
 
     return cycles;
 }
 
-int ISA::LDX(int cycles, byte val)
+int ISA::LDX(int cycles, ubyte val)
 {
     // Load index X with value
     cpu.reg_x = val;
 
     // Z flag => true if the value is 0, false if not
-    cpu.reg_sr.z = (val == 0);
+    cpu.reg_sr.z = val == 0;
 
     // N flag => true if the value is negative, false if not
-    cpu.reg_sr.n = (val < 0);
+    cpu.reg_sr.n = static_cast<byte>(val) < 0;
 
     return cycles;
 }
 
-int ISA::LDY(int cycles, byte val)
+int ISA::LDY(int cycles, ubyte val)
 {
     // Load index Y with value
     cpu.reg_y = val;
 
     // Z flag => true if the value is 0, false if not
-    cpu.reg_sr.z = (val == 0);
+    cpu.reg_sr.z = val == 0;
 
     // N flag => true if the value is negative, false if not
-    cpu.reg_sr.n = (val < 0);
+    cpu.reg_sr.n = static_cast<byte>(val) < 0;
 
     return cycles;
 }
 
-int ISA::LSR(int cycles, uword address, byte val, bool flag_accumulator)
+int ISA::LSR(int cycles, uword address, ubyte val, bool flag_accumulator)
 {
     // Set carry flag if right-most bit (bit 0) is 1
     cpu.reg_sr.c = static_cast<bool>(val & 1);
@@ -1797,7 +1776,7 @@ int ISA::LSR(int cycles, uword address, byte val, bool flag_accumulator)
     // Convert to logical shift right (set bit 7 to 0)
     val &= 0x7F;
 
-    cpu.reg_sr.z = (val == 0);
+    cpu.reg_sr.z = val == 0;
 
     // N flag = false
     cpu.reg_sr.n = false;
@@ -1809,16 +1788,16 @@ int ISA::LSR(int cycles, uword address, byte val, bool flag_accumulator)
     return cycles;
 }
 
-int ISA::ORA(int cycles, byte val)
+int ISA::ORA(int cycles, ubyte val)
 {
     // A OR M
     val = cpu.reg_a | val;
 
     // Z flag = true if val is 0, false otherwise
-    cpu.reg_sr.z = ((val == 0));
+    cpu.reg_sr.z = val == 0;
 
     // N flag = true if val is negative, false otherwise
-    cpu.reg_sr.n = (val < 0);
+    cpu.reg_sr.n = static_cast<byte>(val) < 0;
 
     // Store value to accumulator
     cpu.reg_a = val;
@@ -1844,15 +1823,14 @@ int ISA::PHP()
 int ISA::PLA()
 {
     // Pull accumulator from stack
-    byte a = cpu.pop();
+    ubyte a = cpu.pop();
     cpu.reg_a = a;
 
     // Z flag => true if accumulator is zero
-    cpu.reg_sr.z = (a == 0);
+    cpu.reg_sr.z = a == 0;
 
     // N flag => true if accumulator is negative
-    cpu.reg_sr.n = (a < 0);
-
+    cpu.reg_sr.n = static_cast<byte>(a) < 0;
 
     return 4;
 }
@@ -1867,28 +1845,28 @@ int ISA::PLP()
     return 4;
 }
 
-int ISA::ROL(int cycles, uword address, byte val, bool flag_accumulator)
+int ISA::ROL(int cycles, uword address, ubyte val, bool flag_accumulator)
 {
     // Rotate one bit left
 
     // Step 1/3: set new carry flag to bit 7
     bool carry_flag = 0;
-    if (val < 0) carry_flag = 1;
+    if (static_cast<byte>(val) < 0) carry_flag = 1;
 
     // Step 2/3: shift left 1 bit
     val <<= 1;
 
     // Step 3/3: set bit 0 to old carry flag
-    val += static_cast<byte>(cpu.reg_sr.c);
+    val += cpu.reg_sr.c;
 
     // C flag
     cpu.reg_sr.c = carry_flag;
 
     // Z flag => true if val is zero
-    cpu.reg_sr.z = (val == 0);
+    cpu.reg_sr.z = val == 0;
 
     // N flag = true if val is negative
-    cpu.reg_sr.n = (val < 0);
+    cpu.reg_sr.n = static_cast<byte>(val) < 0;
 
     // Store to cpu/accumulator
     if (flag_accumulator) cpu.reg_a = val;
@@ -1897,7 +1875,7 @@ int ISA::ROL(int cycles, uword address, byte val, bool flag_accumulator)
     return cycles;
 }
 
-int ISA::ROR(int cycles, uword address, byte val, bool flag_accumulator)
+int ISA::ROR(int cycles, uword address, ubyte val, bool flag_accumulator)
 {
     // Rotate one bit right
 
@@ -1909,16 +1887,16 @@ int ISA::ROR(int cycles, uword address, byte val, bool flag_accumulator)
     val &= 0x7F;
 
     // Step 3/3: set bit 7 to old carry flag
-    val += static_cast<byte>(cpu.reg_sr.c) << 7;
+    val += static_cast<ubyte>(cpu.reg_sr.c) << 7;
 
     // C flag
     cpu.reg_sr.c = carry_flag;
 
     // Z flag => true if the value is zero
-    cpu.reg_sr.z = (val == 0);
+    cpu.reg_sr.z = val == 0;
 
     // N flag => true if the value is negative
-    cpu.reg_sr.n = (val < 0);
+    cpu.reg_sr.n = static_cast<byte>(val) < 0;
 
     // Store to cpu/accumulator
     if (flag_accumulator) cpu.reg_a = val;
@@ -1938,8 +1916,8 @@ int ISA::RTI()
     cpu.reg_sr.b = false;
 
     // Pull PC
-    ubyte pcl = static_cast<ubyte>(cpu.pop());
-    ubyte pch = static_cast<ubyte>(cpu.pop());
+    ubyte pcl = cpu.pop();
+    ubyte pch = cpu.pop();
     cpu.reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
 
     return 6;
@@ -1951,14 +1929,14 @@ int ISA::RTS()
     cpu.nextByte();
 
     // Pull PC and increment
-    ubyte pcl = static_cast<ubyte>(cpu.pop());
-    ubyte pch = static_cast<ubyte>(cpu.pop());
+    ubyte pcl = cpu.pop();
+    ubyte pch = cpu.pop();
     cpu.reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl) + 1;
 
     return 6;
 }
 
-int ISA::SBC(int cycles, byte val)
+int ISA::SBC(int cycles, ubyte val)
 {
     return ADC(cycles, ~val);
 }
@@ -2002,9 +1980,9 @@ int ISA::STY(int cycles, uword address)
 
 int ISA::TAX()
 {
-    byte val = cpu.reg_a;
-    cpu.reg_sr.z = (val == 0);
-    cpu.reg_sr.n = (val < 0);
+    ubyte val = cpu.reg_a;
+    cpu.reg_sr.z = val == 0;
+    cpu.reg_sr.n = static_cast<byte>(val) < 0;
     cpu.reg_x = val;
 
     return 2;
@@ -2012,9 +1990,9 @@ int ISA::TAX()
 
 int ISA::TAY()
 {
-    byte val = cpu.reg_a;
-    cpu.reg_sr.z = (val == 0);
-    cpu.reg_sr.n = (val < 0);
+    ubyte val = cpu.reg_a;
+    cpu.reg_sr.z = val == 0;
+    cpu.reg_sr.n = static_cast<byte>(val) < 0;
     cpu.reg_y = val;
 
     return 2;
@@ -2022,9 +2000,9 @@ int ISA::TAY()
 
 int ISA::TSX()
 {
-    byte val = cpu.reg_sp;
-    cpu.reg_sr.z = (val == 0);
-    cpu.reg_sr.n = (val < 0);
+    ubyte val = cpu.reg_sp;
+    cpu.reg_sr.z = val == 0;
+    cpu.reg_sr.n = static_cast<byte>(val) < 0;
     cpu.reg_x = val;
 
     return 2;
@@ -2032,9 +2010,9 @@ int ISA::TSX()
 
 int ISA::TXA()
 {
-    byte val = cpu.reg_x;
-    cpu.reg_sr.z = (val == 0);
-    cpu.reg_sr.n = (val < 0);
+    ubyte val = cpu.reg_x;
+    cpu.reg_sr.z = val == 0;
+    cpu.reg_sr.n = static_cast<byte>(val) < 0;
     cpu.reg_a = val;
 
     return 2;
@@ -2042,7 +2020,7 @@ int ISA::TXA()
 
 int ISA::TXS()
 {
-    byte val = cpu.reg_x;
+    ubyte val = cpu.reg_x;
     cpu.reg_sp = val;
 
     return 2;
@@ -2050,9 +2028,9 @@ int ISA::TXS()
 
 int ISA::TYA()
 {
-    byte val = cpu.reg_y;
-    cpu.reg_sr.z = (val == 0);
-    cpu.reg_sr.n = (val < 0);
+    ubyte val = cpu.reg_y;
+    cpu.reg_sr.z = val == 0;
+    cpu.reg_sr.n = static_cast<byte>(val) < 0;
     cpu.reg_a = val;
 
     return 2;
@@ -2060,26 +2038,26 @@ int ISA::TYA()
 
 // Unofficial instructions
 
-int ISA::ALR(int cycles, byte val)
+int ISA::ALR(int cycles, ubyte val)
 {
     AND(0, val);
     LSR(0, 0, cpu.reg_a, true);
     return cycles;
 }
 
-int ISA::ANC(int cycles, byte val)
+int ISA::ANC(int cycles, ubyte val)
 {
     AND(0, val);
-    byte a = cpu.reg_a;
-    cpu.reg_sr.c = (a < 0);
+    ubyte a = cpu.reg_a;
+    cpu.reg_sr.c = static_cast<byte>(a) < 0;
     return cycles;
 }
 
-int ISA::ARR(int cycles, byte val)
+int ISA::ARR(int cycles, ubyte val)
 {
     AND(0, val);
     ROR(0, 0, cpu.reg_a, true);
-    byte a = cpu.reg_a;
+    ubyte a = cpu.reg_a;
     bool bit6 = static_cast<bool>(a & 0x40);
     bool bit5 = static_cast<bool>(a & 0x20);
     cpu.reg_sr.c = bit6;
@@ -2087,13 +2065,13 @@ int ISA::ARR(int cycles, byte val)
     return cycles;
 }
 
-int ISA::AXS(int cycles, byte val)
+int ISA::AXS(int cycles, ubyte val)
 {
-    byte result = cpu.reg_a & cpu.reg_x;
-    cpu.reg_sr.c = (static_cast<ubyte>(result) >= static_cast<ubyte>(val));
+    ubyte result = cpu.reg_a & cpu.reg_x;
+    cpu.reg_sr.c = result >= val;
     result -= val;
-    cpu.reg_sr.z = (result == 0);
-    cpu.reg_sr.n = (result < 0);
+    cpu.reg_sr.z = result == 0;
+    cpu.reg_sr.n = static_cast<byte>(result) < 0;
     cpu.reg_x = result;
     return cycles;
 }
@@ -2101,7 +2079,7 @@ int ISA::AXS(int cycles, byte val)
 int ISA::DCP(int cycles, uword address)
 {
     DEC(0, address);
-    byte val = cpu.read(address);
+    ubyte val = cpu.read(address);
     CMP(0, val);
     return cycles;
 }
@@ -2109,30 +2087,30 @@ int ISA::DCP(int cycles, uword address)
 int ISA::ISC(int cycles, uword address)
 {
     INC(0, address);
-    byte val = cpu.read(address);
+    ubyte val = cpu.read(address);
     SBC(0, val);
     return cycles;
 }
 
-int ISA::LAX(int cycles, byte val)
+int ISA::LAX(int cycles, ubyte val)
 {
     LDA(0, val);
     TAX();
     return cycles;
 }
 
-int ISA::LXA(int cycles, byte val)
+int ISA::LXA(int cycles, ubyte val)
 {
     cpu.reg_a = val;
     cpu.reg_x = val;
     cpu.reg_sr.z = (val == 0);
-    cpu.reg_sr.n = (val < 0);
+    cpu.reg_sr.n = (static_cast<byte>(val) < 0);
     return cycles;
 }
 
 int ISA::RLA(int cycles, uword address)
 {
-    byte val = cpu.read(address);
+    ubyte val = cpu.read(address);
     ROL(0, address, val, false);
     val = cpu.read(address);
     AND(0, val);
@@ -2141,7 +2119,7 @@ int ISA::RLA(int cycles, uword address)
 
 int ISA::RRA(int cycles, uword address)
 {
-    byte val = cpu.read(address);
+    ubyte val = cpu.read(address);
     ROR(0, address, val, false);
     val = cpu.read(address);
     ADC(0, val);
@@ -2150,7 +2128,7 @@ int ISA::RRA(int cycles, uword address)
 
 int ISA::SAX(int cycles, uword address)
 {
-    byte result = cpu.reg_a & cpu.reg_x;
+    ubyte result = cpu.reg_a & cpu.reg_x;
     cpu.write(address, result);
     return cycles;
 }
@@ -2158,9 +2136,9 @@ int ISA::SAX(int cycles, uword address)
 //TODO flags?
 int ISA::SHA(int cycles, uword address)
 {
-    byte a = cpu.reg_a;
-    byte x = cpu.reg_x;
-    byte result = a & x & ((address >> 8) + 1);
+    ubyte a = cpu.reg_a;
+    ubyte x = cpu.reg_x;
+    ubyte result = a & x & ((address >> 8) + 1);
     cpu.write(address, result);
     return cycles;
 }
@@ -2176,9 +2154,9 @@ int ISA::SHS(int cycles, uword address)
 int ISA::SHX(int cycles, uword address)
 {
     // Detect page cross
-    if (static_cast<ubyte>(cpu.reg_y) > static_cast<ubyte>(address & 0x00FF))
+    if (cpu.reg_y > static_cast<ubyte>(address & 0x00FF))
     {
-        address &= ((static_cast<uword>(static_cast<ubyte>(cpu.reg_x)) << 8) + 0xFF);
+        address &= ((static_cast<uword>(cpu.reg_x) << 8) + 0xFF);
     }
     cpu.write(address, cpu.reg_x & (static_cast<ubyte>(address >> 8) + 1));
     return cycles;
@@ -2187,9 +2165,9 @@ int ISA::SHX(int cycles, uword address)
 int ISA::SHY(int cycles, uword address)
 {
     // Detect page cross
-    if (static_cast<ubyte>(cpu.reg_x) > static_cast<ubyte>(address & 0x00FF))
+    if (cpu.reg_x > static_cast<ubyte>(address & 0x00FF))
     {
-        address &= ((static_cast<uword>(static_cast<ubyte>(cpu.reg_y)) << 8) + 0xFF);
+        address &= ((static_cast<uword>(cpu.reg_y) << 8) + 0xFF);
     }
     cpu.write(address, cpu.reg_y & (static_cast<ubyte>(address >> 8) + 1));
     return cycles;
@@ -2197,7 +2175,7 @@ int ISA::SHY(int cycles, uword address)
 
 int ISA::SLO(int cycles, uword address)
 {
-    byte val = cpu.read(address);
+    ubyte val = cpu.read(address);
     ASL(0, address, val, false);
     val = cpu.read(address);
     ORA(0, val);
@@ -2206,7 +2184,7 @@ int ISA::SLO(int cycles, uword address)
 
 int ISA::SRE(int cycles, uword address)
 {
-    byte val = cpu.read(address);
+    ubyte val = cpu.read(address);
     LSR(0, address, val, false);
     val = cpu.read(address);
     EOR(0, val);

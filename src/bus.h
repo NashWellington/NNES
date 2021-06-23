@@ -42,16 +42,16 @@ class Bus
 {
 public:
     // TODO make an arg for cpuRead that doesn't allow register state change on read
-    byte  cpuRead(uword address);
-    void  cpuWrite(uword address, byte data);
+    ubyte  cpuRead(uword address);
+    void  cpuWrite(uword address, ubyte data);
 
     // PPU memory access
-    byte  ppuRead(uword address);
-    void  ppuWrite(uword address, byte data);
+    ubyte  ppuRead(uword address);
+    void  ppuWrite(uword address, ubyte data);
 
     // Register I/O
-    byte cpuReadReg(uword address);
-    void cpuWriteReg(uword address, byte data);
+    ubyte cpuReadReg(uword address);
+    void cpuWriteReg(uword address, ubyte data);
 
     // Write to OAM (if necessary) and decrement cpu_suspend_cycles
     bool oamWrite(bool odd_cycle);
@@ -78,47 +78,47 @@ private:
     /* Zero Page
     * $0000 to $00FF
     */
-    std::array<byte, 0x0100> zero_page = {};
+    std::array<ubyte, 0x0100> zero_page = {};
 
     /* Stack
     * $0100 to $01FF
     * Note: this is implemented as an array to keep SP operations simple
     */
-    std::array<byte, 0x0100> stack = {};
+    std::array<ubyte, 0x0100> stack = {};
 
     /* RAM
     * $0200 to $07FF
     */
-    std::array<byte, 0x0600> ram = {};
+    std::array<ubyte, 0x0600> ram = {};
 
     /* APU and I/O registers
     * $4000 to $4017
     * $4018 to $401F (test mode, should not access)
     */
-    std::array<byte, 0x0020> io_regs = {};
+    std::array<ubyte, 0x0020> io_regs = {};
 
     /* Cartridge memory not allocated by the mapper
     * Note: only used if not present on the cartridge,
     *       generally for compatibility with test roms
     */
-    std::array<byte, 0xBFD0> dummy_cart_mem = {};
+    std::array<ubyte, 0xBFD0> dummy_cart_mem = {};
 
 // PPU memory arrays
     /* Dummy pattern tables
     * Note: only used if pattern tables not present on the cartridge,
     *       generally for compatibility with test roms
     */
-    std::array<byte, 0x2000> dummy_pattern_tables = {};
+    std::array<ubyte, 0x2000> dummy_pattern_tables = {};
 
     /* Name tables
     * $2000 to $2FFF
     */
-    std::array<std::array<byte, 0x0400>, 4> name_tables = {};
+    std::array<std::array<ubyte, 0x0400>, 4> name_tables = {};
 
     /* Palette RAM indices
     * $3F00 to $3F19
     */
-    std::array<byte, 0x0020> palette_ram = {};
+    std::array<ubyte, 0x0020> palette_ram = {};
 
 public:
 // PPU registers
@@ -166,7 +166,7 @@ public:
             unsigned p  : 1;
             unsigned v  : 1;
         };
-        byte reg;
+        ubyte reg;
     } reg_ppu_ctrl { .reg = 0 };
         
 
@@ -203,7 +203,7 @@ public:
             unsigned emphasize_green    : 1;
             unsigned emphasize_blue     : 1;
         };
-        byte reg;
+        ubyte reg;
     } reg_ppu_mask { .reg = 0 };
 
     /* PPU status register
@@ -232,7 +232,7 @@ public:
             unsigned s  : 1;
             unsigned v  : 1;
         };
-        byte reg;
+        ubyte reg;
     } reg_ppu_status { .reg = 0 };
 
     /* PPU scrolling position register
@@ -244,10 +244,10 @@ public:
         ubyte x = 0; // ubytes so I don't have to deal w/ sign extension
         ubyte y = 0;
         unsigned int i = 0;
-        void write (byte data)
+        void write (ubyte data)
         {
-            if (i == 0) x = static_cast<ubyte>(data);
-            else y = static_cast<ubyte>(data);
+            if (i == 0) x = data;
+            else y = data;
             i++;
             i %= 2;
         }
@@ -262,11 +262,11 @@ public:
     {
         uword address = 0;
         unsigned int i = 0;
-        void write (byte data) // Alternates between writing to low and high bytes of address
+        void write (ubyte data) // Alternates between writing to low and high bytes of address
         {
-            uword mask = 0xFF << (8 * i);
+            uword mask = static_cast<uword>(0xFF << (8 * i));
             address &= mask;
-            address += (static_cast<uword>(static_cast<ubyte>((data))) << (8 * (1 - i)));
+            address += static_cast<uword>(data << static_cast<ubyte>(8 * (1 - i)));
             address %= 0x4000;
             i++;
             i %= 2;
@@ -278,7 +278,7 @@ public:
     * On boot & reset: 0
     * Used as the internal read buffer, updated & returned at CPU read
     */
-    byte reg_ppu_data = 0;
+    ubyte reg_ppu_data = 0;
 
 // I/O registers
     bool poll_inputs = false;
@@ -307,7 +307,7 @@ public:
             unsigned d4 : 1;
             unsigned    : 3;
         };
-        byte reg;
+        ubyte reg;
     } reg_input[2] {{.reg = 0}, {.reg = 0}};
 
     /* APU Frame Counter
@@ -329,7 +329,7 @@ public:
             unsigned i : 1; // Interrupt inhibit flag
             unsigned m : 1; // Sequencer mode
         };
-        byte reg;
+        ubyte reg;
     } apu_frame_counter {.reg = 0};
 
 // PPU Object Attribute Memory
@@ -360,7 +360,7 @@ public:
     * http://wiki.nesdev.com/w/index.php/PPU_sprite_evaluation
     * On boot & reset: ?
     */
-    byte oam_data = 0;
+    ubyte oam_data = 0;
 
     /* Address in CPU memory for DMA transfer to OAM
     * High byte controlled by register $4014
@@ -370,7 +370,7 @@ public:
 
 // Other PPU internals
     // Detailed here: https://wiki.nesdev.com/w/index.php/PPU_registers#Ports
-    byte ppu_latch = 0;
+    ubyte ppu_latch = 0;
 
 // Other
     int cpu_suspend_cycles = 0; // Used to stall CPU during OAM DMA

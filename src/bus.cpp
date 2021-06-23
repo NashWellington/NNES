@@ -2,9 +2,9 @@
 
 Bus bus;
 
-byte Bus::cpuRead(uword address)
+ubyte Bus::cpuRead(uword address)
 {
-    std::optional<byte> data = mapper->cpuRead(address); // Cartridge mem
+    std::optional<ubyte> data = mapper->cpuRead(address); // Cartridge mem
     if (data) return data.value();
     else if (address < 0x2000) // zpg, stack, RAM, or their mirrors
     {
@@ -23,7 +23,7 @@ byte Bus::cpuRead(uword address)
     }
 }
 
-void Bus::cpuWrite(uword address, byte data)
+void Bus::cpuWrite(uword address, ubyte data)
 {
     if (mapper->cpuWrite(address, data)) return; // Cartridge mem
     else if (address < 0x2000) // zpg, stack, RAM, or their mirrors
@@ -43,9 +43,9 @@ void Bus::cpuWrite(uword address, byte data)
     }
 }
 
-byte Bus::ppuRead(uword address)
+ubyte Bus::ppuRead(uword address)
 {
-    std::optional<byte> data = mapper->ppuRead(address); // Pattern tables
+    std::optional<ubyte> data = mapper->ppuRead(address); // Pattern tables
     if (data) return data.value();
     else if (address < 0x2000)
     {
@@ -71,7 +71,7 @@ byte Bus::ppuRead(uword address)
     }
 }
 
-void Bus::ppuWrite(uword address, byte data)
+void Bus::ppuWrite(uword address, ubyte data)
 {
     if (mapper->ppuWrite(address, data)) return;
     else if (address < 0x2000)
@@ -98,9 +98,9 @@ void Bus::ppuWrite(uword address, byte data)
     }
 }
 
-byte Bus::cpuReadReg(uword address)
+ubyte Bus::cpuReadReg(uword address)
 {
-    byte data = 0;
+    ubyte data = 0;
     if (address < 0x4000)
     {
         address = 0x2000 + (address - 0x2000) % 0x0008;
@@ -179,7 +179,7 @@ byte Bus::cpuReadReg(uword address)
     return data;
 }
 
-void Bus::cpuWriteReg(uword address, byte data)
+void Bus::cpuWriteReg(uword address, ubyte data)
 {
     if (address < 0x4000)
     {
@@ -188,7 +188,7 @@ void Bus::cpuWriteReg(uword address, byte data)
         {
             // TODO ignore writes for "about 30k cycles" after power/reset
             case 0x2000: // PPU ctrl
-                if (reg_ppu_ctrl.v && reg_ppu_status.v && data < 0)
+                if (reg_ppu_ctrl.v && reg_ppu_status.v && static_cast<byte>(data) < 0)
                 {
                     addInterrupt(NMI);
                 }

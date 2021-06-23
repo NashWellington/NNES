@@ -4,7 +4,7 @@
 #include "globals.h"
 
 // Foreward declaration
-byte nextByte();
+ubyte nextByte();
 
 #include "cpu.h"
 
@@ -36,7 +36,7 @@ namespace Mode
     *           +3 if read-modify-write instr - external
     *               extra +1 if indexed - external
     */
-    std::pair<uword,int> absolute(std::optional<byte> offset, bool read_instr);
+    std::pair<uword,int> absolute(std::optional<ubyte> offset, bool read_instr);
 
     /* Returns a memory address specified indirectly by two operands
     * Read the docs to understand
@@ -54,12 +54,12 @@ namespace Mode
     *               extra +3 for read-modify-write instrs - external
     *               
     */
-    std::pair<uword,int> indirect(byte offset, ubyte index_type, bool read_instr);
+    std::pair<uword,int> indirect(ubyte offset, ubyte index_type, bool read_instr);
 
     /* Returns one operand (the next byte in memory) to be operated on
     * cycles: 2
     */
-    std::pair<byte,int> immediate();
+    std::pair<ubyte,int> immediate();
 
     /* Calculates the address the PC should branch to
     * cycles: 3 (minimum)

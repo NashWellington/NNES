@@ -11,15 +11,15 @@ extern CPU cpu;
 class CPU
 {
 public:
-    byte read(uword address);
-    void write(uword address, byte data);
+    ubyte read(uword address);
+    void write(uword address, ubyte data);
 
-    byte pop();
-    void push(byte data);
+    ubyte pop();
+    void push(ubyte data);
 
     /* Return the byte pointed at by PC and increment PC
     */
-    byte nextByte();
+    ubyte nextByte();
 
     /* Call nextByte() and execute that byte as an instruction
     */
@@ -69,21 +69,21 @@ public:
     * 8-bit register
     * Stores the result of arithmetic and logic operations
     */
-    byte reg_a = 0;
+    ubyte reg_a = 0;
 
     /* Index Register X
     * 8-bit register
     * Counter or offset for certain addressing modes
     * Can be used to get or set the stack pointer
     */
-    byte reg_x = 0;
+    ubyte reg_x = 0;
 
     /* Index Register Y
     * 8-bit register
     * Counter or offset
     * Cannot affect the stack pointer
     */
-    byte reg_y = 0;
+    ubyte reg_y = 0;
 
     /* Status Register
     *
@@ -122,7 +122,7 @@ public:
             unsigned v : 1;
             unsigned n : 1;
         };
-        byte reg;
+        ubyte reg;
     } reg_sr = { .reg = 0x24 };
 
 private:

@@ -8,7 +8,7 @@ std::pair<uword,int> Mode::zeroPage(byte offset)
     return std::make_pair(address, 3);
 }
 
-std::pair<uword,int> Mode::absolute(std::optional<byte> offset, bool read_instr)
+std::pair<uword,int> Mode::absolute(std::optional<ubyte> offset, bool read_instr)
 {
     int cycles = 3;
 
@@ -22,7 +22,7 @@ std::pair<uword,int> Mode::absolute(std::optional<byte> offset, bool read_instr)
     // Indexed
     if (offset)
     {
-        address += static_cast<uword>(static_cast<ubyte>(offset.value()));
+        address += static_cast<uword>(offset.value());
 
         // Dummy read of address pre-fixing of high byte
         aa += offset.value();
@@ -37,7 +37,7 @@ std::pair<uword,int> Mode::absolute(std::optional<byte> offset, bool read_instr)
     return std::make_pair(address, cycles);
 }
 
-std::pair<uword,int> Mode::indirect(byte offset, ubyte index_type, bool read_instr)
+std::pair<uword,int> Mode::indirect(ubyte offset, ubyte index_type, bool read_instr)
 {
     int cycles = 5;
     uword address = 0;
@@ -74,7 +74,7 @@ std::pair<uword,int> Mode::indirect(byte offset, ubyte index_type, bool read_ins
     // post-indexing
     if (index_type == 2)
     {
-        post_indexed_address += static_cast<uword>(static_cast<ubyte>(offset));
+        post_indexed_address += static_cast<uword>(offset);
         
         // handle page boundary cross if read instr
         if (read_instr && (post_indexed_address >> 8 != address >> 8))
@@ -85,7 +85,7 @@ std::pair<uword,int> Mode::indirect(byte offset, ubyte index_type, bool read_ins
 }
 
 
-std::pair<byte,int> Mode::immediate()
+std::pair<ubyte,int> Mode::immediate()
 {
     ubyte val = cpu.nextByte();
     return std::make_pair(val, 2);
@@ -97,9 +97,10 @@ std::pair<uword,int> Mode::relative()
     byte offset = static_cast<byte>(cpu.nextByte());
     uword pc = cpu.reg_pc;
 
-    // add or subtract offset
     uword address = pc;
-    address += static_cast<uword>(offset);  // casts positives to 00xx and negatives to FFxx
+
+    // Sign extends when casting from (signed) byte to word
+    address += static_cast<word>(offset);
 
     // check if page boundary is crossed
     if (address >> 8 != pc >> 8) 

@@ -49,7 +49,7 @@ Mapper001::Mapper001(Header& header, std::ifstream& rom)
     assert(chr_mem.size() >= 2 && chr_mem.size() <= 16);
 }
 
-std::optional<byte> Mapper001::cpuRead(uword address)
+std::optional<ubyte> Mapper001::cpuRead(uword address)
 {
     if (address < 0x6000) return {};
     else if (address < 0x8000) // PRG-RAM
@@ -108,7 +108,7 @@ std::optional<byte> Mapper001::cpuRead(uword address)
     }
 }
 
-bool Mapper001::cpuWrite(uword address, byte data)
+bool Mapper001::cpuWrite(uword address, ubyte data)
 {
     if (address < 0x6000) return false;
     else if (address < 0x8000)
@@ -118,7 +118,7 @@ bool Mapper001::cpuWrite(uword address, byte data)
     }
     else 
     {
-        if (data < 0) // check if byte 7 is set
+        if (static_cast<byte>(data) < 0) // check if byte 7 is set
         {
             reg_shift = 0x10;
             prg_rom_bank_mode = 3;
@@ -210,7 +210,7 @@ bool Mapper001::cpuWrite(uword address, byte data)
     }
 }
 
-std::optional<byte> Mapper001::ppuRead(uword address)
+std::optional<ubyte> Mapper001::ppuRead(uword address)
 {
     if (address >= 0x2000) return {};
     else
@@ -239,7 +239,7 @@ std::optional<byte> Mapper001::ppuRead(uword address)
     }
 }
 
-bool Mapper001::ppuWrite(uword address, byte data)
+bool Mapper001::ppuWrite(uword address, ubyte data)
 {
     if (address >= 0x2000) return false;
     else

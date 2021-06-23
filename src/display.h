@@ -29,7 +29,8 @@ struct RunFlags
     #endif
 };
 
-// TODO copy/move constructor?
+// FIXME copy/move constructor
+// TODO alpha value
 struct Pixel
 {
     Pixel() {}
@@ -97,7 +98,7 @@ public:
     void displayFrame(RunFlags& run_flags);
 
 #ifdef DEBUGGER
-    int palette_selected = 0;
+    uint palette_selected = 0;
     struct
     {
         std::array<uword, 5> addrs = 

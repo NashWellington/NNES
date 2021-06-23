@@ -5,17 +5,17 @@ CPU cpu;
 // Address of the stack (used for push and pop)
 const uword STACK_START = 0x0100;
 
-byte CPU::read(uword address)
+ubyte CPU::read(uword address)
 {
     return bus.cpuRead(address);
 }
 
-void CPU::write(uword address, byte data)
+void CPU::write(uword address, ubyte data)
 {
     bus.cpuWrite(address, data);
 }
 
-byte CPU::pop()
+ubyte CPU::pop()
 {
     ubyte old_sp = reg_sp;
     reg_sp++;
@@ -31,7 +31,7 @@ byte CPU::pop()
     return bus.cpuRead(address);
 }
 
-void CPU::push(byte data)
+void CPU::push(ubyte data)
 {
     ubyte old_sp = reg_sp;
     uword address = STACK_START + reg_sp;
@@ -47,7 +47,7 @@ void CPU::push(byte data)
     bus.cpuWrite(address, data);
 }
 
-byte CPU::nextByte()
+ubyte CPU::nextByte()
 {
     // This is a bit of a misnomer because it could also be an operand
     ubyte instruction = bus.cpuRead(reg_pc);
@@ -58,7 +58,7 @@ byte CPU::nextByte()
 int CPU::executeInstruction()
 {
     // Step 1: get next instruction
-    byte instruction = nextByte();
+    ubyte instruction = nextByte();
 
     // Step 2: process opcode
     return ISA::executeOpcode(instruction);
@@ -109,7 +109,7 @@ void CPU::reset()
     ubyte pcl = bus.cpuRead(0xFFFC);
     ubyte pch = bus.cpuRead(0xFFFD);
     reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
-    reg_sp -= 3;
+    reg_sp += 3;
     reg_sr.i = true;     // I flag
     bus.reset();
     cycle = 7;
