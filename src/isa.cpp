@@ -1299,7 +1299,7 @@ int ISA::executeOpcode(ubyte instr)
             return SBC(cycles, val);
 
         case 0xFE: // INC abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu.reg_x, true);
+            std::tie(address, cycles) = Mode::absolute(cpu.reg_x, false);
             cycles += 4;
             return INC(cycles, address);
 

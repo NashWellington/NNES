@@ -16,7 +16,7 @@ Note: "240p test suite" is not included, and has been added to .gitignore, becau
 | CPU Exec Space | bisqwit | 0/2 | <l><li>APU  test crashes</li> <li>PPU test fails #6</li></l> |
 | CPU Flag Concurrency | bisqwit | 0/1 | Fails #2 |
 | CPU Reset | blargg | N/A | Not tested yet as resets aren't fully implemented |
-| CPU Timing Test v6 | Zepper | 0/1 | Fail OP: $FE with page cross |
+| CPU Timing Test v6 | Zepper | Pass | |
 | Instruction Behavior Misc Tests | blargg | 2/4 | <l><li>Tests 1 and 2 pass</li> <li>Test 3 fails #3</li> <li>Test 4 fails #2</li> <li>Combined test displays nothing</li></l> |
 | Instruction Test v5 | blargg | 11/11 | Passes all 11 individual tests, but exhibits weird behavior when running the combined test ROMs that needs to be investigated |
 | Instruction Timing Tests | blargg | 0/2 | <l><li>Test 1 fails #5</li> <li>Test 2 fails with no error code</li></l> |
