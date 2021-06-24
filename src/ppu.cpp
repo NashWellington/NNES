@@ -153,7 +153,7 @@ void PPU::tick()
                     {
                         ubyte y = bus.primary_oam[n].y;
                         bus.secondary_oam[sec_oam_i].y = y;
-                        if (y >= scanline+1 && y < scanline+1 + y_range)
+                        if (y <= scanline+1 && static_cast<int>(y) > scanline+1 - y_range)
                         {
                             bus.secondary_oam[sec_oam_i].x = bus.primary_oam[n].x;
                             bus.secondary_oam[sec_oam_i].tile_i = bus.primary_oam[n].tile_i;
@@ -186,10 +186,10 @@ void PPU::tick()
                 for (uint i = 0; i < 8; i++)
                 {
                     ubyte y = bus.secondary_oam[i].y;
-                    if (y >= scanline+1 && y < scanline+1 + y_range) 
+                    if (y <= scanline+1 && static_cast<int>(y) > scanline+1 - y_range)
                     {
                         show_spr[i] = true;
-                        ubyte pt_y = y - (scanline+1); // y coord within the pattern table tile
+                        ubyte pt_y = scanline+1 - y; // y coord within the pattern table tile
                         ubyte attributes = bus.secondary_oam[i].attributes;
                         if (attributes & 0x80) 
                             pt_y = y_range - pt_y - 1; // Flip vertically

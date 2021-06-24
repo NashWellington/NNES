@@ -28,7 +28,7 @@ Note: "240p test suite" is not included, and has been added to .gitignore, becau
 | Test | Author | Status | Details |
 | :--- | :----: | :----: | :------ |
 | 240p Test Suite | tepples | 0/2 | No support for mappers 2 or 34 yet |
-| Color Test | rainwarrior | 0/1 | Sprites are upside-down and emphasis/chroma/luma not implemented yet |
+| Color Test | rainwarrior | 0/1 | Emphasis/chroma/luma not implemented yet |
 | Full Palette Test | blargg | 0/3 | <l><li>full_palette and full_palette_smooth show four different shades of blue (i.e. not correct but a step in the right direction)</li> <li>flowing_palette crashes because its PRG-RAM size is larger than the maximum PRG-RAM size for mapper 0</li></l> |
 | Misc PPU Tests | blargg | 1/5 | <l><li>palette_ram passes</li> <li>power_up_palette fails #2 (start/reset palette setting not implemented yet)</li> <li>sprite_ram fails #4</li> <li>vbl_clear_time fails #3 (vbl flag cleared too late)</li> <li>vram_access fails #6</li></l> |
 | NMI Sync Test | blargg | 0/1 | |
