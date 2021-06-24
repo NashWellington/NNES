@@ -4,10 +4,10 @@ NNES has currently only been tested on Ubuntu 20.04 with gcc 9.3.0 on an x64 sys
 
 ## Roadmap
 This is a rough order of features I am planning to implement or change. Features I am currently working on are in **bold**:
-* **Sprites**
-* Audio
+* **Audio**
 * Automated testing
-* **Cycle-accurate CPU**
+* Cycle-accurate CPU (currently instruction-level accurate)
+* Cycle-accurate PPU (currently scanline-level accurate)
 * Support for more mappers
 * Other QoL features (savestates, cheats, etc)
 * Cross-platform support
