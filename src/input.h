@@ -7,9 +7,19 @@
 class Input
 {
 public:
+    Input();
+    ~Input();
     void pollInputs(RunFlags& run_flags);
 
-    ubyte joypad_1 = 0;
+private:
+#ifdef DEBUGGER
+    void pollDebug(RunFlags& run_flags, SDL_Event& event);
+#endif
+    void pollKeyboard(RunFlags& run_flags, SDL_Event& event);
+    void pollControllers();
+
+    std::array<SDL_GameController*, 4> controllers;
+    std::array<ubyte, 2> joypads = {};
 };
 
 extern Input input;
