@@ -27,9 +27,24 @@
 #include <optional>         
 #include <queue>
 
+/* 1-byte unsigned integer
+* Used by default (as opposed to byte)
+*/
 typedef uint8_t ubyte;
+
+/* 1-byte signed integer
+* Used mostly for signed addition or for setting/clearing zero flag
+*/
 typedef int8_t byte;
+
+/* 2-byte unsigned integer
+* Used by default (usually for addresses)
+*/
 typedef uint16_t uword;
+
+/* 2-byte signed integer
+* Never or almost never used
+*/
 typedef int16_t word;
 
 enum InterruptType
@@ -53,8 +68,6 @@ std::string binary(const T x)
 {
     std::string bin_str = "";
     for (int i = 0; i < static_cast<int>(8*sizeof(T)); i++)
-    {
         bin_str += (x & (1 << static_cast<int>(8*sizeof(T)-1-i)) ? '1' : '0');
-    }
     return bin_str;
 }
