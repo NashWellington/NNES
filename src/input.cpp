@@ -171,45 +171,48 @@ void pollDebug(RunFlags& run_flags, SDL_Event& event)
 {
     if (event.type == SDL_KEYDOWN)
     {
-        case SDLK_p:
-            display.palette_selected += 1;
-            display.palette_selected %= 8;
-            break;
-        case SDLK_f:
-            run_flags.paused = false;
-            run_flags.frame = true;
-            break;
-        case SDLK_t:
-            run_flags.paused = false;
-            run_flags.tick = true;
-            break;
-        case SDLK_g:
-            run_flags.paused = false;
-            run_flags.steps += 1;
-            break;
-        case SDLK_8: // Execute 2^8 instructions
-            run_flags.paused = false;
-            run_flags.steps += 0x0100;
-            break;
-        // TODO make these only work if Memory window is hovered/selected
-        case SDLK_UP:
-            display.mem_addrs.addrs[display.mem_addrs.device] -= 16;
-            break;
-        case SDLK_DOWN:
-            display.mem_addrs.addrs[display.mem_addrs.device] += 16;
-            break;
-        case SDLK_LEFT:
-            display.mem_addrs.addrs[display.mem_addrs.device]--;
-            break;
-        case SDLK_RIGHT:
-            display.mem_addrs.addrs[display.mem_addrs.device]++;
-            break;
-        case SDLK_PAGEUP:
-            display.mem_addrs.addrs[display.mem_addrs.device] -= 16 * 16;
-            break;
-        case SDLK_PAGEDOWN:
-            display.mem_addrs.addrs[display.mem_addrs.device] += 16 * 16;
-            break;
+        switch (event.key.keysym.sym)
+        {
+            case SDLK_p:
+                display.palette_selected += 1;
+                display.palette_selected %= 8;
+                break;
+            case SDLK_f:
+                run_flags.paused = false;
+                run_flags.frame = true;
+                break;
+            case SDLK_t:
+                run_flags.paused = false;
+                run_flags.tick = true;
+                break;
+            case SDLK_g:
+                run_flags.paused = false;
+                run_flags.steps += 1;
+                break;
+            case SDLK_8: // Execute 2^8 instructions
+                run_flags.paused = false;
+                run_flags.steps += 0x0100;
+                break;
+            // TODO make these only work if Memory window is hovered/selected
+            case SDLK_UP:
+                display.mem_addrs.addrs[display.mem_addrs.device] -= 16;
+                break;
+            case SDLK_DOWN:
+                display.mem_addrs.addrs[display.mem_addrs.device] += 16;
+                break;
+            case SDLK_LEFT:
+                display.mem_addrs.addrs[display.mem_addrs.device]--;
+                break;
+            case SDLK_RIGHT:
+                display.mem_addrs.addrs[display.mem_addrs.device]++;
+                break;
+            case SDLK_PAGEUP:
+                display.mem_addrs.addrs[display.mem_addrs.device] -= 16 * 16;
+                break;
+            case SDLK_PAGEDOWN:
+                display.mem_addrs.addrs[display.mem_addrs.device] += 16 * 16;
+                break;
+        }
     }
 
     // Make sure memory display address isn't out of bounds
