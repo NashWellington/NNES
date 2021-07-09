@@ -74,10 +74,21 @@ void APU::tick()
     clockNoise();
     clockDMC();*/
 
-    if (cycle % (MAX_CYCLE * 15 / audio->sample_rate) == 0) // Should make 44.1k samples/sec
+    if ((cycle*audio->sample_rate / (15*MAX_CYCLE)) >= (sample_i+1)) // Should make 44.1k samples/sec
+    {
+        sample_i++;
         mix();
+    }
 
     if (cycle == MAX_CYCLE) cycle = 0;
+    
+    // TODO delet
+    if (cycle == 0)
+    {
+        std::cerr << mix_count << std::endl;
+        mix_count = 0;
+        sample_i = 0;
+    }
 }
 
 /* For more info on mixing: https://wiki.nesdev.com/w/index.php/APU_Mixer
@@ -88,10 +99,13 @@ void APU::mix()
     // float tnd_out
     float output = pulse_out /*+ tnd_out*/ * 2; // TODO the rest of this
     audio->pushSample(output);
+    // TODO delet
+    mix_count++;
 }
 
 void APU::clockPulse(int i)
 {
+    // TODO fix bug where audio is playing at the beginning
     pulse[i].timer--;
     if (pulse[i].timer < 0) pulse[i].timer = pulse_timer[i];
 
@@ -106,6 +120,7 @@ void APU::clockPulse(int i)
         {
             volume = static_cast<float>(envelope[i].decay)/15.0f;
         }
+        if (pulse_timer[i] < 8) volume = 0;
         pulse[i].output = volume * pulse_waveforms[reg_pulse_ctrl[i].duty][pulse[i].sequence];
         pulse[i].sequence--;
         if (pulse[i].sequence < 0) pulse[i].sequence = 7;

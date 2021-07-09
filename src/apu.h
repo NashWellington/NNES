@@ -11,6 +11,12 @@
 class APU
 {
 public:
+// TODO delet
+uint mix_count = 0;
+
+// TODO move
+uint sample_i = 0;
+
     APU();
     void tick();
 

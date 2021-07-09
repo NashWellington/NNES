@@ -45,9 +45,6 @@ int main(int argc, char ** argv)
     // Initialize everything
     Boot::loadRom(rom);
     cpu.start();
-    // Audio audio = Audio();
-    // std::shared_ptr<Audio> audio_ptr = std::make_shared<Audio>(audio);
-    // apu.audio = audio_ptr;
 
     // Main loop
     // TODO time it so 1 frame takes 1/60 seconds
