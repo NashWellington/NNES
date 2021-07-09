@@ -101,184 +101,213 @@ void Bus::ppuWrite(uword address, ubyte data)
 ubyte Bus::cpuReadReg(uword address)
 {
     ubyte data = 0;
-    if (address < 0x4000)
+    if (address < 0x4000) address = 0x2000 + (address - 0x2000) % 0x0008;
+    switch (address)
     {
-        address = 0x2000 + (address - 0x2000) % 0x0008;
-        switch (address)
-        {
-            case 0x2000: // PPU ctrl
-                return ppu_latch;
+// PPU regs
+        case 0x2000: // PPU ctrl
+            return ppu_latch;
 
-            case 0x2001: // PPU mask
-                return ppu_latch;
+        case 0x2001: // PPU mask
+            return ppu_latch;
 
-            case 0x2002: // PPU status
-                // TODO race condition
-                data = (reg_ppu_status.reg & 0xE0) + (ppu_latch & 0x1F);
-                reg_ppu_status.v = 0;
-                reg_ppu_addr.i = 0;
-                ppu_latch = data;
-                return data;
+        case 0x2002: // PPU status
+            // TODO race condition
+            data = (reg_ppu_status.reg & 0xE0) + (ppu_latch & 0x1F);
+            reg_ppu_status.v = 0;
+            reg_ppu_addr.i = 0;
+            ppu_latch = data;
+            return data;
 
-            case 0x2003: // OAM addr
-                return ppu_latch;
-            
-            case 0x2004: // OAM data
-                //data = primary_oam[oam_addr/4].data[oam_addr%4];
-                ppu_latch = oam_data;
-                return oam_data;
-            
-            case 0x2005: // PPU scroll
-                return ppu_latch;
+        case 0x2003: // OAM addr
+            return ppu_latch;
+        
+        case 0x2004: // OAM data
+            //data = primary_oam[oam_addr/4].data[oam_addr%4];
+            ppu_latch = oam_data;
+            return oam_data;
+        
+        case 0x2005: // PPU scroll
+            return ppu_latch;
 
-            case 0x2006: // PPU address
-                return ppu_latch;
+        case 0x2006: // PPU address
+            return ppu_latch;
 
-            case 0x2007: // PPU data
-                data = reg_ppu_data;
-                reg_ppu_data = ppuRead(reg_ppu_addr.address);
-                if (reg_ppu_addr.address >= 0x3F00) data = reg_ppu_data;
-                if(reg_ppu_ctrl.i) reg_ppu_addr.address += 32;
-                else reg_ppu_addr.address += 1;
-                return data;
+        case 0x2007: // PPU data
+            data = reg_ppu_data;
+            reg_ppu_data = ppuRead(reg_ppu_addr.address);
+            if (reg_ppu_addr.address >= 0x3F00) data = reg_ppu_data;
+            if(reg_ppu_ctrl.i) reg_ppu_addr.address += 32;
+            else reg_ppu_addr.address += 1;
+            return data;
 
-            default:
-                break;
-        }
-    }
-    else
-    {
-        switch (address)
-        {
-            case 0x4014: // OAM DMA
-                return ppu_latch;
+// APU regs
 
-            case 0x4016: // Input port 1
-                reg_input[0].d0 = (joypad_data[0] & 0x80) >> 7;
-                joypad_data[0] <<= 1;
-                joypad_data[0] |= 0x01; // All bits after the first 8 read as 1
-                data = reg_input[0].reg & 0x1F;
-                reg_input[0].reg = 0; 
-                return data;
+// Another PPU reg
+        case 0x4014: // OAM DMA
+            return ppu_latch;
 
-            case 0x4017: // Input port 2
-                reg_input[1].d0 = (joypad_data[1] & 0x80) >> 7;
-                joypad_data[1] <<= 1;
-                joypad_data[1] |= 0x01;
-                data = reg_input[1].reg & 0x1F;
-                reg_input[1].reg = 0;
-                return data;
+// Input/misc regs
+        case 0x4016: // Input port 1
+            reg_input[0].d0 = (joypad_data[0] & 0x80) >> 7;
+            joypad_data[0] <<= 1;
+            joypad_data[0] |= 0x01; // All bits after the first 8 read as 1
+            data = reg_input[0].reg & 0x1F;
+            reg_input[0].reg = 0; 
+            return data;
 
-            default:
-                #ifndef NDEBUG
-                std::cerr << "Warning: unsupported CPU Reg Read at " << hex(address) << std::endl;
-                #endif
-                break;
-        }
+        case 0x4017: // Input port 2
+            reg_input[1].d0 = (joypad_data[1] & 0x80) >> 7;
+            joypad_data[1] <<= 1;
+            joypad_data[1] |= 0x01;
+            data = reg_input[1].reg & 0x1F;
+            reg_input[1].reg = 0;
+            return data;
+
+        default:
+            #ifndef NDEBUG
+            std::cerr << "Warning: unsupported CPU Reg Read at " << hex(address) << std::endl;
+            #endif
+            break;
     }
     return data;
 }
 
 void Bus::cpuWriteReg(uword address, ubyte data)
 {
-    if (address < 0x4000)
+    if (address < 0x4000) address = 0x2000 + (address - 0x2000) % 0x0008;
+    switch (address)
     {
-        address = 0x2000 + (address - 0x2000) % 0x0008;
-        switch (address)
-        {
-            // TODO ignore writes for "about 30k cycles" after power/reset
-            case 0x2000: // PPU ctrl
-                if (reg_ppu_ctrl.v && reg_ppu_status.v && static_cast<byte>(data) < 0)
-                {
-                    addInterrupt(NMI);
-                }
-                reg_ppu_ctrl.reg = data;
-                #ifndef NDEBUG
-                if (reg_ppu_ctrl.p)
-                    std::cerr << "Warning: PPUCTRL bit 6 set" << std::endl;
-                #endif
-                ppu_latch = data;
-                break;
+// PPU regs
+        // TODO ignore writes for "about 30k cycles" after power/reset
+        case 0x2000: // PPU ctrl
+            if (reg_ppu_ctrl.v && reg_ppu_status.v && static_cast<byte>(data) < 0)
+            {
+                addInterrupt(NMI);
+            }
+            reg_ppu_ctrl.reg = data;
+            ppu_latch = data;
+            break;
 
-            case 0x2001: // PPU mask
-                reg_ppu_mask.reg = data;
-                ppu_latch = data;
-                break;
+        case 0x2001: // PPU mask
+            reg_ppu_mask.reg = data;
+            ppu_latch = data;
+            break;
 
-            case 0x2002: // PPU status
-                ppu_latch = data;
-                break;
+        case 0x2002: // PPU status
+            ppu_latch = data;
+            break;
 
-            case 0x2003: // OAM addr
-                // TODO 2C02 OAM corruption
-                oam_addr = data;
-                ppu_latch = data;
-                break;
+        case 0x2003: // OAM addr
+            // TODO 2C02 OAM corruption
+            oam_addr = data;
+            ppu_latch = data;
+            break;
 
-            // TODO no writing during vblank + more
-            case 0x2004: // OAM data
-                primary_oam[oam_addr/4].data[oam_addr%4] = data;
-                oam_addr++;
-                oam_data = data;
-                ppu_latch = data;
-                break;
+        // TODO no writing during vblank + more
+        case 0x2004: // OAM data
+            primary_oam[oam_addr/4].data[oam_addr%4] = data;
+            oam_addr++;
+            oam_data = data;
+            ppu_latch = data;
+            break;
 
-            case 0x2005: // PPU scroll
-                reg_ppu_scroll.write(data);
-                ppu_latch = data;
-                break;
-            
-            case 0x2006: // PPU addr
-                reg_ppu_addr.write(data);
-                ppu_latch = data;
-                break;
+        case 0x2005: // PPU scroll
+            reg_ppu_scroll.write(data);
+            ppu_latch = data;
+            break;
+        
+        case 0x2006: // PPU addr
+            reg_ppu_addr.write(data);
+            ppu_latch = data;
+            break;
 
-            case 0x2007: // PPU data
-                // TODO buffer
-                ppuWrite(reg_ppu_addr.address, data);
-                if(reg_ppu_ctrl.i) reg_ppu_addr.address += 32;
-                else reg_ppu_addr.address += 1;
-                ppu_latch = data;
-                break;
+        case 0x2007: // PPU data
+            // TODO buffer
+            ppuWrite(reg_ppu_addr.address, data);
+            if(reg_ppu_ctrl.i) reg_ppu_addr.address += 32;
+            else reg_ppu_addr.address += 1;
+            ppu_latch = data;
+            break;
+// APU regs
+        case 0x4000: // Pulse 1 control
+            apu.reg_pulse_ctrl[0].reg = data;
+            break;
+        
+        case 0x4001: // Pulse 1 sweep control
+            apu.reg_sweep[0].reg = data;
+            break;
 
-            default:
-                break;
-        }
-    }
-    else 
-    {
-        switch (address)
-        {
-            case 0x4014: // OAM DMA
-                dma_addr = static_cast<uword>(data) << 8;
-                cpu_suspend_cycles = 514;
-                ppu_latch = data;
-                break;
+        case 0x4002: // Pulse 1 timer (low 8 bits)
+            apu.pulse_timer[0] &= 0xFF00;
+            apu.pulse_timer[0] |= static_cast<uword>(data);
+            break;
+        
+        case 0x4003: // Pulse 1 length counter load + timer (high 3 bits)
+            apu.pulse_length_ctr_load[0] = ((data & 0xF8) >> 3);
+            apu.pulse_timer[0] &= 0x00FF;
+            apu.pulse_timer[0] |= (static_cast<uword>(data & 0x07) << 8);
+            apu.envelope[0].start = true;
+            apu.loadLengthCounter(0);
+            break;
+        
+        case 0x4004: // Pulse 2 control
+            apu.reg_pulse_ctrl[1].reg = data;
+            break;
+        
+        case 0x4005: // Pulse 2 sweep control
+            apu.reg_sweep[1].reg = data;
+            break;
 
-            case 0x4016: // Joypad 1 input + general output port
-                if (data & 0x01)
-                {
-                    joypad_data[0] = joypad_data_buffer[0];
-                    joypad_data[1] = joypad_data_buffer[1];
-                }
-                // TODO expansion ports (if I ever get there)
-                ppu_latch &= 0xF8;
-                ppu_latch |= (data & 0x07);
-                break;
+        case 0x4006: // Pulse 2 timer (low 8 bits)
+            apu.pulse_timer[1] &= 0xFF00;
+            apu.pulse_timer[1] |= static_cast<uword>(data);
+            break;
+        
+        case 0x4007: // Pulse 2 length counter load + timer (high 3 bits)
+            apu.pulse_length_ctr_load[1] = ((data & 0xF8) >> 3);
+            apu.pulse_timer[1] &= 0x00FF;
+            apu.pulse_timer[1] |= (static_cast<uword>(data & 0x07) << 8);
+            apu.envelope[1].start = true;
+            apu.loadLengthCounter(1);
+            break;
 
-            case 0x4017: // Joypad 2 input + APU Frame Counter
-                // TODO Expand on this once I implement the APU
-                apu_frame_counter.reg = data & 0xC0;
-                if (!apu_frame_counter.i) addInterrupt(IRQ);
-                ppu_latch = apu_frame_counter.reg;
-                break;
+// Another PPU reg
+        case 0x4014: // OAM DMA
+            dma_addr = static_cast<uword>(data) << 8;
+            cpu_suspend_cycles = 514;
+            ppu_latch = data;
+            break;
 
-            default:
-                #ifndef NDEBUG
-                std::cerr << "Unsupported CPU Reg Write at " << hex(address) << std::endl;
-                #endif
-                break;
-        }
+// Another APU reg
+        case 0x4015: // APU ctrl
+            apu.reg_apu_ctrl.reg = data;
+            break;
+
+// Misc regs
+        case 0x4016: // Poll input
+            if (data & 0x01)
+            {
+                joypad_data[0] = joypad_data_buffer[0];
+                joypad_data[1] = joypad_data_buffer[1];
+            }
+            // TODO expansion ports (if I ever get there)
+            ppu_latch &= 0xF8;
+            ppu_latch |= (data & 0x07);
+            break;
+
+        case 0x4017: // APU frame counter
+            // TODO buffer for 3-4 CPU cycles
+            apu.reg_frame_ctr.reg = data & 0xC0;
+            // TODO interrupts?
+            ppu_latch = apu.reg_frame_ctr.reg;
+            break;
+
+        default:
+            #ifndef NDEBUG
+            std::cerr << "Unsupported CPU Reg Write at " << hex(address) << std::endl;
+            #endif
+            break;
     }
 }
 
@@ -321,6 +350,9 @@ void Bus::load(Savestate& savestate)
 
 InterruptType Bus::getInterrupt()
 {
+    if (current_interrupt == InterruptType::NO_INTERRUPT
+        && apu.frame_interrupt)
+        addInterrupt(IRQ);
     return current_interrupt;
 }
 

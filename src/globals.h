@@ -14,7 +14,7 @@
 // Uncomment this out if building as NNES - debugger
 // TODO cmake argument
 #ifndef DEBUGGER
-#define DEBUGGER
+//#define DEBUGGER
 #endif
 
 #include <iostream>         // Used for logging errors etc.

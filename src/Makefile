@@ -1,4 +1,4 @@
-objects =  main.o boot.o cpu.o ppu.o apu.o bus.o $(mapper_objects) isa.o mode.o savestate.o display.o input.o util.o imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
+objects =  main.o boot.o cpu.o ppu.o apu.o bus.o $(mapper_objects) isa.o mode.o savestate.o display.o audio.o input.o util.o imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
 
 mapper_objects = mapper000.o mapper001.o
 
@@ -14,7 +14,7 @@ flags += -I/usr/include/SDL2 -I/usr/include/freetype2
 
 libs = -lGLEW -lGL -lGLU -lSDL2 -lfreetype
 
-target = NNES-debug
+target = NNES
 
 $(target) : $(objects)
 		$(compiler) $(flags) $(objects) -o ../build/$(target) $(libs)
@@ -41,7 +41,7 @@ isa.o : isa.h globals.h mode.h cpu.h
 mode.o : mode.h globals.h cpu.h
 		$(compiler) $(flags) -c mode.cpp
 
-bus.o : bus.h globals.h mappers/mapper.h savestate.h
+bus.o : bus.h globals.h apu.h mappers/mapper.h savestate.h
 		$(compiler) $(flags) -c bus.cpp
 
 mapper000.o : mappers/mapper.h globals.h savestate.h
@@ -52,6 +52,9 @@ mapper001.o : mappers/mapper.h globals.h savestate.h
 
 display.o : display.h globals.h util.h savestate.h libs/imgui/imgui.h libs/imgui/imgui_impl_sdl.h libs/imgui/imgui_impl_opengl3.h
 		$(compiler) $(flags) -c display.cpp
+
+audio.o : audio.h globals.h
+		$(compiler) $(flags) -c audio.cpp
 
 input.o : input.h globals.h display.h bus.h
 		$(compiler) $(flags) -c input.cpp

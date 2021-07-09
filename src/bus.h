@@ -1,6 +1,8 @@
 #pragma once
 
 #include "globals.h"
+#include "apu.h"
+// TODO include CPU and PPU probably
 #include "mappers/mapper.h"
 #include "savestate.h"
 
@@ -290,7 +292,7 @@ public:
     ubyte joypad_data_buffer[2] = {};
 
     // 8 inputs from joypads 1 and 2
-    // NOTE: I made this a ubyte so I don't have to deal w/ ASR/LSR bs
+    // NOTE: I made this a ubyte so I don't have to deal w/ ASR/LSR sign extension
     ubyte joypad_data[2] = {};
 
     /* Input ports 1 and 2
@@ -309,28 +311,6 @@ public:
         };
         ubyte reg;
     } reg_input[2] {{.reg = 0}, {.reg = 0}};
-
-    /* APU Frame Counter
-    * $4017
-    * 
-    * 7 6 5 4   3 2 1 0
-    * M I
-    * 
-    * I - Interrupt inhibit flag
-    *     Clears the frame interrupt flag if set
-    * M - Sequencer mode
-    *     0 = 4-step sequence, 1 = 5-step sequence
-    */
-    union
-    {
-        struct
-        {
-            unsigned   : 6;
-            unsigned i : 1; // Interrupt inhibit flag
-            unsigned m : 1; // Sequencer mode
-        };
-        ubyte reg;
-    } apu_frame_counter {.reg = 0};
 
 // PPU Object Attribute Memory
     struct Sprite
