@@ -147,6 +147,12 @@ ubyte Bus::cpuReadReg(uword address)
         case 0x4014: // OAM DMA
             return ppu_latch;
 
+// Another APU reg
+        case 0x4015: // APU status
+            apu.getStatus();
+            data = apu.reg_apu_status.reg;
+            return data;
+
 // Input/misc regs
         case 0x4016: // Input port 1
             reg_input[0].d0 = (joypad_data[0] & 0x80) >> 7;
