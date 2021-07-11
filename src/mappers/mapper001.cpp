@@ -44,9 +44,9 @@ Mapper001::Mapper001(Header& header, std::ifstream& rom)
         rom.read(reinterpret_cast<char*>(chr_mem[i].data()), 0x1000);
     }
 
-    assert(prg_rom.size() >= 2 && prg_rom.size() <= 16);
-    assert(prg_ram.size() <= 4);
-    assert(chr_mem.size() >= 2 && chr_mem.size() <= 16);
+    assert(prg_rom.size() >= 2 && prg_rom.size() <= 32);
+    assert(prg_ram.size() <= 4 && prg_ram.size() != 3);
+    assert(chr_mem.size() >= 2 && chr_mem.size() <= 32);
 }
 
 std::optional<ubyte> Mapper001::cpuRead(uword address)
@@ -66,9 +66,8 @@ std::optional<ubyte> Mapper001::cpuRead(uword address)
                 case 4: // 32 KiB PRG-RAM
                     return prg_ram[chr_bank[0].ss][address-0x6000];
                 default:
-                    // TODO remove
                     std::cerr << "Error: Unsupported PRG-RAM size: " << (prg_ram.size() * 0x6000) << std::endl;
-                    throw std::exception();
+                    exit(EXIT_FAILURE);
             }
             return {};
         }
@@ -274,6 +273,6 @@ bool Mapper001::ppuWrite(uword address, ubyte data)
             std::cerr << "Warning: unsupported PPU write to " << hex(address) << std::endl;
             #endif
         }
-    return true;
+        return true;
     }
 }
