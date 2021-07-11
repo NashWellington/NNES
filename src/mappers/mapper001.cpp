@@ -2,6 +2,7 @@
 
 // TODO support for SZROM
 // TODO support submapper 5
+// TODO battery-backed save
 
 Mapper001::Mapper001(Header& header, std::ifstream& rom)
 {

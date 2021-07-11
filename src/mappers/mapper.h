@@ -54,6 +54,10 @@ public:
 
 /* NROM
 * http://wiki.nesdev.com/w/index.php/NROM
+* Games: 248
+* Notable games: 1942, Dig Dug (I & II), Donkey Kong (1, 3, and Jr.)
+*   Duck Hunt, ExciteBike, Galaga, Ice Climber, Mario Bros., 
+*   Ms. Pac-Man, Pac-Man, Super Mario Bros.
 */
 class Mapper000 : public Mapper
 {
@@ -93,6 +97,11 @@ private:
 
 /* MMC1
 * http://wiki.nesdev.com/w/index.php/MMC1
+* Games: 681
+* Notable games: Barbie, Bomberman II, Bubble Bobble, Castlevania II, 
+*   Double Dragon, Dr. Mario, Dragon Warrior (I-IV), Final Fantasy (I & II)
+*   Kid Icarus, The Legend of Zelda, Mega Man 2, Metroid, Ninja Gaiden, 
+*   TMNT, Tetris (Licensed), Zelda II
 */
 class Mapper001 : public Mapper
 {
@@ -207,6 +216,10 @@ private:
 
 /* UxROM (except for 2 games)
 * https://wiki.nesdev.com/w/index.php/UxROM
+* Games: 271
+* Notable Games: Archin, Castlevania, Contra, Ducktales (I & II), 
+*   Ghosts 'n Goblins, Mega Man, Metal Gear, Paperboy 2, Prince of Persia, 
+*   Super Pitfall
 */
 class Mapper002 : public Mapper
 {
@@ -237,6 +250,9 @@ private:
 
 /* CNROM & similar boards
 * https://wiki.nesdev.com/w/index.php/INES_Mapper_003
+* Games: 155
+* Notable Games: Adventure Island, Arkanoid, Donkey Kong Classics, 
+*   Gradius, Joust, Paperboy, Tetris (Unlicensed)
 */
 class Mapper003 : public Mapper
 {
@@ -267,6 +283,13 @@ private:
 
 /* MMC3 (TxROM), MMC6 (HKROM)
 * https://wiki.nesdev.com/w/index.php/MMC3
+* Games: 600
+* Notable games: Adventure Island II, Bubble Bobble 2, Contra Force, 
+*   Double Dragon (II & III), Jurassic Park, Kirby's Adventure, 
+*   Mega Man (3-6), Mother (JP), Ninja Gaiden (II & III), Smash T.V.,
+*   Star Wars, Star Wars: The Empire Strikes Back, Street Fighter 2010, 
+*   Super Mario Bros. (2 & 3), TMNT (II, III, Tournament Fighters), Tetris 2
+*   Wario's Woods, Yoshi's Cookie
 */
 class Mapper004 : public Mapper
 {
@@ -347,3 +370,44 @@ private:
     bool irq_reload = false;
     bool irq_enable = false;
 };
+
+// TODO mapper 5
+// I'm procrastinating this one because it seems complicated
+
+// TODO mapper 6
+// This one seems to be disk-based, so I probably won't get to it for a while
+
+/* AxROM
+* https://wiki.nesdev.com/w/index.php/AxROM
+* Games: 76
+* Noteworthy games: Battletoads, Battletoads & Double Dragon
+*/
+class Mapper007 : public Mapper
+{
+public:
+    Mapper007(Header& header, std::ifstream& rom);
+    std::optional<ubyte> cpuRead(uword address);
+    bool cpuWrite(uword address, ubyte data);
+    std::optional<ubyte> ppuRead(uword address);
+    bool ppuWrite(uword address, ubyte data);
+private:
+// Banks
+    /* Program ROM
+    * capacity: $8,000 to $80,000 (32KiB to 512KiB)
+    * banks:     1 to 16
+    * window:   $8000
+    */
+    std::vector<std::array<ubyte,0x8000>> prg_rom = {};
+    uint prg_bank = 0;
+
+    /* Character ROM/RAM
+    * capacity: $2000 (8KiB)
+    * banks:     1
+    * window:   $2000
+    */
+    std::array<ubyte,0x2000> chr_mem = {};
+    bool chr_ram = false;
+};
+
+// TODO mapper 8
+// Note: this mapper is considered "useless"
