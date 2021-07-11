@@ -41,12 +41,7 @@ bool Mapper002::cpuWrite(uword address, ubyte data)
     if (address < 0x8000) return false;
     else
     {
-        if (data > prg_rom.size())
-        {
-            std::cerr << "Error: invalid bank selection: " << data << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        prg_bank = data;
+        prg_bank = data % prg_rom.size();
         return true;
     }
 }
