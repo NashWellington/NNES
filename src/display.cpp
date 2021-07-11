@@ -376,7 +376,6 @@ Display::~Display()
 
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
-    SDL_Quit();
 }
 
 void Display::displayFrame(RunFlags& run_flags)
