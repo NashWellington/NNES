@@ -129,6 +129,7 @@ Header Boot::readHeader(std::ifstream& rom)
 std::shared_ptr<Mapper> Boot::getMapper(Header& header, std::ifstream& rom)
 {
     std::shared_ptr<Mapper> mapper;
+    // TODO array of pointers?
     switch (header.mapper)
     {
         case 0:
@@ -137,6 +138,10 @@ std::shared_ptr<Mapper> Boot::getMapper(Header& header, std::ifstream& rom)
 
         case 1:
             mapper = std::make_shared<Mapper001>(header, rom);
+            break;
+
+        case 2:
+            mapper = std::make_shared<Mapper002>(header, rom);
             break;
 
         default:

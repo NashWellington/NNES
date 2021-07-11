@@ -1,6 +1,6 @@
 objects =  main.o boot.o cpu.o ppu.o apu.o bus.o $(mapper_objects) isa.o mode.o savestate.o display.o audio.o input.o util.o imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
 
-mapper_objects = mapper000.o mapper001.o
+mapper_objects = mapper000.o mapper001.o mapper002.o
 
 compiler = g++
 
@@ -49,6 +49,9 @@ mapper000.o : mappers/mapper.h globals.h savestate.h
 
 mapper001.o : mappers/mapper.h globals.h savestate.h
 		$(compiler) $(flags) -c mappers/mapper001.cpp
+
+mapper002.o : mappers/mapper.h globals.h savestate.h
+	$(compiler) $(flags) -c mappers/mapper002.cpp
 
 display.o : display.h globals.h util.h savestate.h libs/imgui/imgui.h libs/imgui/imgui_impl_sdl.h libs/imgui/imgui_impl_opengl3.h
 		$(compiler) $(flags) -c display.cpp

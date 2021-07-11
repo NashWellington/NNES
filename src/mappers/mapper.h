@@ -192,20 +192,52 @@ private:
     bool prg_ram_enabled = false;
 
     /* Program ROM
-    * capacity: $8000 to $80000 (32-512 KiB)
-    * banks:     2-16
+    * capacity: $8,000 to $80,000 (32-512 KiB)
+    * banks:     2-32
     * window:   $4000 x 2
     * location: $8000
     */
     std::vector<std::array<ubyte,0x4000>> prg_rom = {};
 
     /* Character ROM/RAM
-    * capacity: $2000 to $20000 (8-128KiB)
-    * banks:     2-16
+    * capacity: $2,000 to $20,000 (8-128KiB)
+    * banks:     2-32
     * window:   $1000 x 2
     * location: $0000
     */
     std::vector<std::array<ubyte,0x1000>> chr_mem = {};
 
+    bool chr_ram = false;
+};
+
+/* UxROM (except for 2 games)
+* https://wiki.nesdev.com/w/index.php/UxROM
+*/
+class Mapper002 : public Mapper
+{
+public:
+    Mapper002(Header& header, std::ifstream& rom);
+    std::optional<ubyte> cpuRead(uword address);
+    bool cpuWrite(uword address, ubyte data);
+    std::optional<ubyte> ppuRead(uword address);
+    bool ppuWrite(uword address, ubyte data);
+private:
+// Banks
+    /* Program ROM
+    * capacity: $40,000 to $400,000 (256 to 4096 KiB)
+    * banks:     10-100
+    * window:   $4,000 x 2
+    * location: $8,000
+    */
+    std::vector<std::array<ubyte,0x4000>> prg_rom = {};
+    uint prg_bank = 0; // location of the first PRG-ROM bank
+
+    /* Character ROM/RAM
+    * capacity: $2000
+    * banks:     N/A
+    * window:   $2000
+    * location: $0000
+    */
+    std::array<ubyte,0x2000> chr_mem = {};
     bool chr_ram = false;
 };
