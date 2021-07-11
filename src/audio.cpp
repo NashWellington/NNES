@@ -41,7 +41,6 @@ Audio::Audio()
 Audio::~Audio()
 {
     SDL_CloseAudioDevice(id);
-    SDL_Quit();
 }
 
 void Audio::callback(void* data, uint8_t* stream, int bytes)

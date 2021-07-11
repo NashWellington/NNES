@@ -113,9 +113,10 @@ int main(int argc, char ** argv)
                 time_point frame_time = start_time + frame(frame_count);
                 if (frame_time < steady_clock::now())
                 {
-                    milliseconds delay = duration_cast<milliseconds>(steady_clock::now() - frame_time);
-                    std::cerr << "Warning: frame " << frame_count << " is behind schedule by ";
-                    std::cerr << delay.count() << " ms" << std::endl;
+                    // TODO FPS count
+                    //milliseconds delay = duration_cast<milliseconds>(steady_clock::now() - frame_time);
+                    //std::cerr << "Warning: frame " << frame_count << " is behind schedule by ";
+                    //std::cerr << delay.count() << " ms" << std::endl;
                 }
                 else
                 {
@@ -142,6 +143,8 @@ int main(int argc, char ** argv)
             #endif
         }
     }
+
+    SDL_Quit();
 
     #ifndef NDEBUG
     // Reset cerr buffer

@@ -23,6 +23,11 @@ APU::APU()
     audio = std::make_unique<Audio>();
 }
 
+APU::~APU()
+{
+    audio.~unique_ptr();
+}
+
 // TODO should I run this at CPU freq and only do other APU stuff every other cycle?
 void APU::tick()
 {
@@ -93,7 +98,7 @@ void APU::mix()
 {
     float pulse_out = 95.88f / ((8128.0f / (pulse[0].output + pulse[1].output)) + 100.0f);
     // float tnd_out
-    float output = pulse_out /*+ tnd_out*/; // TODO the rest of this
+    float output = pulse_out /*+ tnd_out*/ * 2; // TODO the rest of this
     audio->pushSample(output);
 }
 
