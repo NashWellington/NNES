@@ -80,13 +80,9 @@ void APU::tick()
         mix();
     }
 
-    if (cycle == MAX_CYCLE) cycle = 0;
-    
-    // TODO delet
-    if (cycle == 0)
+    if (cycle == MAX_CYCLE) 
     {
-        std::cerr << mix_count << std::endl;
-        mix_count = 0;
+        cycle = 0;
         sample_i = 0;
     }
 }
@@ -97,15 +93,12 @@ void APU::mix()
 {
     float pulse_out = 95.88f / ((8128.0f / (pulse[0].output + pulse[1].output)) + 100.0f);
     // float tnd_out
-    float output = pulse_out /*+ tnd_out*/ * 2; // TODO the rest of this
+    float output = pulse_out /*+ tnd_out*/; // TODO the rest of this
     audio->pushSample(output);
-    // TODO delet
-    mix_count++;
 }
 
 void APU::clockPulse(int i)
 {
-    // TODO fix bug where audio is playing at the beginning
     pulse[i].timer--;
     if (pulse[i].timer < 0) pulse[i].timer = pulse_timer[i];
 
@@ -163,7 +156,9 @@ void APU::loadLengthCounter(int i)
         case 0:
         case 1:
             pulse[i].length = length_table[pulse_length_ctr_load[i]];
-        // case 2 & 3
+            break;
+        // TODO triangle
+        // TODO noise
         default:
             break;
     }
@@ -177,7 +172,8 @@ void APU::clearLengthCounter(int i)
         case 0:
         case 1:
             pulse[i].length = 0;
-        // TODO case 2 & 3
+        // TODO triangle
+        // TODO noise
         default:
             break;
     }

@@ -11,12 +11,6 @@
 class APU
 {
 public:
-// TODO delet
-uint mix_count = 0;
-
-// TODO move
-uint sample_i = 0;
-
     APU();
     void tick();
 
@@ -42,7 +36,7 @@ uint sample_i = 0;
 
     /* Set the length counter to 0
     * Same indices as loadLengthCounter
-    * Should only be called for each of the low 4 bits in $4015
+    * Should only be called for each of the low 4 bits in $4015 write
     * when they are zeroed out
     */
     void clearLengthCounter(int i);
@@ -68,6 +62,7 @@ private:
 // APU + channel variables
     uint cycle = 0;
     uint frame_ctr = 0;
+    uint sample_i = 0; // Sample index (goes from 0 to sample_rate/15)
 
     struct
     {

@@ -288,6 +288,10 @@ void Bus::cpuWriteReg(uword address, ubyte data)
 // Another APU reg
         case 0x4015: // APU ctrl
             apu.reg_apu_ctrl.reg = data;
+            if (apu.reg_apu_ctrl.lce_p1 == 0) apu.clearLengthCounter(0);
+            if (apu.reg_apu_ctrl.lce_p2 == 0) apu.clearLengthCounter(1);
+            if (apu.reg_apu_ctrl.lce_tr == 0) apu.clearLengthCounter(2);
+            if (apu.reg_apu_ctrl.lce_ns == 0) apu.clearLengthCounter(3);
             break;
 
 // Misc regs

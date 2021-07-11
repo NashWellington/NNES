@@ -1,7 +1,5 @@
 #include "audio.h"
 
-const uint AUDIO_DELAY_MS = 40;
-
 Audio::Audio()
 {
     // Do all SDL audio init stuff
@@ -11,13 +9,17 @@ Audio::Audio()
         std::cerr << SDL_GetError() << std::endl;
         exit(EXIT_FAILURE);
     }
+
+    audio_buffer = {};
     
     SDL_AudioSpec desired;
     desired.freq = sample_rate;
+    // TODO switch to byte or ubyte or something
     desired.format = AUDIO_F32SYS; // We want a float so we don't have to do type conversions
     desired.channels = 1;
-    desired.samples = 2048; // buffer size
-    desired.callback = NULL;
+    desired.samples = 1024; // buffer size
+    desired.callback = callback;
+    desired.userdata = this;
 
     id = SDL_OpenAudioDevice(NULL, 0, &desired, &spec, 0);
     if (!id)
@@ -33,6 +35,7 @@ Audio::Audio()
         exit(EXIT_FAILURE);
     }
     sample_rate = spec.freq;
+    SDL_PauseAudioDevice(id, 0);
 }
 
 Audio::~Audio()
@@ -41,10 +44,22 @@ Audio::~Audio()
     SDL_Quit();
 }
 
+void Audio::callback(void* data, uint8_t* stream, int bytes)
+{
+    uint samples = bytes / sizeof(float);
+    float* buffer = reinterpret_cast<float*>(stream);
+    Audio* audio = reinterpret_cast<Audio*>(data);
+
+    for (uint i = 0; i < samples; i++)
+    {
+        buffer[i] = audio->audio_buffer.pull();
+    }
+}
+
 void Audio::pushSample(float sample)
 {
     // TODO type conversions if needed
-    SDL_QueueAudio(id, &sample, sizeof(spec.format));
+    audio_buffer.push(sample);
 
     SDL_AudioStatus status = SDL_GetAudioDeviceStatus(id);
     if (status == SDL_AUDIO_STOPPED)
@@ -53,10 +68,29 @@ void Audio::pushSample(float sample)
         std::cerr << SDL_GetError() << std::endl;
         exit(EXIT_FAILURE);
     }
-    else if (status == SDL_AUDIO_PAUSED 
-        && (SDL_GetQueuedAudioSize(id) >= (spec.samples * AUDIO_DELAY_MS / 1000)))
+}
+
+void AudioBuffer::push(float sample)
+{
+    buffer[apu_index] = sample;
+    apu_index++;
+    apu_index %= 4096;
+    while (apu_index == sdl_index)
     {
-        // start playing audio once buffer has 1024 samples
-        SDL_PauseAudioDevice(id, 0);
+        using namespace std::chrono_literals;
+        std::this_thread::sleep_for(1ms);
     }
+}
+
+float AudioBuffer::pull()
+{
+    while (sdl_index == apu_index)
+    {
+        using namespace std::chrono_literals;
+        std::this_thread::sleep_for(1ms);
+    }
+    float sample = buffer[sdl_index];
+    sdl_index++;
+    sdl_index %= 4096;
+    return sample;
 }
