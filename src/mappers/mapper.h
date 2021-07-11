@@ -411,3 +411,48 @@ private:
 
 // TODO mapper 8
 // Note: this mapper is considered "useless"
+
+/* MMC2
+* https://wiki.nesdev.com/w/index.php/MMC2
+* Games: 11 (all versions of Mike Tyson's Punch Out!! and Punch Out!!)
+*/
+class Mapper009 : public Mapper
+{
+public:
+    Mapper009(Header& header, std::ifstream& rom);
+    std::optional<ubyte> cpuRead(uword address);
+    bool cpuWrite(uword address, ubyte data);
+    std::optional<ubyte> ppuRead(uword address);
+    bool ppuWrite(uword address, ubyte data);
+private:
+    /* Program RAM
+    * capacity: $0000 or $2000 (0 or 8 KiB)
+    */
+    std::array<ubyte,0x2000> prg_ram = {};
+    bool prg_ram_exists = false;
+
+    /* Program ROM
+    * capacity: $8000 to $20,000 (32 to 128 KiB)
+    * banks:     4 to 16
+    * window:   $2000 x 1 + $6000 x 1
+    */
+    std::vector<std::array<ubyte,0x2000>> prg_rom = {};
+    uint prg_bank = 0; // Bank select for the first bank (last 3 fixed)
+
+    /* Character ROM/RAM
+    * capacity: $2000 to $20,000 (8 to 128 KiB)
+    * banks:     2 to 32
+    * window:   $1000 x 2
+    */
+    std::vector<std::array<ubyte,0x1000>> chr_mem = {};
+
+    /* CHR-ROM/RAM bank selection
+    * [0][0] - $0000 bank select when latch 0 = $FD
+    * [0][1] - ''                             = $FE
+    * [1][0] - $1000 bank select when latch 1 = $FD
+    * [1][1] - ''                             = $FE
+    */
+    std::array<std::array<uint,2>,2> chr_bank = {};
+    std::array<ubyte,2> chr_latch = {0xFD, 0xFD}; // not sure what the default is
+    bool chr_ram = false;
+};
