@@ -114,8 +114,31 @@ private:
 
     /* Name tables
     * $2000 to $2FFF
+    * Note: 4 nametables are addressable, but only 2 are present in memory.
+    *       How these nametables (A and B) are addressed is determined 
+    *       by mirroring (wihch is determined by the cartridge)
+    * 
+    * Horizontal Mirroring:
+    *   A - $2000, $2400
+    *   B - $2800, $2C00
+    * 
+    * Vertical Mirroring:
+    *   A - $2000, $2800
+    *   B - $2400, $2C00
+    * 
+    * Single-Screen:
+    *   A - All (if SINGLE_SCREEN_LOWER)
+    *   B - All (if SINGLE_SCREEN_UPPER)
+    * 
+    * Four-Screen:
+    *   A - $2000
+    *   B - $2400
+    *   C - $2800 (on cart)
+    *   D - $2C00 (on cart)
+    * // TODO other types of mirroring, such as:
+    *   Diagonal, L-Shaped, 3-screen (vert, horizontal, diagonal), 1-screen fixed
     */
-    std::array<std::array<ubyte, 0x0400>, 4> name_tables = {};
+    std::array<std::array<ubyte, 0x0400>, 2> name_tables = {};
 
     /* Palette RAM indices
     * $3F00 to $3F19
