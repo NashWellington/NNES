@@ -26,6 +26,7 @@
 #include <vector>           
 #include <optional>         
 #include <queue>
+#include <thread>
 
 /* 1-byte unsigned integer
 * Used by default (as opposed to byte)
@@ -46,6 +47,13 @@ typedef uint16_t uword;
 * Never or almost never used
 */
 typedef int16_t word;
+
+/* Used for timing
+* Duration of one frame
+* // TODO actual exact value
+* // TODO PAL/Dendy vals
+*/
+typedef std::chrono::duration<int64_t,std::ratio<1,60>> frame;
 
 enum InterruptType
 {

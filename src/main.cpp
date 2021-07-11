@@ -57,6 +57,10 @@ int main(int argc, char ** argv)
     debug_state.filename = rom_filename;
     #endif
 
+    // Timing
+    uint64_t frame_count = 0;
+    std::chrono::time_point start_time = std::chrono::steady_clock::now();
+
     while (!run_flags.finished)
     {
         if (run_flags.paused)
@@ -98,12 +102,25 @@ int main(int argc, char ** argv)
             ppu_cycle++;
             if ((ppu_cycle == cycles_per_frame) || (ppu_cycle == (cycles_per_frame * 2 - 1)))
             {
+                using namespace std::chrono;
                 #ifdef DEBUGGER
                 cpu.save(debug_state); // Save registers for use by the debugger
                 #endif
 
                 display.displayFrame(run_flags);
                 ppu_cycle %= cycles_per_frame * 2 - 1;
+                frame_count++;
+                time_point frame_time = start_time + frame(frame_count);
+                if (frame_time < steady_clock::now())
+                {
+                    milliseconds delay = duration_cast<milliseconds>(steady_clock::now() - frame_time);
+                    std::cerr << "Warning: frame " << frame_count << " is behind schedule by ";
+                    std::cerr << delay.count() << " ms" << std::endl;
+                }
+                else
+                {
+                    std::this_thread::sleep_until(frame_time);
+                }
 
                 #ifdef DEBUGGER
                 if (run_flags.frame)
@@ -115,7 +132,7 @@ int main(int argc, char ** argv)
                 {
                     input.pollInputs(run_flags);
                 }
-                ppu.addDebug();
+                ppu.addDebug(); //TODO move between cpu.save and display frame?
                 #else
                 input.pollInputs(run_flags);
                 #endif
