@@ -315,7 +315,7 @@ void Bus::cpuWriteReg(uword address, ubyte data)
 
         default:
             #ifndef NDEBUG
-            std::cerr << "Unsupported CPU Reg Write at " << hex(address) << std::endl;
+            std::cerr << "Warning: unsupported CPU Reg Write at " << hex(address) << std::endl;
             #endif
             break;
     }
