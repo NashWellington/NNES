@@ -48,6 +48,7 @@ public:
     virtual bool ppuWrite(uword address, ubyte data) = 0;
     // virtual bool save(Savestate& savestate) = 0; // Most mappers won't need these
     // virtual bool load(Savestate& savestate) = 0;
+    // inline void tick() {return;} // Probably won't use this
     MirrorType mirroring = MirrorType::HORIZONTAL;
 };
 
@@ -259,7 +260,90 @@ private:
     * banks:     1 to 256
     * window:   $2000
     */
-   std::vector<std::array<ubyte,0x2000>> chr_mem = {};
-   bool chr_ram = false;
-   uint chr_bank = 0;
+    std::vector<std::array<ubyte,0x2000>> chr_mem = {};
+    bool chr_ram = false;
+    uint chr_bank = 0;
+};
+
+/* MMC3 (TxROM), MMC6 (HKROM)
+* https://wiki.nesdev.com/w/index.php/MMC3
+*/
+class Mapper004 : public Mapper
+{
+public:
+    Mapper004(Header& header, std::ifstream& rom);
+    std::optional<ubyte> cpuRead(uword address);
+    bool cpuWrite(uword address, ubyte data);
+    std::optional<ubyte> ppuRead(uword address);
+    bool ppuWrite(uword address, ubyte data);
+private:
+// Banks
+    /* Program RAM
+    * capacity: $0 or $2000 (0 or 8KiB)
+    * banks:     0 or 1
+    * window:   $2000
+    */
+    std::array<ubyte,0x2000> prg_ram = {};
+    bool prg_ram_exists = false;
+    bool prg_ram_enabled = true;
+    bool prg_ram_write_protect = false; // TODO defaults?
+
+    /* Program ROM
+    * capacity: $8,000 to $80,000 (32KiB to 2048 KiB)
+    * banks:     4 to 256
+    * window:   $2000 x 4
+    */
+    std::vector<std::array<ubyte,0x2000>> prg_rom = {};
+    std::array<uint,4> prg_bank = {};
+
+    /* Character ROM/RAM
+    * capacity: $8,000 to $40,000 (32KiB to 256 Kib)
+    * banks:     8* to 64*
+    * window:   $2000 x2 + $1000 x 4
+    */
+    std::vector<std::array<ubyte,0x1000>> chr_mem = {};
+    bool chr_ram = false;
+    std::array<uint,8> chr_bank = {};
+
+// Registers
+    /* Bank select ($8000-$9FFE, even)
+    * 
+    * 7 6 5 4   3 2 1 0
+    * C P M -   - R R R
+    * 
+    * R - Specifies which bank register to update on next write to Bank Data reg
+    *     R = 0 - Select 2 KiB CHR bank at $0000 (or $1000)
+    *     R = 1 - Select 2 KiB CHR bank at $0800 (or $1800)
+    *     R = 2 - Select 1 KiB CHR bank at $1000 (or $0000)
+    *     R = 3 - Select 1 KiB CHR bank at $1400 (or $0400)
+    *     R = 4 - Select 1 KiB CHR bank at $1800 (or $0800)
+    *     R = 5 - Select 1 KiB CHR bank at $1C00 (or $0C00)
+    *     R = 6 - Select 8 KiB PRG bank at $8000 (or $C000)
+    *     R = 7 - Select 8 KiB PRG bank at $A000
+    * M - //TODO MMC6 behavior
+    * P - PRG-ROM bank mode
+    *     0: $8000-$9FFF swappable, $C000-$DFFF fixed to second-last bank
+    *     1: vice versa
+    * C - CHR A12 inversion
+    *     0: two 2KiB banks at $0000-$0FFF, four 1KiB banks at $1000-$1FFF
+    *     1: vice versa
+    */
+    union
+    {
+        struct
+        {
+            unsigned bank           : 3;
+            unsigned                : 2;
+            unsigned mmc6           : 1;
+            unsigned prg_bank_mode  : 1;
+            unsigned chr_bank_mode  : 1;
+        };
+        ubyte reg;
+    } reg_bank_select {.reg = 0};
+
+    uint a12 = 0;
+    int irq_counter = 0;
+    ubyte irq_latch = 0;
+    bool irq_reload = false;
+    bool irq_enable = false;
 };

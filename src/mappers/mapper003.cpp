@@ -1,6 +1,7 @@
 #include "mapper.h"
 
 // TODO submappers
+// TODO emulate bus conflicts to fix Cybernoid
 
 Mapper003::Mapper003(Header& header, std::ifstream& rom)
 {

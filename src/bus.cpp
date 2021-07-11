@@ -2,6 +2,8 @@
 
 Bus bus;
 
+// TODO emulate open bus behavior
+
 ubyte Bus::cpuRead(uword address)
 {
     std::optional<ubyte> data = mapper->cpuRead(address); // Cartridge mem
