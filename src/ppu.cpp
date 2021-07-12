@@ -6,9 +6,6 @@ PPU::PPU()
 {
     loadSystemPalette();
 
-    /* Initializing to a # larger than the width of the screen so sprite pixels
-    * don't get drawn on screen
-    */
     spr_x_pos.fill(0x00FF);
     spr_at_byte.fill(0xFF);
     spr_pt_byte_low.fill(0xFF);
@@ -564,8 +561,7 @@ void PPU::getPalette(std::array<Pixel,4>& palette, uint palette_index)
 // TODO grayscale + color emphasis PPUMASK flags
 Pixel PPU::getColor(ubyte color_byte)
 {
-    assert(color_byte < 0x40);
-    return system_palette[color_byte];
+    return system_palette[color_byte % 0x40];
 }
 
 void PPU::sendFrame()
