@@ -164,6 +164,8 @@ void Input::pollKeyboard(RunFlags& run_flags, SDL_Event& event)
     }
     else if (event.type == SDL_QUIT)
         run_flags.finished = true;
+
+    if (!controllers[0]) bus.joypad_data_buffer[0] = joypads[0];
 }
 
 #ifdef DEBUGGER
@@ -268,6 +270,6 @@ void Input::pollInputs(RunFlags& run_flags)
         pollDebug(run_flags, event);
         #endif
         pollKeyboard(run_flags, event);
-        pollControllers();
     }
+    pollControllers();
 }
