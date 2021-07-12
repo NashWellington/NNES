@@ -11,7 +11,7 @@ Note: "240p test suite" is not included, and has been added to .gitignore, becau
 | Test | Author | Status | Details |
 | :--- | :----: | :----: | :------ |
 | Branch Timing Tests | blargg | Pass | |
-| CPU Dummy Reads | blargg | 0/1 | No support for mapper 3 yet |
+| CPU Dummy Reads | blargg | 0/1 | LDA abs,X fails #3 |
 | CPU Dummy Writes | bisqwit | 0/2 | <l><li>OAM test fails #2 (OAM reads not reliable)</li> <li>PPU test fails #5 (single write to $2006 shouldn't change PPUADDR when vblank is on</li></l> | 
 | CPU Exec Space | bisqwit | 0/2 | <l><li>APU test crashes (APU not implemented)</li> <li>PPU test fails #6</li></l> |
 | CPU Flag Concurrency | bisqwit | 0/1 | Fails #2 |
@@ -20,25 +20,25 @@ Note: "240p test suite" is not included, and has been added to .gitignore, becau
 | Instruction Behavior Misc Tests | blargg | 2/4 | <l><li>Tests 1 and 2 pass</li> <li>Test 3 fails #3 (Note: this tests mid-instruction reads, and will likely not pass until I make the CPU cycle-accurate)</li> <li>Test 4 fails #2</li> <li>Combined test displays nothing</li></l> |
 | Instruction Test v5 | blargg | Pass | |
 | Instruction Timing Tests | blargg | 0/2 | <l><li>Test 1 fails #5</li> <li>Test 2 fails with no error code</li> <li>Note: these tests require a functional APU</li></l> |
-| Interrupt Test v2 | blargg | 0/5 | <l><li>Test 1 fails #3 (APU not implemented)</li> <li>Tests 2-5 fail with no error code</li> <li>Note: tests 2-4 are likely failing beccause interrupt hijacking isn't emulated</li></l> |
+| Interrupt Test v2 | blargg | 0/5 | <l><li>Test 1 fails #4 (exactly one execution after CLI should execute before IRQ is taken)</li> <li>Tests 2-5 fail with no error code</li> <li>Note: tests 2-4 are likely failing beccause interrupt hijacking isn't emulated</li> <li>New: the combined test ROM segfaults at the same line that Pac-Man does ("ubyte y = bus.secondary_oam[i].y;" in ppu.cpp)</li></l> |
 | nestest | kevtris | Pass | |
 
 ## PPU Tests
 
 | Test | Author | Status | Details |
 | :--- | :----: | :----: | :------ |
-| 240p Test Suite | tepples | 0/2 | No support for mappers 2 or 34 yet |
+| 240p Test Suite | tepples | 0/? | <l>Mapper 2 is supported, but this is probably not worth testing until I make an attempt at color emphasis and a few other things</l> |
 | Color Test | rainwarrior | 0/1 | Emphasis/chroma/luma not implemented yet |
-| Full Palette Test | blargg | 0/3 | <l><li>full_palette and full_palette_smooth show four different shades of blue (i.e. not correct but a step in the right direction)</li> <li>flowing_palette crashes because its PRG-RAM size is larger than the maximum PRG-RAM size for mapper 0</li></l> |
+| Full Palette Test | blargg | 0/3 | <l><li>full_palette and full_palette_smooth show four different shades of blue (i.e. not correct but a step in the right direction)</li> <li>flowing_palette crashes because it has PRG-RAM size set to $C4,000 (I need to check boot.cpp for this)</li></l> |
 | Misc PPU Tests | blargg | 1/5 | <l><li>palette_ram passes</li> <li>power_up_palette fails #2 (start/reset palette setting not implemented yet)</li> <li>sprite_ram fails #4</li> <li>vbl_clear_time fails #3 (vbl flag cleared too late)</li> <li>vram_access fails #6</li></l> |
 | NMI Sync Test | blargg | 0/1 | |
 | NTSC Torture Test | rainwarrior | 0/1 | No color display |
 | OAM Read Test | blargg | Pass | |
 | OAM Stress Test | blargg | 0/1 | |
-| OAM Test 3 | lidnariq | 0/1 | No support for mapper 7 yet |
+| OAM Test 3 | lidnariq | 0/1 | Looks to be somewhat working. I'll check this test out more later. |
 | Palette Test | rainwarrior | 0/1 | Same as color test |
 | PPU Open Bus Test | blargg | 0/1 | Fails #4 (Note: I probably won't be fixing this for a while. It seems to test obscure VRAM decay behavior) |
-| PPU Read Buffer Test | bisqwit | 0/1 | No support for mapper 3 yet |
+| PPU Read Buffer Test | bisqwit | 0/1 | Segfaults at the same place as Pac-Man |
 | Scanline Test | Quietust | 0/1 | Only shows a gray screen |
 | Sprite DMA and DMC DMA Tests | blargg | 0/2 | Flashes some text for a few frames and displays a black screen |
 | Sprite Hit Tests | blargg | 1/11 | <l><li>Tests 1-4 fail #2</li> <li>Test 5 fails #4</li> <li>Tests 6-10 fail #3</li> <li>Test 11 passes somehow</li></l> |
