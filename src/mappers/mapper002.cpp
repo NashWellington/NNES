@@ -8,7 +8,6 @@ Mapper002::Mapper002(Header& header, std::ifstream& rom)
 
     assert(mirroring == MirrorType::HORIZONTAL || mirroring == MirrorType::VERTICAL);
     assert(!header.trainer);
-    std::cerr << "PRG-ROM size: " << header.prg_rom_size << std::endl;
     assert(header.prg_rom_size >= 0x8000 && header.prg_rom_size <= 0x400'000);
     assert((header.chr_rom_size == 0x2000) != (header.chr_ram_size == 0x2000));
 

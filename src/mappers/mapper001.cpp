@@ -12,6 +12,7 @@ Mapper001::Mapper001(Header& header, std::ifstream& rom)
     assert(!header.trainer);
     assert(header.prg_rom_size >= 0x8000 && header.prg_rom_size <= 0x80000);
     assert(header.prg_ram_size <= 0x8000);
+    assert((header.chr_rom_size > 0) != (header.chr_ram_size > 0));
 
     if (header.prg_ram_size == 0 && header.type == HeaderType::INES)
     {
@@ -35,10 +36,15 @@ Mapper001::Mapper001(Header& header, std::ifstream& rom)
         rom.read(reinterpret_cast<char*>(prg_rom[i].data()), 0x4000);
     }
 
-    if (header.chr_rom_size > 0 && header.chr_ram_size == 0)
+    if (header.chr_rom_size > 0)
+    {
         banks = header.chr_rom_size / 0x1000;
-    else if (header.chr_rom_size == 0 && header.chr_ram_size > 0)
+    }
+    else if (header.chr_ram_size > 0)
+    {
         banks = header.chr_ram_size / 0x1000;
+        chr_ram = true;
+    }
     chr_mem.resize(banks);
     for (uint i = 0; i < banks; i++)
     {
