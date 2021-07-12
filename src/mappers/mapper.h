@@ -1,20 +1,22 @@
 #pragma once
 
 // TODO clang, MSVC, etc.
-#pragma GCC diagnostic warning "-Wunused-parameter"
+// #pragma GCC diagnostic warning "-Wunused-parameter"
 
 #include "../globals.h"
 #include "../savestate.h"
 
+// TODO check nes20db for min/max RAM/ROM sizes
+
 // https://wiki.nesdev.com/w/index.php/Mirroring#Nametable_Mirroring
 enum class MirrorType
 {
-    HORIZONTAL,
+    HORIZONTAL,             // Horizontal or mapper-controlled (set by ROM header)
     VERTICAL,
-    SINGLE_SCREEN_LOWER, // lower or upper bank
+    SINGLE_SCREEN_LOWER,    // lower or upper bank
     SINGLE_SCREEN_UPPER, 
     FOUR_SCREEN,
-    OTHER           // TODO
+    OTHER                   // Mapper-controlled (set by mapper)
 };
 
 enum class HeaderType
@@ -372,15 +374,54 @@ private:
 };
 
 // TODO mapper 5
-// I'm procrastinating this one because it seems complicated
+/* MMC5
+* https://wiki.nesdev.com/w/index.php/MMC5
+* Games: 24
+* Notable games: Castlevania III
+*/
+class Mapper005 : public Mapper
+{
+public:
+    Mapper005(Header& header, std::ifstream& rom);
+    std::optional<ubyte> cpuRead(uword address);
+    bool cpuWrite(uword address, ubyte data);
+    std::optional<ubyte> ppuRead(uword address);
+    bool ppuWrite(uword address, ubyte data);
+private:
+// Banks
+    /* Program RAM
+    * capacity: $0000 to $20,000 (0 to 128KiB) (note: might be 16K min)
+    * banks:     0 to 16
+    * window:   $2000 (at $6000), $4000 (at $8000 w/ PRG mode 1/2)
+    */
+    std::vector<std::array<ubyte,0x2000>> prg_ram = {};
+    uint prg_ram_exists = false;
+
+    /* Program ROM
+    * capacity: $20,000 to $100,000 (128KiB to 1MiB)
+    * banks:     16 to 128
+    * window:   $2000, $4000, or $8000
+    */
+    std::vector<std::array<ubyte,0x2000>> prg_rom = {};
+
+    /* Character ROM/RAM
+    * capacity: $20,000 to $100,000 (128KiB to 1MiB)
+    * banks:     256 to 2048
+    * window:   $400, $800, $1000, or $2000
+    */
+    std::vector<std::array<ubyte,0x0400>> chr_mem = {};
+// Registers
+    uint prg_mode = 0; // 0-3
+    uint chr_mode = 0; // 0-3
+};
 
 // TODO mapper 6
-// This one seems to be disk-based, so I probably won't get to it for a while
+// Only used for a sound test ROM
 
 /* AxROM
 * https://wiki.nesdev.com/w/index.php/AxROM
 * Games: 76
-* Noteworthy games: Battletoads, Battletoads & Double Dragon
+* Notable games: Battletoads, Battletoads & Double Dragon
 */
 class Mapper007 : public Mapper
 {
@@ -394,18 +435,19 @@ private:
 // Banks
     /* Program ROM
     * capacity: $8,000 to $80,000 (32KiB to 512KiB)
+    *   note: can be smaller than 32K, in which case we need mirroring
     * banks:     1 to 16
     * window:   $8000
     */
-    std::vector<std::array<ubyte,0x8000>> prg_rom = {};
+    std::vector<std::vector<ubyte>> prg_rom = {};
     uint prg_bank = 0;
 
     /* Character ROM/RAM
-    * capacity: $2000 (8KiB)
+    * capacity: <= $2000 (8KiB)
     * banks:     1
     * window:   $2000
     */
-    std::array<ubyte,0x2000> chr_mem = {};
+    std::vector<ubyte> chr_mem = {};
     bool chr_ram = false;
 };
 
@@ -456,3 +498,32 @@ private:
     std::array<ubyte,2> chr_latch = {0xFD, 0xFD}; // not sure what the default is
     bool chr_ram = false;
 };
+
+// TODO mapper 10
+// Includes "Famicom Wars" and two JP Fire Emblem games
+
+/* Color Dreams
+* https://wiki.nesdev.com/w/index.php/Color_Dreams
+* Games: 31
+* Notable games: riveting Christianity-themed titles including:
+*   Baby Boomer, Bible Adventures, Joshua & the Battle of Jericho,
+*   Spiritual Warfare, Sunday Funday: The Ride
+*/
+//class Mapper011 : public Mapper {};
+
+// TODO mapper 12
+// Probably only used by Dragon Ball Z 5
+
+// TODO mapper 13
+// Only used by Videomation
+
+// TODO mappers 14
+// Only used by an unlicensed Taiwanese game
+
+// TODO mapper 15
+// Used by two XXX-in-1 Konami boards
+
+// TODO mapper 16
+// Used by some Bandai boards
+
+//
