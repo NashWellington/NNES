@@ -5,9 +5,8 @@ Mapper000::Mapper000(Header& header, std::ifstream& rom)
     mirroring = header.mirroring;
     assert(mirroring == MirrorType::HORIZONTAL || mirroring == MirrorType::VERTICAL);
     assert(!header.trainer);
-    assert(header.prg_ram_size <= 0x1000);
+    assert(header.prg_ram_size <= 0x2000);
     assert(header.prg_rom_size == 0x4000 || header.prg_rom_size == 0x8000);
-    // 8KiB CHR-ROM or CHR-RAM, but not both (aka XOR)
     assert((header.chr_rom_size == 0x2000) != (header.chr_ram_size == 0x2000));
 
     if (header.prg_ram_size == 0 && header.type == HeaderType::INES)
