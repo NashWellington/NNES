@@ -99,11 +99,15 @@ private:
     */
     std::array<ubyte, 0x0020> io_regs = {};
 
-    /* Cartridge memory not allocated by the mapper
-    * Note: only used if not present on the cartridge,
-    *       generally for compatibility with test roms
+// Cartridge memory not provided by the ROM
+    /* Cartridge mem that should be at $4020 to $5FFF
     */
-    std::array<ubyte, 0xBFD0> dummy_cart_mem = {};
+    
+    std::array<ubyte, 0x1FD0> dummy_misc_ram = {};
+    
+    /* Cartridge mem that should be at $6000 to $7FFF
+    */
+    std::array<ubyte, 0x2000> dummy_prg_ram = {};
 
 // PPU memory arrays
     /* Dummy pattern tables

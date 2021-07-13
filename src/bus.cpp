@@ -16,12 +16,22 @@ ubyte Bus::cpuRead(uword address)
         else                        return zero_page[address];
     }
     else if (address < 0x4020) return cpuReadReg(address);
-    else 
+    else
     {
         #ifndef NDEBUG
         std::cerr << "Warning: read from dummy cart memory at " << hex(address) << std::endl;
         #endif
-        return dummy_cart_mem[address - 0x4020];
+        if (address >= 0x4020 && address < 0x6000)
+            return dummy_misc_ram[address-0x4020];
+        else if (address >= 0x6000 && address < 0x8000)
+            return dummy_prg_ram[address-0x6000];
+        #ifndef NDEBUG
+        else
+        {
+            std::cerr << "Error: no PRG-ROM found" << std::endl;
+            throw std::exception();
+        }
+        #endif
     }
 }
 
@@ -41,7 +51,17 @@ void Bus::cpuWrite(uword address, ubyte data)
         #ifndef NDEBUG
         std::cerr << "Warning: write to dummy cart memory at " << hex(address) << std::endl;
         #endif
-        dummy_cart_mem[address - 0x4020] = data;
+        if (address >= 0x4020 && address < 0x6000)
+            dummy_misc_ram[address-0x4020] = data;
+        else if (address >= 0x6000 && address < 0x8000)
+            dummy_prg_ram[address-0x6000] = data;
+        #ifndef NDEBUG
+        else
+        {
+            std::cerr << "Error: no PRG-ROM found" << std::endl;
+            throw std::exception();
+        }
+        #endif
     }
 }
 
