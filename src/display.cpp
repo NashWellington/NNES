@@ -277,7 +277,8 @@ void Texture::update(int _width, int _height, void* pixels)
 Display::Display()
 {
     // Setup SDL
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
+    // TODO bring back timer?
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0)
     {
         std::cerr << "Failed to init SDL" << std::endl;
         throw std::exception();

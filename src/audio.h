@@ -5,14 +5,24 @@
 // TODO if I ever make multiple frontends, put an ifdef around this
 #include <SDL.h>
 #include <SDL_audio.h>
+#include <mutex>
+#include <condition_variable>
 
-struct AudioBuffer
+class AudioBuffer
 {
-    std::array<float,4096> buffer = {};
-    uint apu_index = 0;
-    uint sdl_index = 0;
+public:
+    AudioBuffer();
     void push(float sample);
     float pull();
+    bool full();
+    bool empty();
+    uint size();
+private:
+    std::unique_ptr<std::mutex> mtx;
+    std::unique_ptr<std::condition_variable> cv;
+    std::array<float,4096> buffer = {};
+    uint head = 0;
+    uint tail = 0;
 };
 
 class Audio

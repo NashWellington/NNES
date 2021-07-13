@@ -7,11 +7,11 @@ Audio::Audio()
     {
         std::cerr << "Error: failed to initialize SDL:" << std::endl;
         std::cerr << SDL_GetError() << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::exception();
     }
 
     audio_buffer = {};
-    
+
     SDL_AudioSpec desired;
     desired.freq = sample_rate;
     // TODO switch to byte or ubyte or something
@@ -26,13 +26,13 @@ Audio::Audio()
     {
         std::cerr << "Error: failed to open audio:" << std::endl;
         std::cerr << SDL_GetError() << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::exception();
     }
     if (desired.format != spec.format)
     {
         // TODO save the used format so we can do type conversions
         std::cerr << "Error: format isn't 32-bit float" << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::exception();
     }
     sample_rate = spec.freq;
     SDL_PauseAudioDevice(id, 0);
@@ -40,6 +40,7 @@ Audio::Audio()
 
 Audio::~Audio()
 {
+    SDL_PauseAudioDevice(id, 1);
     SDL_CloseAudioDevice(id);
 }
 
@@ -65,31 +66,55 @@ void Audio::pushSample(float sample)
     {
         std::cerr << "SDL Audio stopped" << std::endl;
         std::cerr << SDL_GetError() << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::exception();
     }
+}
+
+AudioBuffer::AudioBuffer()
+{
+    mtx = std::make_unique<std::mutex>();
+    cv = std::make_unique<std::condition_variable>();
 }
 
 void AudioBuffer::push(float sample)
 {
-    buffer[apu_index] = sample;
-    apu_index++;
-    apu_index %= 4096;
-    while (apu_index == sdl_index)
+    std::unique_lock<std::mutex> lk(*mtx);
+    while (full())
     {
-        using namespace std::chrono_literals;
-        std::this_thread::sleep_for(1ms);
+        cv->wait(lk);
     }
+    buffer[head] = sample;
+    head++;
+    head %= 4096;
+    if (size() >= 1024) cv->notify_one();
 }
 
 float AudioBuffer::pull()
 {
-    while (sdl_index == apu_index)
+    std::unique_lock<std::mutex> lk(*mtx);
+    while (empty())
     {
-        using namespace std::chrono_literals;
-        std::this_thread::sleep_for(1ms);
+        cv->wait(lk);
     }
-    float sample = buffer[sdl_index];
-    sdl_index++;
-    sdl_index %= 4096;
+    float sample = buffer[tail];
+    tail++;
+    tail %= 4096;
+    cv->notify_one();
     return sample;
+}
+
+bool AudioBuffer::full()
+{
+    return ((head+1) % 4096) == tail;
+}
+
+bool AudioBuffer::empty()
+{
+    return head == tail;
+}
+
+uint AudioBuffer::size()
+{
+    uint h = (head < tail) ? head+4096 : head;
+    return h - tail;
 }

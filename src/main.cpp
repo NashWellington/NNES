@@ -15,6 +15,9 @@
 // TODO find better way of handling args
 int main(int argc, char ** argv)
 {
+    // Ideally should get called after other destructors
+    atexit(SDL_Quit);
+
     #ifndef NDEBUG
     // Set up error log
     std::ofstream error_stream(ERROR_LOG_FILENAME);
@@ -143,8 +146,6 @@ int main(int argc, char ** argv)
             #endif
         }
     }
-
-    SDL_Quit();
 
     #ifndef NDEBUG
     // Reset cerr buffer
