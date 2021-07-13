@@ -15,7 +15,7 @@
 // TODO find better way of handling args
 int main(int argc, char ** argv)
 {
-    // Ideally should get called after other destructors
+    // SDL_Quit should be called after audio/display shutdowns
     atexit(SDL_Quit);
 
     #ifndef NDEBUG
@@ -146,6 +146,8 @@ int main(int argc, char ** argv)
             #endif
         }
     }
+    apu.~APU();
+    display.~Display();
 
     #ifndef NDEBUG
     // Reset cerr buffer

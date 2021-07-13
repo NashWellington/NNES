@@ -23,11 +23,6 @@ APU::APU()
     audio = std::make_unique<Audio>();
 }
 
-APU::~APU()
-{
-    audio.~unique_ptr();
-}
-
 // TODO should I run this at CPU freq and only do other APU stuff every other cycle?
 void APU::tick()
 {

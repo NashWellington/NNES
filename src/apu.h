@@ -12,7 +12,6 @@ class APU
 {
 public:
     APU();
-    ~APU();
     void tick();
 
     /* Envelope data

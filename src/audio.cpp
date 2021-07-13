@@ -40,6 +40,8 @@ Audio::Audio()
 
 Audio::~Audio()
 {
+    audio_buffer.finished = true;
+    audio_buffer.cv->notify_all();
     SDL_PauseAudioDevice(id, 1);
     SDL_CloseAudioDevice(id);
 }
@@ -81,6 +83,7 @@ void AudioBuffer::push(float sample)
     std::unique_lock<std::mutex> lk(*mtx);
     while (full())
     {
+        if (finished) return;
         cv->wait(lk);
     }
     buffer[head] = sample;
@@ -94,6 +97,7 @@ float AudioBuffer::pull()
     std::unique_lock<std::mutex> lk(*mtx);
     while (empty())
     {
+        if (finished) return 0.0;
         cv->wait(lk);
     }
     float sample = buffer[tail];

@@ -8,16 +8,15 @@
 #include <mutex>
 #include <condition_variable>
 
-class AudioBuffer
+struct AudioBuffer
 {
-public:
     AudioBuffer();
     void push(float sample);
     float pull();
     bool full();
     bool empty();
     uint size();
-private:
+    bool finished = false;
     std::unique_ptr<std::mutex> mtx;
     std::unique_ptr<std::condition_variable> cv;
     std::array<float,4096> buffer = {};
