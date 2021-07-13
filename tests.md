@@ -20,7 +20,7 @@ Note: "240p test suite" is not included, and has been added to .gitignore, becau
 | Instruction Behavior Misc Tests | blargg | 2/4 | <l><li>Tests 1 and 2 pass</li> <li>Test 3 fails #3 (Note: this tests mid-instruction reads, and will likely not pass until I make the CPU cycle-accurate)</li> <li>Test 4 fails #2</li> <li>Combined test displays nothing</li></l> |
 | Instruction Test v5 | blargg | Pass | |
 | Instruction Timing Tests | blargg | 0/2 | <l><li>Test 1 fails #5</li> <li>Test 2 fails with no error code</li> <li>Note: these tests require a functional APU</li></l> |
-| Interrupt Test v2 | blargg | 0/5 | <l><li>Test 1 fails #4 (exactly one execution after CLI should execute before IRQ is taken)</li> <li>Tests 2-5 fail with no error code</li> <li>Note: tests 2-4 are likely failing beccause interrupt hijacking isn't emulated</li> <li>New: the combined test ROM segfaults at the same line that Pac-Man does ("ubyte y = bus.secondary_oam[i].y;" in ppu.cpp)</li></l> |
+| Interrupt Test v2 | blargg | 0/5 | <l><li>Test 1 fails #4 (exactly one execution after CLI should execute before IRQ is taken)</li> <li>Tests 2-5 fail with no error code</li> <li>Note: tests 2-4 are likely failing beccause interrupt hijacking isn't emulated</li></l> |
 | nestest | kevtris | Pass | |
 
 ## PPU Tests
@@ -38,7 +38,7 @@ Note: "240p test suite" is not included, and has been added to .gitignore, becau
 | OAM Test 3 | lidnariq | 0/1 | Looks to be somewhat working. I'll check this test out more later. |
 | Palette Test | rainwarrior | 0/1 | Same as color test |
 | PPU Open Bus Test | blargg | 0/1 | Fails #4 (Note: I probably won't be fixing this for a while. It seems to test obscure VRAM decay behavior) |
-| PPU Read Buffer Test | bisqwit | 0/1 | Segfaults at the same place as Pac-Man |
+| PPU Read Buffer Test | bisqwit | 0/1 | Doesn't display any results. Attempts to write three times to pattern tables despite not having CHR-RAM. Forcing CHR-RAM doesn't seem to help. |
 | Scanline Test | Quietust | 0/1 | Only shows a gray screen |
 | Sprite DMA and DMC DMA Tests | blargg | 0/2 | Flashes some text for a few frames and displays a black screen |
 | Sprite Hit Tests | blargg | 1/11 | <l><li>Tests 1-4 fail #2</li> <li>Test 5 fails #4</li> <li>Tests 6-10 fail #3</li> <li>Test 11 passes somehow</li></l> |
