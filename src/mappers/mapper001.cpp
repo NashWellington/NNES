@@ -74,7 +74,7 @@ std::optional<ubyte> Mapper001::cpuRead(uword address)
                     return prg_ram[chr_bank[0].ss][address-0x6000];
                 default:
                     std::cerr << "Error: Unsupported PRG-RAM size: " << (prg_ram.size() * 0x6000) << std::endl;
-                    exit(EXIT_FAILURE);
+                    throw std::exception();
             }
             return {};
         }

@@ -148,10 +148,29 @@ std::shared_ptr<Mapper> Boot::getMapper(Header& header, std::ifstream& rom)
         case 4:
             mapper = std::make_shared<Mapper004>(header, rom);
             break;
+        
+        /* This isn't quite done yet :)
+        case 5:
+            mapper = std::make_shared<Mapper005>(header, rom);
+            break;
+        */
+
+        case 7:
+            mapper = std::make_shared<Mapper007>(header, rom);
+            break;
+
+        case 9:
+            mapper = std::make_shared<Mapper009>(header, rom);
+            break;
 
         default:
             std::cerr << "Error: unsupported mapper type: " << header.mapper << std::endl;
-            exit(EXIT_FAILURE);
+            throw std::exception();
     }
+    // TODO maybe delete later
+    #ifndef NDEBUG
+    std::cerr << "Debug info:" << std::endl;
+    std::cerr << "Mapper " << header.mapper << std::endl;
+    #endif
     return mapper;
 }
