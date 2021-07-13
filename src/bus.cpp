@@ -79,7 +79,7 @@ ubyte Bus::ppuRead(uword address)
                 break;
             case MirrorType::OTHER:
                 std::cerr << "Error: Unsupported mirroring mode" << std::endl;
-                exit(EXIT_FAILURE);
+                throw std::exception();
             default: // currently just 4-screen
                 break;
         }
@@ -109,8 +109,30 @@ void Bus::ppuWrite(uword address, ubyte data)
     {
         address -= 0x2000;
         address %= 0x1000;
-        if (mapper->mirroring == MirrorType::HORIZONTAL) address %= 2 * 0x0800;
-        else address = (address % 0x0400) + 0x0800 * (address / 0x0800);
+        uint nt_i = address / 0x400;
+        address %= 0x400;
+
+        switch (mapper->mirroring)
+        {
+            case MirrorType::HORIZONTAL:
+                nt_i /= 2;
+                break;
+            case MirrorType::VERTICAL:
+                nt_i %= 2;
+                break;
+            case MirrorType::SINGLE_SCREEN_LOWER:
+                nt_i = 0;
+                break;
+            case MirrorType::SINGLE_SCREEN_UPPER:
+                nt_i = 1;
+                break;
+            case MirrorType::OTHER:
+                std::cerr << "Error: Unsupported mirroring mode" << std::endl;
+                throw std::exception();
+            default: // currently just 4-screen
+                break;
+        }
+        assert (nt_i <= 1);
         name_tables[address / 0x0400][address % 0x0400] = data;
     }
     else

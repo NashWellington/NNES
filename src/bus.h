@@ -44,12 +44,12 @@ class Bus
 {
 public:
     // TODO make an arg for cpuRead that doesn't allow register state change on read
-    ubyte  cpuRead(uword address);
-    void  cpuWrite(uword address, ubyte data);
+    ubyte    cpuRead(uword address);
+    void    cpuWrite(uword address, ubyte data);
 
     // PPU memory access
-    ubyte  ppuRead(uword address);
-    void  ppuWrite(uword address, ubyte data);
+    ubyte    ppuRead(uword address);
+    void    ppuWrite(uword address, ubyte data);
 
     // Register I/O
     ubyte cpuReadReg(uword address);
@@ -340,7 +340,7 @@ public:
     {
         std::array<ubyte,4> data = {};
         ubyte& y            = data[0]; // top pixels
-        ubyte& tile_i       = data[1];
+        ubyte& tile_i       = data[1]; // pattern table tile index
         ubyte& attributes   = data[2];
         ubyte& x            = data[3]; // left pixels
     };
