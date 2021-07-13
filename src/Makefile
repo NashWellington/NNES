@@ -1,4 +1,4 @@
-objects =  main.o boot.o cpu.o ppu.o apu.o bus.o $(mapper_objects) isa.o mode.o savestate.o display.o audio.o input.o util.o imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
+objects =  nnes.o boot.o cpu.o ppu.o apu.o bus.o $(mapper_objects) isa.o mode.o savestate.o display.o audio.o input.o util.o imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
 
 mapper_objects = mapper000.o mapper001.o mapper002.o mapper003.o mapper004.o mapper007.o mapper009.o
 
@@ -20,8 +20,8 @@ $(target) : $(objects)
 		$(compiler) $(flags) $(objects) -o ../build/$(target) $(libs)
 		rm $(objects)
 
-main.o : main.cpp globals.h boot.h cpu.h ppu.h apu.h display.h input.h savestate.h
-		$(compiler) $(flags) -c main.cpp
+nnes.o : nnes.cpp globals.h boot.h cpu.h ppu.h apu.h display.h input.h savestate.h
+		$(compiler) $(flags) -c nnes.cpp
 
 boot.o : boot.h globals.h bus.h mappers/mapper.h
 		$(compiler) $(flags) -c boot.cpp
