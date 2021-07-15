@@ -21,11 +21,13 @@ struct Process
     }
 };
 
+void ticks(std::shared_ptr<Processor> p, uint64_t cycles);
+
 class Scheduler
 {
 public:
     Scheduler(std::vector<std::shared_ptr<Processor>> processors, uint64_t cpf);
-    enum Mode
+    enum Length
     {
         PPU_CYCLE,
         CPU_CYCLE,
@@ -33,7 +35,12 @@ public:
         FRAME_SLOW,
         FRAME
     };
-    void run(Mode mode);
+    enum Mode
+    {
+        SLOW,   // No multithreading, ticks each processor one at a time
+        BROKEN  // Puts all processors in three differnt threads and runs them
+    } mode = BROKEN;
+    void run(Length length);
     void sync();
 private:
     // The main process that other processes will sync to is at index 0

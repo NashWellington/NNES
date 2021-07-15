@@ -38,9 +38,12 @@ void NES::insertROM(std::ifstream& rom)
     scheduler = std::make_unique<Scheduler>(std::vector<std::shared_ptr<Processor>>({cpu, apu, ppu}), 178683 * 2);
 }
 
-void NES::run(Scheduler::Mode mode)
+void NES::run(Scheduler::Length length)
 {
-    scheduler->run(mode);
+    auto start = std::chrono::steady_clock::now();
+    scheduler->run(length);
+    auto duration = std::chrono::steady_clock::now() - start;
+    std::cerr << "Frame rate: " << 1'000'000'000.0 / duration.count() << " fps" <<  std::endl;
 }
 
 void NES::processInputs()

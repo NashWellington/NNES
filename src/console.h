@@ -16,7 +16,7 @@ public:
     virtual ~Console() {}
     virtual void reset() = 0;
     virtual void insertROM(std::ifstream& rom) = 0;
-    virtual void run(Scheduler::Mode mode) = 0;
+    virtual void run(Scheduler::Length length) = 0;
     virtual void processInputs() = 0;
     std::string revision = {};
     std::string region = {};
@@ -30,7 +30,7 @@ public:
     NES(std::shared_ptr<Audio> audio, std::shared_ptr<Video> video);
     void reset();
     void insertROM(std::ifstream& rom);
-    void run(Scheduler::Mode mode);
+    void run(Scheduler::Length length);
     // Called at the end of Input polling (not NES software input polling)
     void processInputs();
     
@@ -42,4 +42,9 @@ public:
     std::shared_ptr<Cartridge> cart;
     std::shared_ptr<Expansion> expansion;
     std::unique_ptr<Scheduler> scheduler;
+
+    // TODO testing
+    uint frame = 0;
+    uint64_t cycle = 0;
+    uint64_t cycles_per_two_frames = 178683;
 };

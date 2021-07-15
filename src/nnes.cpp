@@ -59,7 +59,7 @@ int main(int argc, char ** argv)
     while (running)
     {
         running = input.poll();
-        nes->run(Scheduler::FRAME_SLOW);
+        nes->run(Scheduler::FRAME);
         video->displayFrame();
     }
     nes->~Console(); // Might need to destroy PPU or APU before destroying SDL frontend classes

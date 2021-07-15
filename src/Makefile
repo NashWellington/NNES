@@ -4,7 +4,7 @@ mapper_objects = mapper000.o mapper001.o mapper002.o mapper003.o mapper007.o map
 
 compiler = g++
 
-flags = -g -fsanitize=address -std=c++17 -Wall -Werror -Wextra
+flags =  -std=c++17 -Wall -Werror -Wextra
 flags += -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align
 flags += -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion
 flags += -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches
@@ -12,7 +12,7 @@ flags += -Wlogical-op -Wnull-dereference -Wlogical-op -Wnull-dereference
 flags += -Wuseless-cast -Wdouble-promotion -Wformat=2
 flags += -I/usr/include/SDL2 -I/usr/include/freetype2
 
-libs = -lGLEW -lGL -lGLU -lSDL2 -lfreetype
+libs = -lGLEW -lGL -lGLU -lSDL2 -lfreetype -lpthread
 
 target = NNES
 
