@@ -1,6 +1,4 @@
-#include "display.h"
-
-Display display;
+#include "video.h"
 
 // TODO move these to their own files
 const char* frame_vert_source = 
@@ -274,13 +272,13 @@ void Texture::update(int _width, int _height, void* pixels)
     height = _height;
 }
 
-Display::Display()
+Video::Video()
 {
     // Setup SDL
     // TODO bring back timer?
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0)
+    if (SDL_Init(SDL_INIT_VIDEO) != 0)
     {
-        std::cerr << "Failed to init SDL" << std::endl;
+        std::cerr << "Failed to init SDL Video" << std::endl;
         throw std::exception();
     }
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0); // TODO research
@@ -365,7 +363,7 @@ Display::Display()
 #endif
 }
 
-Display::~Display()
+Video::~Video()
 {
     #ifdef DEBUGGER
     ImGui_ImplOpenGL3_Shutdown();
@@ -379,7 +377,7 @@ Display::~Display()
     SDL_DestroyWindow(window);
 }
 
-void Display::displayFrame(RunFlags& run_flags)
+void Video::displayFrame()
 {
 #ifdef DEBUGGER
     ImGui_ImplOpenGL3_NewFrame();
@@ -635,11 +633,11 @@ void Display::displayFrame(RunFlags& run_flags)
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    if (run_flags.paused)
-    {
-        roboto_black.renderText(text_shader, {"PAUSED"}, static_cast<float>(window_w), static_cast<float>(window_h), static_cast<float>(window_w), static_cast<float>(window_h), static_cast<float>(window_h)/1000.0f, false);
-        frame_shader.use();
-    }
+//    if (run_flags.paused)
+//    {
+//        roboto_black.renderText(text_shader, {"PAUSED"}, static_cast<float>(window_w), static_cast<float>(window_h), static_cast<float>(window_w), static_cast<float>(window_h), static_cast<float>(window_h)/1000.0f, false);
+//        frame_shader.use();
+//    }
 
     // Draw ImGui elements
 #ifdef DEBUGGER

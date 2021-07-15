@@ -1,173 +1,167 @@
 #include "input.h"
 
-#define BUT_A       0x80
-#define BUT_B       0x40
-#define BUT_SELECT  0x20
-#define BUT_START   0x10
-#define BUT_UP      0x08
-#define BUT_DOWN    0x04
-#define BUT_LEFT    0x02
-#define BUT_RIGHT   0x01
+#define CONTROL_CONFIG "./cfg/controls.cfg"
 
-Input input = {};
-
-Input::Input()
+Input::Input(std::shared_ptr<Console> _console, 
+             std::shared_ptr<Audio>   _audio,
+             std::shared_ptr<Video> _video)
+    : console(_console), audio(_audio), video(_video)
 {
-    controllers.fill(nullptr);
+    if (SDL_Init(SDL_INIT_GAMECONTROLLER) != 0)
+    {
+        std::cerr << "Failed to init SDL Game Controller API" << std::endl;
+        throw std::exception();
+    }
+    
     for (int i = 0; i < SDL_NumJoysticks(); i++)
     {
         if (SDL_IsGameController(i))
         {
-            controllers[i] = SDL_GameControllerOpen(i);
-            if (!controllers[i])
+            joypads.push_back(SDL_GameControllerOpen(i));
+            if (!joypads[i])
                 std::cerr << "Could not open game controller " << i << std::endl;
         }
     }
+
+    loadBinds(CONTROL_CONFIG);
 }
 
 Input::~Input()
 {
-    for (int i = 0; i < static_cast<int>(controllers.size()); i++)
+    for (uint i = 0; i < joypads.size(); i++)
     {
-        if (controllers[i])
-            SDL_GameControllerClose(controllers[i]);
+        if (joypads[i])
+            SDL_GameControllerClose(joypads[i]); // FIXME
     }
+}
+
+void Input::loadBinds(std::string config)
+{
+    std::ifstream config_file(config);
+    //if(!config_file.is_open())
+    //{
+    //    std::cerr << "Config file not found: " << config << std::endl;
+    //    throw std::exception();
+    //}
+    // TODO actually load these from a file
+    // Emulation controls
+    emu_binds.insert({SDLK_ESCAPE,
+        [this](){ quit(); }
+    });
+    emu_binds.insert({SDLK_SPACE,
+        [this]() { pause(); }
+    });
+    emu_binds.insert({SDLK_m,
+        [this]() { mute(); }
+    });
+
+    #ifdef DEBUGGER
+    // TODO debugger controls
+    #endif
+    
+    // Game Input controls
+    std::vector<std::shared_ptr<Controller>>& controllers = console->controllers;
+    assert(controllers.size() > 0);
+    key_binds.insert({SDLK_v, Bind(0, controllers[0])}); // V -> A
+    key_binds.insert({SDLK_c, Bind(1, controllers[0])}); // C -> B
+    key_binds.insert({SDLK_z, Bind(2, controllers[0])}); // Z -> Select
+    key_binds.insert({SDLK_x, Bind(3, controllers[0])}); // X -> Start
+    key_binds.insert({SDLK_w, Bind(4, controllers[0])}); // W -> Up
+    key_binds.insert({SDLK_s, Bind(5, controllers[0])}); // S -> Down
+    key_binds.insert({SDLK_a, Bind(6, controllers[0])}); // A -> Left
+    key_binds.insert({SDLK_d, Bind(7, controllers[0])}); // D -> Right
+
+    
+    for (uint i = 0; i < joypads.size() && i < controllers.size(); i++)
+    {
+        joypad_binds.insert({{SDL_CONTROLLER_BUTTON_B, i},          Bind(0, controllers[i])}); // X-input B = right button  -> A
+        joypad_binds.insert({{SDL_CONTROLLER_BUTTON_A, i},          Bind(1, controllers[i])}); // X-input A = bottom button -> B
+        joypad_binds.insert({{SDL_CONTROLLER_BUTTON_BACK, i},       Bind(2, controllers[i])}); // X-input Back -> Select
+        joypad_binds.insert({{SDL_CONTROLLER_BUTTON_START, i},      Bind(3, controllers[i])});
+        joypad_binds.insert({{SDL_CONTROLLER_BUTTON_DPAD_UP, i},    Bind(4, controllers[i])});
+        joypad_binds.insert({{SDL_CONTROLLER_BUTTON_DPAD_DOWN, i},  Bind(5, controllers[i])});
+        joypad_binds.insert({{SDL_CONTROLLER_BUTTON_DPAD_LEFT, i},  Bind(6, controllers[i])});
+        joypad_binds.insert({{SDL_CONTROLLER_BUTTON_DPAD_RIGHT, i}, Bind(7, controllers[i])});
+    }
+    config_file.close();
+}
+
+void Input::quit()
+{
+    running = false;
+}
+
+void Input::pause()
+{
+
+}
+
+void Input::mute()
+{
+
 }
 
 void Input::pollControllers()
 {
-    for (int i = 0; i < 2; i++)
+    for (int button_i = 0; button_i < static_cast<int>(SDL_CONTROLLER_BUTTON_MAX); button_i++)
     {
-        if (controllers[i])
+        for (uint joypad_i = 0; joypad_i < joypads.size(); joypad_i++)
         {
-            // Xinput B button = right button (NES A button)
-            if (SDL_GameControllerGetButton(controllers[i], SDL_CONTROLLER_BUTTON_B))
-                joypads[i] |= BUT_A;
-            else
-                joypads[i] &= ~BUT_A;
-            
-            // Xinput A button = bottom button (NES B button)
-            if (SDL_GameControllerGetButton(controllers[i], SDL_CONTROLLER_BUTTON_A))
-                joypads[i] |= BUT_B;
-            else
-                joypads[i] &= ~BUT_B;
-            
-            if (SDL_GameControllerGetButton(controllers[i], SDL_CONTROLLER_BUTTON_START))
-                joypads[i] |= BUT_START;
-            else
-                joypads[i] &= ~BUT_START;
-            
-            if (SDL_GameControllerGetButton(controllers[i], SDL_CONTROLLER_BUTTON_BACK))
-                joypads[i] |= BUT_SELECT;
-            else
-                joypads[i] &= ~BUT_SELECT;
-
-            if (SDL_GameControllerGetButton(controllers[i], SDL_CONTROLLER_BUTTON_DPAD_UP))
-                joypads[i] |= BUT_UP;
-            else
-                joypads[i] &= ~BUT_UP;
-
-            if (SDL_GameControllerGetButton(controllers[i], SDL_CONTROLLER_BUTTON_DPAD_DOWN))
-                joypads[i] |= BUT_DOWN;
-            else
-                joypads[i] &= ~BUT_DOWN;
-
-            if (SDL_GameControllerGetButton(controllers[i], SDL_CONTROLLER_BUTTON_DPAD_LEFT))
-                joypads[i] |= BUT_LEFT;
-            else
-                joypads[i] &= ~BUT_LEFT;
-
-            if (SDL_GameControllerGetButton(controllers[i], SDL_CONTROLLER_BUTTON_DPAD_RIGHT))
-                joypads[i] |= BUT_RIGHT;
-            else
-                joypads[i] &= ~BUT_RIGHT;
-            
-            bus.joypad_data_buffer[i] = joypads[i];
-        }
-    }
-}
-
-void Input::pollKeyboard(RunFlags& run_flags, SDL_Event& event)
-{
-    if (event.type == SDL_KEYDOWN)
-    {
-        switch (event.key.keysym.sym)
-        {
-            case SDLK_ESCAPE:
-                run_flags.finished = true;
-                break;
-            case SDLK_SPACE:
-                run_flags.paused = !run_flags.paused;
-                break;
-
-            // Keyboard input if no controller
-            if (!controllers[0])
+            if (joypads[joypad_i])
             {
-                case SDLK_w:
-                    joypads[0] |= BUT_UP;
-                    break;
-                case SDLK_s:
-                    joypads[0] |= BUT_DOWN;
-                    break;
-                case SDLK_a:
-                    joypads[0] |= BUT_LEFT;
-                    break;
-                case SDLK_d:
-                    joypads[0] |= BUT_RIGHT;
-                    break;
-                case SDLK_v:
-                    joypads[0] |= BUT_A;
-                    break;
-                case SDLK_c:
-                    joypads[0] |= BUT_B;
-                    break;
-                case SDLK_x:
-                    joypads[0] |= BUT_START;
-                    break;
-                case SDLK_z:
-                    joypads[0] |= BUT_SELECT;
-                    break;
+                bool pressed = SDL_GameControllerGetButton(joypads[joypad_i], static_cast<SDL_GameControllerButton>(button_i));
+                if (pressed)
+                {
+                    auto bind_iter = joypad_binds.find({static_cast<SDL_GameControllerButton>(button_i), joypad_i});
+                    bind_iter->second.press(true, false);
+                }
             }
         }
     }
-    else if (event.type == SDL_KEYUP && !controllers[0])
+}
+
+void Input::pollKeyboard(SDL_Event& event)
+{
+    if (event.type == SDL_KEYDOWN)
     {
-        switch (event.key.keysym.sym)
+        SDL_Keycode key = event.key.keysym.sym;
+        auto emu_bind_iter = emu_binds.find(key);
+        while (emu_bind_iter != emu_binds.end())
         {
-            case SDLK_w:
-                joypads[0] &= ~BUT_UP;
-                break;
-            case SDLK_s:
-                joypads[0] &= ~BUT_DOWN;
-                break;
-            case SDLK_a:
-                joypads[0] &= ~BUT_LEFT;
-                break;
-            case SDLK_d:
-                joypads[0] &= ~BUT_RIGHT;
-                break;
-            case SDLK_v:
-                joypads[0] &= ~BUT_A;
-                break;
-            case SDLK_c:
-                joypads[0] &= ~BUT_B;
-                break;
-            case SDLK_x:
-                joypads[0] &= ~BUT_START;
-                break;
-            case SDLK_z:
-                joypads[0] &= ~BUT_SELECT;
-                break;
-            default:
-                break;
+            emu_bind_iter->second();
+            emu_bind_iter++;
+        }
+        #ifdef DEBUGGER
+        auto debug_bind_iter = debug_binds.find(key);
+        while (debug_bind_iter != debug_binds.end())
+        {
+            debug_bind_iter->second());
+            debug_bind_iter++;
+        }
+        #endif
+        auto key_bind_iter = key_binds.find(key);
+        while (key_bind_iter != key_binds.end())
+        {
+            key_bind_iter->second.press(true, true);
+            key_bind_iter++;
+        }
+    }
+    else if (event.type == SDL_KEYUP)
+    {
+        auto key_bind_iter = key_binds.find(event.key.keysym.sym);
+        while (key_bind_iter != key_binds.end())
+        {
+            key_bind_iter->second.press(false, true);
+            key_bind_iter++;
         }
     }
     else if (event.type == SDL_QUIT)
-        run_flags.finished = true;
-
-    if (!controllers[0]) bus.joypad_data_buffer[0] = joypads[0];
+    {
+        quit();
+    }
 }
 
+// TODO this is all old code. Port this to loadBinds()
 #ifdef DEBUGGER
 void pollDebug(RunFlags& run_flags, SDL_Event& event)
 {
@@ -260,16 +254,17 @@ void pollDebug(RunFlags& run_flags, SDL_Event& event)
 }
 #endif
 
-void Input::pollInputs(RunFlags& run_flags)
+bool Input::poll()
 {
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
         #ifdef DEBUGGER
         ImGui_ImplSDL2_ProcessEvent(&event);
-        pollDebug(run_flags, event);
         #endif
-        pollKeyboard(run_flags, event);
+        pollKeyboard(event);
     }
     pollControllers();
+    console->processInputs();
+    return running;
 }

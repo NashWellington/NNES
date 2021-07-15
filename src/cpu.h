@@ -1,16 +1,20 @@
 #pragma once
 
+// Forward declaration
+class Memory;
+
 // Include
 #include "globals.h"
-#include "bus.h"
+#include "processor.h"
+#include "mem.h"
 #include "isa.h"
 #include "savestate.h"
 
-extern CPU cpu;
-
-class CPU
+class CPU : public Processor
 {
 public:
+    void setRegion(Region _region);
+
     ubyte read(uword address);
     void write(uword address, ubyte data);
 
@@ -50,20 +54,22 @@ public:
     void save(Savestate& savestate);
     void load(Savestate& savestate);
 
+    std::shared_ptr<Memory> mem;
+
     // CPU registers
 
     /* Program Counter
     * 16-bit register 
     * Holds the address of the next instruction executed
     */
-    uword reg_pc = 0x8000;
+    uword reg_pc = 0xFFFC;
 
     /* Stack Pointer
     * 8-bit register 
     * Used as an offset from $0100
     * No stack overflow detection (will wrap around)
     */
-    ubyte reg_sp = 0xF0;
+    ubyte reg_sp = 0xFD;
 
     /* Accumulator
     * 8-bit register
@@ -123,10 +129,9 @@ public:
             unsigned n : 1;
         };
         ubyte reg;
-    } reg_sr = { .reg = 0x24 };
+    } reg_sr = { .reg = 0x34 };
 
 private:
-    int cycle = 0;
     bool odd_cycle = false;
 
     int handleInterrupt(InterruptType type);

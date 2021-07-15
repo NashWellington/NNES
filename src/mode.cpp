@@ -2,13 +2,13 @@
 
 // TODO dummy reads for indexed instructions
 
-std::pair<uword,int> Mode::zeroPage(byte offset)
+std::pair<uword,int> Mode::zeroPage(CPU& cpu, byte offset)
 {
     uword address = static_cast<uword>(static_cast<ubyte>(cpu.nextByte() + offset));
     return std::make_pair(address, 3);
 }
 
-std::pair<uword,int> Mode::absolute(std::optional<ubyte> offset, bool read_instr)
+std::pair<uword,int> Mode::absolute(CPU& cpu, std::optional<ubyte> offset, bool read_instr)
 {
     int cycles = 3;
 
@@ -37,7 +37,7 @@ std::pair<uword,int> Mode::absolute(std::optional<ubyte> offset, bool read_instr
     return std::make_pair(address, cycles);
 }
 
-std::pair<uword,int> Mode::indirect(ubyte offset, ubyte index_type, bool read_instr)
+std::pair<uword,int> Mode::indirect(CPU& cpu, ubyte offset, ubyte index_type, bool read_instr)
 {
     int cycles = 5;
     uword address = 0;
@@ -85,13 +85,13 @@ std::pair<uword,int> Mode::indirect(ubyte offset, ubyte index_type, bool read_in
 }
 
 
-std::pair<ubyte,int> Mode::immediate()
+std::pair<ubyte,int> Mode::immediate(CPU& cpu)
 {
     ubyte val = cpu.nextByte();
     return std::make_pair(val, 2);
 }
 
-std::pair<uword,int> Mode::relative()
+std::pair<uword,int> Mode::relative(CPU& cpu)
 {
     int cycles = 2;
     byte offset = static_cast<byte>(cpu.nextByte());

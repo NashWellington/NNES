@@ -63,6 +63,48 @@ enum InterruptType
     RESET
 };
 
+enum class HeaderType
+{
+    NO_HEADER,  // Not an iNES, NES 2.0, or UNIF header
+    INES,
+    NES20,
+    UNIF        // Currently unimplemented
+};
+
+// https://wiki.nesdev.com/w/index.php/Mirroring#Nametable_Mirroring
+enum class MirrorType
+{
+    HORIZONTAL,             // Horizontal or mapper-controlled (set by ROM header)
+    VERTICAL,
+    SINGLE_SCREEN_LOWER,    // lower or upper bank
+    SINGLE_SCREEN_UPPER, 
+    FOUR_SCREEN,
+    OTHER                   // Mapper-controlled (set by mapper)
+};
+
+struct Header
+{
+    HeaderType type = HeaderType::NO_HEADER;
+    MirrorType mirroring = MirrorType::HORIZONTAL;
+
+    uint mapper = 0;
+    uint submapper = 0;
+    bool trainer = false;
+    uint64_t prg_rom_size = 0;
+    uint64_t chr_rom_size = 0;
+    uint64_t prg_ram_size = 0;
+    uint64_t chr_ram_size = 0;
+};
+
+struct Pixel
+{
+    Pixel() {}
+    Pixel(ubyte red, ubyte green, ubyte blue) : r(red), g(green), b(blue) {}
+    ubyte r = 0;
+    ubyte g = 0;
+    ubyte b = 0;
+};
+
 template<typename T>
 std::string hex(const T x)
 {

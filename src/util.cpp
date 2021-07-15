@@ -22,7 +22,7 @@ const std::array<std::string,256> instructions =
 };
 
 // Disassemble addressing mode
-std::string disassembleMode(uword& address, ubyte instr)
+std::string disassembleMode(uword& address, ubyte instr, std::shared_ptr<Memory> mem)
 {
     std::string mode = " ";
     switch (instr%32)
@@ -31,21 +31,21 @@ std::string disassembleMode(uword& address, ubyte instr)
             if (instr == 0x20) // JSR Absolute
             {
                 mode += "$";
-                mode += hex(bus.cpuRead(address+1));
-                mode += hex(bus.cpuRead(address));
+                mode += hex(mem->cpuRead(address+1));
+                mode += hex(mem->cpuRead(address));
                 address += 2;
             }
             else if (instr >= 0x80) // Immediate
             {
                 mode += "#$";
-                mode += hex(bus.cpuRead(address++));
+                mode += hex(mem->cpuRead(address++));
             }
             break;
 
         case 0x01: // X-indexed, indirect
         case 0x03:
             mode += "(#$";
-            mode += hex(bus.cpuRead(address++));
+            mode += hex(mem->cpuRead(address++));
             mode += ",X)";
             break;
 
@@ -55,7 +55,7 @@ std::string disassembleMode(uword& address, ubyte instr)
             if (instr != 0x02 && instr != 0x22 && instr != 0x42 && instr != 0x62)
             {
                 mode += "#$";
-                mode += hex(bus.cpuRead(address++));
+                mode += hex(mem->cpuRead(address++));
             }
             break;
 
@@ -64,7 +64,7 @@ std::string disassembleMode(uword& address, ubyte instr)
         case 0x06:
         case 0x07:
             mode += "$";
-            mode += hex(bus.cpuRead(address++));
+            mode += hex(mem->cpuRead(address++));
             break;
 
         case 0x0C: // Absolute or indirect
@@ -74,36 +74,36 @@ std::string disassembleMode(uword& address, ubyte instr)
             if (instr == 0x6C) // Un-indexed indirect
             {
                 mode += "($";
-                mode += hex(bus.cpuRead(address+1));
-                mode += hex(bus.cpuRead(address));
+                mode += hex(mem->cpuRead(address+1));
+                mode += hex(mem->cpuRead(address));
                 mode += ")";
                 address += 2;
             }
             else // Absolute
             {
                 mode += "$";
-                mode += hex(bus.cpuRead(address+1));
-                mode += hex(bus.cpuRead(address));
+                mode += hex(mem->cpuRead(address+1));
+                mode += hex(mem->cpuRead(address));
                 address += 2;
             }
             break;
 
         case 0x10: // Relative
             mode += "$";
-            mode += hex(bus.cpuRead(address++));
+            mode += hex(mem->cpuRead(address++));
             break;
 
         case 0x11: // indirect, Y-indexed
         case 0x13:
             mode += "(#$";
-            mode += hex(bus.cpuRead(address++));
+            mode += hex(mem->cpuRead(address++));
             mode += "),Y";
             break;
 
         case 0x14: // Zero Page, X-indexed=
         case 0x15:
             mode += "$";
-            mode += hex(bus.cpuRead(address++));
+            mode += hex(mem->cpuRead(address++));
             mode += ",X";
             break;
 
@@ -112,13 +112,13 @@ std::string disassembleMode(uword& address, ubyte instr)
             if (instr >= 0x96) // Y-indexed
             {
                 mode += "$";
-                mode += hex(bus.cpuRead(address++));
+                mode += hex(mem->cpuRead(address++));
                 mode += ",Y";
             }
             else // X-indexed
             {
                 mode += "$";
-                mode += hex(bus.cpuRead(address++));
+                mode += hex(mem->cpuRead(address++));
                 mode += ",X";
             }
             break;
@@ -126,8 +126,8 @@ std::string disassembleMode(uword& address, ubyte instr)
         case 0x19: // Absolute, Y-indexed
         case 0x1B:
             mode += "$";
-            mode += hex(bus.cpuRead(address+1));
-            mode += hex(bus.cpuRead(address));
+            mode += hex(mem->cpuRead(address+1));
+            mode += hex(mem->cpuRead(address));
             mode += ",Y";
             address += 2;
             break;
@@ -139,16 +139,16 @@ std::string disassembleMode(uword& address, ubyte instr)
             if (instr == 0x9E || instr == 0xBE || instr == 0x9F || instr == 0xBF) // Y-indexed
             {
                 mode += "$";
-                mode += hex(bus.cpuRead(address+1));
-                mode += hex(bus.cpuRead(address));
+                mode += hex(mem->cpuRead(address+1));
+                mode += hex(mem->cpuRead(address));
                 mode += ",Y";
                 address += 2;
             }
             else
             {
                 mode += "$";
-                mode += hex(bus.cpuRead(address+1));
-                mode += hex(bus.cpuRead(address));
+                mode += hex(mem->cpuRead(address+1));
+                mode += hex(mem->cpuRead(address));
                 mode += ",X";
                 address += 2;
             }
@@ -160,25 +160,25 @@ std::string disassembleMode(uword& address, ubyte instr)
     return mode; 
 }
 
-std::optional<std::string> disassemble(uword& address)
+std::optional<std::string> disassemble(uword& address, std::shared_ptr<Memory> mem)
 {
     uword start_address = address;
     std::string line = hex(address) + ": ";
-    ubyte instr = bus.cpuRead(address++);
+    ubyte instr = mem->cpuRead(address++);
     line += instructions[instr];
-    line += disassembleMode(address, instr);
+    line += disassembleMode(address, instr, mem);
     if (start_address > (address - 1)) return {};
     for (int i = 0; i < (20 - static_cast<int>(line.size())); i++) line += ' ';
     return line;
 }
 
-std::string peekMem(uword address)
+std::string peekMem(uword address, std::shared_ptr<Memory> mem)
 {
     std::string line = hex(address) + ":";
     for (int i = 0; i < 16; i++)
     {
         line += ' ';
-        line += hex(bus.cpuRead(address++));
+        line += hex(mem->cpuRead(address++));
     }
     return line;
 }

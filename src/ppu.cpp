@@ -1,9 +1,8 @@
 #include "ppu.h"
 
-PPU ppu;
-
-PPU::PPU() 
+PPU::PPU(std::shared_ptr<Video> _video) 
 {
+    video = _video;
     loadSystemPalette();
 
     spr_x_pos.fill(0x00FF);
@@ -34,6 +33,29 @@ void PPU::loadSystemPalette()
     file.close();
 }
 
+void PPU::setRegion(Region _region)
+{
+    region = _region;
+    switch (region)
+    {
+        case Region::NTSC:
+            name = "Ricoh 2C02";
+            time_scale = 4;
+            revision = REV_2C02;
+            break;
+        case Region::PAL:
+            name = "Ricoh 2C07";
+            time_scale = 5;
+            revision = REV_2C07;
+            break;
+        case Region::Dendy:
+            name = "UMC UA6538";
+            time_scale = 5;
+            revision = UMC;
+            break;
+    }
+}
+
 /*TODO
 void PPU::save(Savestate& savestate)
 {
@@ -51,7 +73,7 @@ void PPU::tick()
     // TODO check if background/sprites should be loaded
     // TODO sprite checking/resolution/whatever
 
-    if ((scanline >= 0 && scanline < POST_RENDER_START) || (scanline == PRE_RENDER_START)) // pre-render + visible
+    if ((scanline >= 0 && scanline < POST_RENDER_START) || (scanline == -1)) // pre-render + visible
     {
         if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) // Get table bytes
         {
@@ -61,19 +83,19 @@ void PPU::tick()
                 case 2: // NT byte
                 {
                     uword nt_addr_base = 0x2000 
-                        + (static_cast<uword>(bus.reg_ppu_ctrl.nn) * 0x0400);
-                    bg_nt_byte = bus.ppuRead(nt_addr_base + 32 * reg_nt_row + reg_nt_col);
-                    if (scanline != PRE_RENDER_START && scanline < 239 && cycle <= 256)
+                        + (static_cast<uword>(mem->reg_ppu_ctrl.nn) * 0x0400);
+                    bg_nt_byte = mem->ppuRead(nt_addr_base + 32 * reg_nt_row + reg_nt_col);
+                    if (scanline != -1 && scanline < 239 && cycle <= 256)
                         pushSpritePixels(); // TODO don't do this when pre-render or scanline 239
                     break;
                 }
                 case 4: // AT byte
                 {
                     uword nt_addr_base = 0x2000 
-                        + (static_cast<uword>(bus.reg_ppu_ctrl.nn) * 0x0400);
+                        + (static_cast<uword>(mem->reg_ppu_ctrl.nn) * 0x0400);
                     uword at_col = reg_nt_col / 4;
                     uword at_row = reg_nt_row / 4;
-                    bg_at_byte = bus.ppuRead(nt_addr_base + 0x3C0 + at_row * 8 + at_col);
+                    bg_at_byte = mem->ppuRead(nt_addr_base + 0x3C0 + at_row * 8 + at_col);
 
                     // TODO figure out if I need to do this now or later
                     // get palette info from attribute depending on quadrant
@@ -85,21 +107,21 @@ void PPU::tick()
                 }
                 case 6: // Low PT byte
                 {
-                    uword pt_addr = bus.reg_ppu_ctrl.b * 0x1000 + (static_cast<uword>(bg_nt_byte) << 4);
+                    uword pt_addr = mem->reg_ppu_ctrl.b * 0x1000 + (static_cast<uword>(bg_nt_byte) << 4);
                     uword y_offset = scanline;
                     if (cycle >= 256) y_offset++;
                     y_offset %= 8;
-                    bg_pt_byte_low = bus.ppuRead(pt_addr + y_offset);
+                    bg_pt_byte_low = mem->ppuRead(pt_addr + y_offset);
                     break;
                 }
                 case 0: // High PT byte + inc hori
                 {
-                    uword pt_addr = bus.reg_ppu_ctrl.b * 0x1000 + (static_cast<uword>(bg_nt_byte) << 4);
+                    uword pt_addr = mem->reg_ppu_ctrl.b * 0x1000 + (static_cast<uword>(bg_nt_byte) << 4);
                     uword y_offset = scanline;
                     if (cycle >= 256) y_offset++;
                     y_offset %= 8;
-                    bg_pt_byte_high = bus.ppuRead(pt_addr + y_offset + 8);
-                    if ((scanline != PRE_RENDER_START && cycle <= 240) 
+                    bg_pt_byte_high = mem->ppuRead(pt_addr + y_offset + 8);
+                    if ((scanline != -1 && cycle <= 240) 
                         || (cycle >= 321 && scanline != 239)) 
                     {
                         pushBackgroundPixels();
@@ -118,43 +140,43 @@ void PPU::tick()
                     break;
             }
             // Sprite clear
-            if (cycle == 1 && scanline != PRE_RENDER_START)
+            if (cycle == 1 && scanline != -1)
             {
                 for (uint i = 0; i < 8; i++)
                 {
                     for (uint j = 0; j < 4; j++)
                     {
                         // Clear secondary OAM
-                        bus.secondary_oam[i].data[j] = 0xFF;
+                        mem->secondary_oam[i].data[j] = 0xFF;
                     }
                 }
 
-                bus.oam_data = 0xFF;
+                mem->oam_data = 0xFF;
             }
-            else if (cycle >= 2 && cycle <= 64 && scanline != PRE_RENDER_START)
+            else if (cycle >= 2 && cycle <= 64 && scanline != -1)
             {
                 // TODO not sure if more than one of these is necessary
-                bus.oam_data = 0xFF;
+                mem->oam_data = 0xFF;
             }
             // Sprite evaluation
             // Note: for now, this does it all in one go
             // TODO: make this cycle-accurate
             // TODO: emulate sprite overflow bug
-            else if (cycle == 65 && scanline != PRE_RENDER_START) // cycles 65 to 256
+            else if (cycle == 65 && scanline != -1) // cycles 65 to 256
             {
                 uint sec_oam_i = 0; // Secondary OAM index
-                ubyte y_range = bus.reg_ppu_ctrl.h ? 16 : 8;
+                ubyte y_range = mem->reg_ppu_ctrl.h ? 16 : 8;
                 for (uint n = 0; n < 64; n++) // Primary oam index
                 {
                     if (sec_oam_i < 8)
                     {
-                        ubyte y = bus.primary_oam[n].y;
-                        bus.secondary_oam[sec_oam_i].y = y;
+                        ubyte y = mem->primary_oam[n].y;
+                        mem->secondary_oam[sec_oam_i].y = y;
                         if (y <= scanline && static_cast<int>(y) > scanline - y_range)
                         {
-                            bus.secondary_oam[sec_oam_i].x = bus.primary_oam[n].x;
-                            bus.secondary_oam[sec_oam_i].tile_i = bus.primary_oam[n].tile_i;
-                            bus.secondary_oam[sec_oam_i].attributes = bus.primary_oam[n].attributes;
+                            mem->secondary_oam[sec_oam_i].x = mem->primary_oam[n].x;
+                            mem->secondary_oam[sec_oam_i].tile_i = mem->primary_oam[n].tile_i;
+                            mem->secondary_oam[sec_oam_i].attributes = mem->primary_oam[n].attributes;
                             sec_oam_i++;
                         }
                     }
@@ -162,10 +184,10 @@ void PPU::tick()
                     {
                         for (uint m = 0; m < 4; m++) // m increment is a hardware bug
                         {
-                            ubyte y = bus.primary_oam[n].data[m];
+                            ubyte y = mem->primary_oam[n].data[m];
                             if (y >= scanline && y < scanline + y_range) // TODO is this wrong too?
                             {
-                                bus.reg_ppu_status.o = true;
+                                mem->reg_ppu_status.o = true;
                             }
                         }
                     }
@@ -176,27 +198,27 @@ void PPU::tick()
         {
             // Load secondary OAM data into latches, shift regs, etc.
             // TODO make this cycle-accurate
-            if (scanline != PRE_RENDER_START && scanline < 239 && cycle == 257)
+            if (scanline != -1 && scanline < 239 && cycle == 257)
             {
                 show_spr.fill(false); // Sprites are not shown by default
-                ubyte y_range = bus.reg_ppu_ctrl.h ? 16 : 8;
+                ubyte y_range = mem->reg_ppu_ctrl.h ? 16 : 8;
                 for (uint i = 0; i < 8; i++)
                 {
-                    ubyte y = bus.secondary_oam[i].y;
+                    ubyte y = mem->secondary_oam[i].y;
                     if (y <= scanline && static_cast<int>(y) > scanline - y_range)
                     {
                         show_spr[i] = true;
                         ubyte pt_y = scanline - y; // y coord within the pattern table tile
-                        ubyte attributes = bus.secondary_oam[i].attributes;
+                        ubyte attributes = mem->secondary_oam[i].attributes;
                         if (attributes & 0x80) 
                             pt_y = y_range - pt_y - 1; // Flip vertically
 
-                        uword pt_addr = static_cast<uword>(bus.secondary_oam[i].tile_i);
+                        uword pt_addr = static_cast<uword>(mem->secondary_oam[i].tile_i);
                         uword pt_i;
                         if (y_range == 8) 
                         {
                             pt_addr *= 16;
-                            pt_i = bus.reg_ppu_ctrl.s * 0x1000;
+                            pt_i = mem->reg_ppu_ctrl.s * 0x1000;
                             pt_addr += pt_i;
                             pt_addr += pt_y;
                         }
@@ -209,8 +231,8 @@ void PPU::tick()
                             if (pt_y >= 8) pt_addr += 16;
                         }
 
-                        ubyte pt_low = bus.ppuRead(pt_addr);
-                        ubyte pt_high = bus.ppuRead(pt_addr + 8);
+                        ubyte pt_low = mem->ppuRead(pt_addr);
+                        ubyte pt_high = mem->ppuRead(pt_addr + 8);
 
                         if (attributes & 0x40) // Flip horizontally
                         {
@@ -218,26 +240,26 @@ void PPU::tick()
                             pt_high = reverseByte(pt_high);
                         }
 
-                        spr_x_pos[i] = static_cast<int>(bus.secondary_oam[i].x);
+                        spr_x_pos[i] = static_cast<int>(mem->secondary_oam[i].x);
                         spr_at_byte[i] = attributes;
                         spr_pt_byte_low[i] = pt_low;
                         spr_pt_byte_high[i] = pt_high;
                     }
                 }
             }
-            bus.cpuWrite(0x2003, 0);
+            mem->cpuWrite(0x2003, 0);
         }
         else if ((cycle == 338) || (cycle == 340)) // Unused NT fetches
         {
             // This probably won't have an effect on anything
         }
-        if (scanline == PRE_RENDER_START)
+        if (scanline == -1)
         {
             if (cycle == 1) // clear vblank, sprite 0 hit, and sprite overflow
             {
-                bus.reg_ppu_status.o = 0;
-                bus.reg_ppu_status.s = 0;
-                bus.reg_ppu_status.v = 0;
+                mem->reg_ppu_status.o = 0;
+                mem->reg_ppu_status.s = 0;
+                mem->reg_ppu_status.v = 0;
                 pixel_i = 0;
             }
             else if (cycle >= 280 && cycle <= 304) // Clear vblank???
@@ -264,8 +286,8 @@ void PPU::tick()
             assert(reg_nt_row == 30);
             assert(reg_nt_col == 0);
             reg_nt_row = 0;
-            bus.reg_ppu_status.v = 1;
-            if (bus.reg_ppu_ctrl.v) bus.addInterrupt(NMI);
+            mem->reg_ppu_status.v = 1;
+            if (mem->reg_ppu_ctrl.v) mem->addInterrupt(NMI);
             sendFrame();
         }
     }
@@ -290,7 +312,7 @@ void PPU::pushBackgroundPixels()
 {
     uint  bg_pal_i = bg_at_byte; // Palette RAM index (i.e. which palette is selected)
     uint  bg_color_i = 0;        // Color index (i.e. which one of four colors is selected)
-    bool show_bg = (bus.reg_ppu_mask.left_background || (pixel_i % 256) >= 8) && bus.reg_ppu_mask.show_background;
+    bool show_bg = (mem->reg_ppu_mask.left_background || (pixel_i % 256) >= 8) && mem->reg_ppu_mask.show_background;
 
     std::array<Pixel,4> palette = {};
     getPalette(palette, bg_pal_i);
@@ -392,8 +414,8 @@ Tile PPU::getPTTile(uword address, std::array<Pixel,4>& palette)
     for (uint y = 0; y < 8; y++)
     {
         // TODO pattern table index
-        ubyte pattern_lsb = bus.ppuRead(address + y);
-        ubyte pattern_msb = bus.ppuRead(address + y + 8);
+        ubyte pattern_lsb = mem->ppuRead(address + y);
+        ubyte pattern_msb = mem->ppuRead(address + y + 8);
 
         // Iterate thru bits in each byte
         for (uint x = 0; x < 8; x++)
@@ -428,7 +450,7 @@ void PPU::getNTTile(uint nt_col, uint nt_row, uint nt_i, uint pt_i)
     ubyte palette_index = 0;
 
     // get a byte from the attribute table used to find the palette index
-    attribute = bus.ppuRead(0x2000 + 0x0400 * nt_i + 0x03C0 + nt_col/4 + 8 * (nt_row/4));
+    attribute = mem->ppuRead(0x2000 + 0x0400 * nt_i + 0x03C0 + nt_col/4 + 8 * (nt_row/4));
 
     // get palette info from attribute depending on quadrant
     if (((nt_col / 2) % 2) == 1) offset += 2; // right quadrants -> 1100 0000 or 0000 1100
@@ -438,7 +460,7 @@ void PPU::getNTTile(uint nt_col, uint nt_row, uint nt_i, uint pt_i)
     getPalette(palette, palette_index);
 
     // get tile coords from nametable(i,j)
-    ubyte pt_coords = bus.ppuRead(0x2000 + 0x0400 * nt_i + nt_col + 32 * nt_row);
+    ubyte pt_coords = mem->ppuRead(0x2000 + 0x0400 * nt_i + nt_col + 32 * nt_row);
     uword pt_address = pt_i * 0x1000 + (static_cast<uword>(pt_coords) << 4) /*TODO + fine y offset*/;
 
     nametable.addTile(getPTTile(pt_address, palette), nt_row, nt_col);
@@ -457,10 +479,10 @@ void PPU::getNametable(uint nt_i, uint pt_i)
 
 void PPU::getBigSprite(uint spr_i)
 {
-    ubyte spr_index = bus.primary_oam[spr_i].data[1];
+    ubyte spr_index = mem->primary_oam[spr_i].data[1];
     uword pt_addr = static_cast<uword>(spr_index & 0x01) << 12;
     pt_addr += static_cast<uword>(spr_index & 0xFE);
-    ubyte attributes = bus.primary_oam[spr_i].data[2];
+    ubyte attributes = mem->primary_oam[spr_i].data[2];
     uint pal_i = (attributes & 0x03) | 4;
     std::array<Pixel,4> palette = {};
     getPalette(palette, pal_i);
@@ -483,9 +505,9 @@ void PPU::getBigSprite(uint spr_i)
 
 void PPU::getSmallSprite(uint spr_i)
 {
-    uword pt_addr = static_cast<uword>(bus.reg_ppu_ctrl.s) << 12; // Palette index (0 or 1)
-    pt_addr += static_cast<uword>(bus.primary_oam[spr_i].data[1]);
-    ubyte attributes = bus.primary_oam[spr_i].data[2];
+    uword pt_addr = static_cast<uword>(mem->reg_ppu_ctrl.s) << 12; // Palette index (0 or 1)
+    pt_addr += static_cast<uword>(mem->primary_oam[spr_i].data[1]);
+    ubyte attributes = mem->primary_oam[spr_i].data[2];
     uint pal_i = (attributes & 0x03) | 4;
     std::array<Pixel,4> palette = {};
     getPalette(palette, pal_i);
@@ -523,13 +545,13 @@ void PPU::displayPatternTable(uint pt_i, uint palette_index)
 
 void PPU::displayNametable(uint nt_i)
 {
-    getNametable(nt_i, bus.reg_ppu_ctrl.b);
+    getNametable(nt_i, mem->reg_ppu_ctrl.b);
     display.nt_tex[nt_i].update(256, 240, reinterpret_cast<void*>(&nametable));
 }
 
 void PPU::displaySprites()
 {
-    if (!bus.reg_ppu_ctrl.h) // 8x8 sprites
+    if (!mem->reg_ppu_ctrl.h) // 8x8 sprites
     {
         for (uint i = 0; i < 64; i++)
         {
@@ -552,10 +574,10 @@ void PPU::displaySprites()
 void PPU::getPalette(std::array<Pixel,4>& palette, uint palette_index)
 {
     assert(palette_index < 8);
-    palette[0] = getColor(bus.ppuRead(0x3F00));
-    palette[1] = getColor(bus.ppuRead(0x3F00 + 4 * palette_index + 1));
-    palette[2] = getColor(bus.ppuRead(0x3F00 + 4 * palette_index + 2));
-    palette[3] = getColor(bus.ppuRead(0x3F00 + 4 * palette_index + 3));
+    palette[0] = getColor(mem->ppuRead(0x3F00));
+    palette[1] = getColor(mem->ppuRead(0x3F00 + 4 * palette_index + 1));
+    palette[2] = getColor(mem->ppuRead(0x3F00 + 4 * palette_index + 2));
+    palette[3] = getColor(mem->ppuRead(0x3F00 + 4 * palette_index + 3));
 }
 
 // TODO grayscale + color emphasis PPUMASK flags
@@ -564,7 +586,22 @@ Pixel PPU::getColor(ubyte color_byte)
     return system_palette[color_byte % 0x40];
 }
 
-void PPU::sendFrame()
+inline void PPU::sendFrame()
 {
-    display.frame_tex.update(256, 240, reinterpret_cast<void*>(&frame));
+    video->frame_tex.update(256, 240, reinterpret_cast<void*>(&frame));
+}
+
+inline bool PPU::isRenderingEnabled()
+{
+    return bgEnabled() || sprEnabled();
+}
+
+inline bool PPU::bgEnabled()
+{
+    return mem->reg_ppu_mask.show_background && (mem->reg_ppu_mask.left_background || cycle >= 8);
+}
+
+inline bool PPU::sprEnabled()
+{
+    return mem->reg_ppu_mask.show_sprites && (mem->reg_ppu_mask.left_sprites || cycle >= 8);
 }

@@ -1,40 +1,5 @@
 #include "boot.h"
 
-void Boot::loadRom(std::ifstream& rom)
-{
-    // Read header
-    Header header = readHeader(rom);
-
-    // Send header info to debug_state
-    #ifdef DEBUGGER
-    switch (header.type)
-    {
-        case HeaderType::NONE:
-            debug_state.header_type = "No Header";
-            break;
-        case HeaderType::INES:
-            debug_state.header_type = "iNES";
-            break;
-        case HeaderType::NES20:
-            debug_state.header_type = "NES 2.0";
-            break;
-        case HeaderType::UNIF:
-            debug_state.header_type = "UNIF";
-            break;
-        default:
-            break;
-    }
-    debug_state.mapper = header.mapper;
-    debug_state.submapper = header.submapper;
-    debug_state.prg_rom_size = header.prg_rom_size;
-    debug_state.prg_ram_size = header.prg_ram_size;
-    debug_state.chr_rom_size = header.chr_rom_size;
-    debug_state.chr_ram_size = header.chr_ram_size;
-    #endif
-
-    bus.setMapper(getMapper(header, rom));
-}
-
 Header Boot::readHeader(std::ifstream& rom)
 {
     Header header = Header();
@@ -49,7 +14,7 @@ Header Boot::readHeader(std::ifstream& rom)
         if ((header_data[7] & 0x0C) == 0x08) header.type = HeaderType::NES20;
         else header.type = HeaderType::INES;
     }
-    else header.type = HeaderType::NONE; // TODO UNIF headers
+    else header.type = HeaderType::NO_HEADER; // TODO UNIF headers
 
     assert(header.type == HeaderType::INES || header.type == HeaderType::NES20);
 
@@ -129,7 +94,7 @@ Header Boot::readHeader(std::ifstream& rom)
 std::shared_ptr<Mapper> Boot::getMapper(Header& header, std::ifstream& rom)
 {
     std::shared_ptr<Mapper> mapper;
-    // TODO array of pointers?
+    // TODO function pointer array?
     switch (header.mapper)
     {
         case 0:
@@ -145,13 +110,15 @@ std::shared_ptr<Mapper> Boot::getMapper(Header& header, std::ifstream& rom)
             mapper = std::make_shared<Mapper003>(header, rom);
             break;
 
+        /*
         case 4:
             mapper = std::make_shared<Mapper004>(header, rom);
             break;
+        */
         
         /* This isn't quite done yet :)
         case 5:
-            mapper = std::make_shared<Mapper005>(header, rom);
+            mapper = std::make_shared<Mapper005>(header);
             break;
         */
 
@@ -167,10 +134,8 @@ std::shared_ptr<Mapper> Boot::getMapper(Header& header, std::ifstream& rom)
             std::cerr << "Error: unsupported mapper type: " << header.mapper << std::endl;
             throw std::exception();
     }
-    // TODO maybe delete later
     #ifndef NDEBUG
-    std::cerr << "Debug info:" << std::endl;
-    std::cerr << "Mapper " << header.mapper << std::endl;
+    std::cerr << "Using mapper " << header.mapper << std::endl;
     #endif
     return mapper;
 }

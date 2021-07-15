@@ -1,6 +1,6 @@
 #include "apu.h"
 
-APU apu;
+// TODO let SDL handle resampling???
 
 // clock these every quarter frame
 // TODO noise envelope
@@ -18,9 +18,24 @@ clockLengthCounter(0);\
 clockLengthCounter(1);\
 }
 
-APU::APU()
+APU::APU(std::shared_ptr<Audio> _audio) : audio(_audio) {}
+
+void APU::setRegion(Region _region)
 {
-    audio = std::make_unique<Audio>();
+    region = _region;
+    name = "NES APU"; // It's a pAPU within the CPU so it doesn't really have its own name
+    switch (region)
+    {
+        case Region::NTSC:
+            time_scale = 24;
+            break;
+        case Region::PAL:
+            time_scale = 32;
+            break;
+        case Region::Dendy:
+            time_scale = 30;
+            break;
+    }
 }
 
 // TODO should I run this at CPU freq and only do other APU stuff every other cycle?

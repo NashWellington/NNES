@@ -1,8 +1,13 @@
 #pragma once
 
+// Forward declaration
+class Memory;
+class Video;
+
 #include "globals.h"
-#include "bus.h"
-#include "display.h"
+#include "processor.h"
+#include "mem.h"
+#include "video.h"
 #include "savestate.h"
 #include "util.h"
 
@@ -11,9 +16,7 @@
 // TODO move to globals?
 // NOTE: these are just NTSC vals
 const int SCANLINES_PER_FRAME = 262;
-const int VISIBLE_SCANLINE_START = 0;   // scanlines 0-239
 const int POST_RENDER_START = 240;      // scanlines 240-260
-const int PRE_RENDER_START = -1;        // scanline  261
 const int CYCLES_PER_SCANLINE = 341;    
 const int PIXELS_PER_SCANLINE = 256;
 const int FRAME_WIDTH = 256;
@@ -37,14 +40,22 @@ struct Table
     }
 };
 
-class PPU
+class PPU : public Processor
 {
 public:
-    PPU();
+    PPU(std::shared_ptr<Video> _video);
+    void setRegion(Region _region);
+
+    // TODO
+    void reset() { return; }
+    // void save(Savestate& savestate) { return; }
+    // void load(Savestate& savestate) { return; }
 
     // Send frame to display
-    void sendFrame();
+    inline void sendFrame();
 
+    /* Advance the PPU 1 cycle
+    */
     void tick();
 
     /* Initialize palette
@@ -54,11 +65,19 @@ public:
     // void save(Savestate& savestate);
     // void load(Savestate& savestate);
 
+    std::shared_ptr<Memory> mem;
+    std::shared_ptr<Video> video;
+
+    enum Revision
+    {
+        REV_2C02, REV_2C03, REV_2C04,
+        REV_2C05, REV_2C07, UMC 
+    } revision;
 private:
     std::array<Pixel, 64> system_palette = {};
 
     // The current cycle (resets at the start of a new scanline)
-    int cycle = 0;
+    int sc_cycle = 0;
 
     // The current scanline
     int scanline = -1;
@@ -97,6 +116,16 @@ private:
     void getPalette(std::array<Pixel,4>& palette, uint palette_index);
     Pixel getColor(ubyte color_byte);
 
+    /*
+    void processScanline();
+    void evalSprites();
+    void processSprites();
+    */
+
+    inline bool isRenderingEnabled();
+    inline bool bgEnabled();
+    inline bool sprEnabled();
+
 #ifdef DEBUGGER
 private: // Debugging tools
     std::array<Pixel,4> curr_palette = {}; // Holds the pixels for the next palette to be displayed
@@ -122,5 +151,3 @@ public:
     void displaySprites();
 #endif
 };
-
-extern PPU ppu;

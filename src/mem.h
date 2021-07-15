@@ -1,9 +1,13 @@
 #pragma once
 
+// Forward declaration
+class NES;
+class CPU;
+class PPU;
+class APU;
+
 #include "globals.h"
-#include "apu.h"
-// TODO include CPU and PPU probably
-#include "mappers/mapper.h"
+#include "console.h"
 #include "savestate.h"
 
 /* 64 KiB CPU memory map
@@ -40,10 +44,11 @@
 * $3F20 - Mirrors of $3F00 to $3F1F
 */
 
-class Bus
+class Memory
 {
 public:
-    // TODO make an arg for cpuRead that doesn't allow register state change on read
+    Memory(std::shared_ptr<NES> _nes) : nes(_nes) {}
+
     ubyte    cpuRead(uword address);
     void    cpuWrite(uword address, ubyte data);
 
@@ -66,14 +71,12 @@ public:
     void addInterrupt(InterruptType interrupt);
     void clearInterrupt();
 
-    void setMapper(std::shared_ptr<Mapper> m);
-
     //TODO start() and reset()
     void start();
     void reset();
 
 private:
-    std::shared_ptr<Mapper> mapper;
+    std::shared_ptr<NES> nes;
     InterruptType current_interrupt = NO_INTERRUPT;
 
 // CPU memory arrays
@@ -309,36 +312,6 @@ public:
     */
     ubyte reg_ppu_data = 0;
 
-// I/O registers
-    bool poll_inputs = false;
-
-    /* Inputs go through this buffer first
-    * They get transferred to joypad_data when the CPU writes
-    * to $4016 with bit 0 set to 1
-    */
-    ubyte joypad_data_buffer[2] = {};
-
-    // 8 inputs from joypads 1 and 2
-    // NOTE: I made this a ubyte so I don't have to deal w/ ASR/LSR sign extension
-    ubyte joypad_data[2] = {};
-
-    /* Input ports 1 and 2
-    * $4016 and $4017
-    */
-    union
-    {
-        struct
-        {
-            unsigned d0 : 1; // NES standard controller + Famicom hardwired controller
-            unsigned d1 : 1; // TODO the rest of these
-            unsigned d2 : 1;
-            unsigned d3 : 1;
-            unsigned d4 : 1;
-            unsigned    : 3;
-        };
-        ubyte reg;
-    } reg_input[2] {{.reg = 0}, {.reg = 0}};
-
 // PPU Object Attribute Memory
     struct Sprite
     {
@@ -382,5 +355,3 @@ public:
 // Other
     int cpu_suspend_cycles = 0; // Used to stall CPU during OAM DMA
 };
-
-extern Bus bus;

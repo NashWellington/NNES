@@ -1,12 +1,10 @@
-#include "bus.h"
-
-Bus bus;
+#include "mem.h"
 
 // TODO emulate open bus behavior
 
-ubyte Bus::cpuRead(uword address)
+ubyte Memory::cpuRead(uword address)
 {
-    std::optional<ubyte> data = mapper->cpuRead(address); // Cartridge mem
+    std::optional<ubyte> data = nes->cart->cpuRead(address); // Cartridge mem
     if (data) return data.value();
     else if (address < 0x2000) // zpg, stack, RAM, or their mirrors
     {
@@ -35,9 +33,9 @@ ubyte Bus::cpuRead(uword address)
     }
 }
 
-void Bus::cpuWrite(uword address, ubyte data)
+void Memory::cpuWrite(uword address, ubyte data)
 {
-    if (mapper->cpuWrite(address, data)) return; // Cartridge mem
+    if (nes->cart->cpuWrite(address, data)) return; // Cartridge mem
     else if (address < 0x2000) // zpg, stack, RAM, or their mirrors
     {
         address %= 0x0800;
@@ -65,9 +63,9 @@ void Bus::cpuWrite(uword address, ubyte data)
     }
 }
 
-ubyte Bus::ppuRead(uword address)
+ubyte Memory::ppuRead(uword address)
 {
-    std::optional<ubyte> data = mapper->ppuRead(address); // Pattern tables
+    std::optional<ubyte> data = nes->cart->ppuRead(address); // Pattern tables
     if (data) return data.value();
     else if (address < 0x2000)
     {
@@ -78,32 +76,10 @@ ubyte Bus::ppuRead(uword address)
     }
     else if (address < 0x3F00) // Nametables + mirrors
     {
+        // cart mirroring should have taken care of this
+        assert(address < 0x2800);
         address -= 0x2000;
         address %= 0x1000;
-        uint nt_i = address / 0x400;
-        address %= 0x400;
-
-        switch (mapper->mirroring)
-        {
-            case MirrorType::HORIZONTAL:
-                nt_i /= 2;
-                break;
-            case MirrorType::VERTICAL:
-                nt_i %= 2;
-                break;
-            case MirrorType::SINGLE_SCREEN_LOWER:
-                nt_i = 0;
-                break;
-            case MirrorType::SINGLE_SCREEN_UPPER:
-                nt_i = 1;
-                break;
-            case MirrorType::OTHER:
-                std::cerr << "Error: Unsupported mirroring mode" << std::endl;
-                throw std::exception();
-            default: // currently just 4-screen
-                break;
-        }
-        assert (nt_i <= 1);
         return name_tables[address / 0x0400][address % 0x0400];
     }
     else
@@ -115,44 +91,23 @@ ubyte Bus::ppuRead(uword address)
     }
 }
 
-void Bus::ppuWrite(uword address, ubyte data)
+void Memory::ppuWrite(uword address, ubyte data)
 {
-    if (mapper->ppuWrite(address, data)) return;
+    if (nes->cart->ppuWrite(address, data)) return;
     else if (address < 0x2000)
     {
         #ifndef NDEBUG
-        std::cerr << "Warning: write dummy CHR-ROM at " << hex(address) << std::endl;
+        std::cerr << "Warning: write to dummy CHR-ROM at " << hex(address) << std::endl;
         #endif
         dummy_pattern_tables[address] = data;
     }
     else if (address < 0x3F00) // Nametables + mirrors
     {
+        // cart mirroring should have taken care of this
+        assert(address < 0x2800);
         address -= 0x2000;
         address %= 0x1000;
-        uint nt_i = address / 0x400;
-        address %= 0x400;
 
-        switch (mapper->mirroring)
-        {
-            case MirrorType::HORIZONTAL:
-                nt_i /= 2;
-                break;
-            case MirrorType::VERTICAL:
-                nt_i %= 2;
-                break;
-            case MirrorType::SINGLE_SCREEN_LOWER:
-                nt_i = 0;
-                break;
-            case MirrorType::SINGLE_SCREEN_UPPER:
-                nt_i = 1;
-                break;
-            case MirrorType::OTHER:
-                std::cerr << "Error: Unsupported mirroring mode" << std::endl;
-                throw std::exception();
-            default: // currently just 4-screen
-                break;
-        }
-        assert (nt_i <= 1);
         name_tables[address / 0x0400][address % 0x0400] = data;
     }
     else
@@ -164,7 +119,7 @@ void Bus::ppuWrite(uword address, ubyte data)
     }
 }
 
-ubyte Bus::cpuReadReg(uword address)
+ubyte Memory::cpuReadReg(uword address)
 {
     ubyte data = 0;
     if (address < 0x4000) address = 0x2000 + (address - 0x2000) % 0x0008;
@@ -215,25 +170,19 @@ ubyte Bus::cpuReadReg(uword address)
 
 // Another APU reg
         case 0x4015: // APU status
-            apu.getStatus();
-            data = apu.reg_apu_status.reg;
+            nes->apu->getStatus();
+            data = nes->apu->reg_apu_status.reg;
             return data;
 
 // Input/misc regs
         case 0x4016: // Input port 1
-            reg_input[0].d0 = (joypad_data[0] & 0x80) >> 7;
-            joypad_data[0] <<= 1;
-            joypad_data[0] |= 0x01; // All bits after the first 8 read as 1
-            data = reg_input[0].reg & 0x1F;
-            reg_input[0].reg = 0; 
+            data |= nes->controllers[0]->read();
+            // TODO expansion etc.
             return data;
 
         case 0x4017: // Input port 2
-            reg_input[1].d0 = (joypad_data[1] & 0x80) >> 7;
-            joypad_data[1] <<= 1;
-            joypad_data[1] |= 0x01;
-            data = reg_input[1].reg & 0x1F;
-            reg_input[1].reg = 0;
+            data |= nes->controllers[1]->read();
+            // TODO expansion etc.
             return data;
 
         default:
@@ -245,7 +194,7 @@ ubyte Bus::cpuReadReg(uword address)
     return data;
 }
 
-void Bus::cpuWriteReg(uword address, ubyte data)
+void Memory::cpuWriteReg(uword address, ubyte data)
 {
     if (address < 0x4000) address = 0x2000 + (address - 0x2000) % 0x0008;
     switch (address)
@@ -303,45 +252,45 @@ void Bus::cpuWriteReg(uword address, ubyte data)
             break;
 // APU regs
         case 0x4000: // Pulse 1 control
-            apu.reg_pulse_ctrl[0].reg = data;
+            nes->apu->reg_pulse_ctrl[0].reg = data;
             break;
         
         case 0x4001: // Pulse 1 sweep control
-            apu.reg_sweep[0].reg = data;
+            nes->apu->reg_sweep[0].reg = data;
             break;
 
         case 0x4002: // Pulse 1 timer (low 8 bits)
-            apu.pulse_timer[0] &= 0xFF00;
-            apu.pulse_timer[0] |= static_cast<uword>(data);
+            nes->apu->pulse_timer[0] &= 0xFF00;
+            nes->apu->pulse_timer[0] |= static_cast<uword>(data);
             break;
         
         case 0x4003: // Pulse 1 length counter load + timer (high 3 bits)
-            apu.pulse_length_ctr_load[0] = ((data & 0xF8) >> 3);
-            apu.pulse_timer[0] &= 0x00FF;
-            apu.pulse_timer[0] |= (static_cast<uword>(data & 0x07) << 8);
-            apu.envelope[0].start = true;
-            apu.loadLengthCounter(0);
+            nes->apu->pulse_length_ctr_load[0] = ((data & 0xF8) >> 3);
+            nes->apu->pulse_timer[0] &= 0x00FF;
+            nes->apu->pulse_timer[0] |= (static_cast<uword>(data & 0x07) << 8);
+            nes->apu->envelope[0].start = true;
+            nes->apu->loadLengthCounter(0);
             break;
         
         case 0x4004: // Pulse 2 control
-            apu.reg_pulse_ctrl[1].reg = data;
+            nes->apu->reg_pulse_ctrl[1].reg = data;
             break;
         
         case 0x4005: // Pulse 2 sweep control
-            apu.reg_sweep[1].reg = data;
+            nes->apu->reg_sweep[1].reg = data;
             break;
 
         case 0x4006: // Pulse 2 timer (low 8 bits)
-            apu.pulse_timer[1] &= 0xFF00;
-            apu.pulse_timer[1] |= static_cast<uword>(data);
+            nes->apu->pulse_timer[1] &= 0xFF00;
+            nes->apu->pulse_timer[1] |= static_cast<uword>(data);
             break;
         
         case 0x4007: // Pulse 2 length counter load + timer (high 3 bits)
-            apu.pulse_length_ctr_load[1] = ((data & 0xF8) >> 3);
-            apu.pulse_timer[1] &= 0x00FF;
-            apu.pulse_timer[1] |= (static_cast<uword>(data & 0x07) << 8);
-            apu.envelope[1].start = true;
-            apu.loadLengthCounter(1);
+            nes->apu->pulse_length_ctr_load[1] = ((data & 0xF8) >> 3);
+            nes->apu->pulse_timer[1] &= 0x00FF;
+            nes->apu->pulse_timer[1] |= (static_cast<uword>(data & 0x07) << 8);
+            nes->apu->envelope[1].start = true;
+            nes->apu->loadLengthCounter(1);
             break;
 
 // Another PPU reg
@@ -353,20 +302,17 @@ void Bus::cpuWriteReg(uword address, ubyte data)
 
 // Another APU reg
         case 0x4015: // APU ctrl
-            apu.reg_apu_ctrl.reg = data;
-            if (apu.reg_apu_ctrl.lce_p1 == 0) apu.clearLengthCounter(0);
-            if (apu.reg_apu_ctrl.lce_p2 == 0) apu.clearLengthCounter(1);
-            if (apu.reg_apu_ctrl.lce_tr == 0) apu.clearLengthCounter(2);
-            if (apu.reg_apu_ctrl.lce_ns == 0) apu.clearLengthCounter(3);
+            nes->apu->reg_apu_ctrl.reg = data;
+            if (nes->apu->reg_apu_ctrl.lce_p1 == 0) nes->apu->clearLengthCounter(0);
+            if (nes->apu->reg_apu_ctrl.lce_p2 == 0) nes->apu->clearLengthCounter(1);
+            if (nes->apu->reg_apu_ctrl.lce_tr == 0) nes->apu->clearLengthCounter(2);
+            if (nes->apu->reg_apu_ctrl.lce_ns == 0) nes->apu->clearLengthCounter(3);
             break;
 
 // Misc regs
         case 0x4016: // Poll input
-            if (data & 0x01)
-            {
-                joypad_data[0] = joypad_data_buffer[0];
-                joypad_data[1] = joypad_data_buffer[1];
-            }
+            nes->controllers[0]->poll(data & 0x01);
+            nes->controllers[1]->poll(data & 0x01);
             // TODO expansion ports (if I ever get there)
             ppu_latch &= 0xF8;
             ppu_latch |= (data & 0x07);
@@ -374,9 +320,9 @@ void Bus::cpuWriteReg(uword address, ubyte data)
 
         case 0x4017: // APU frame counter
             // TODO buffer for 3-4 CPU cycles
-            apu.reg_frame_ctr.reg = data & 0xC0;
+            nes->apu->reg_frame_ctr.reg = data & 0xC0;
             // TODO interrupts?
-            ppu_latch = apu.reg_frame_ctr.reg;
+            ppu_latch = nes->apu->reg_frame_ctr.reg;
             break;
 
         default:
@@ -387,7 +333,7 @@ void Bus::cpuWriteReg(uword address, ubyte data)
     }
 }
 
-bool Bus::oamWrite(bool odd_cycle)
+bool Memory::oamWrite(bool odd_cycle)
 {
     assert(cpu_suspend_cycles <= 514 && cpu_suspend_cycles >= 0);
     if (cpu_suspend_cycles == 0) return false;
@@ -413,51 +359,42 @@ bool Bus::oamWrite(bool odd_cycle)
 }
 
 /*TODO Implement these
-void Bus::save(Savestate& savestate)
+void Memory::save(Savestate& savestate)
 {
 
 }
 
-void Bus::load(Savestate& savestate)
+void Memory::load(Savestate& savestate)
 {
 
 }
 */
 
-InterruptType Bus::getInterrupt()
+InterruptType Memory::getInterrupt()
 {
     if (current_interrupt == InterruptType::NO_INTERRUPT
-        && apu.frame_interrupt)
+        && nes->apu->frame_interrupt)
         addInterrupt(IRQ);
     return current_interrupt;
 }
 
-void Bus::addInterrupt(InterruptType interrupt)
+void Memory::addInterrupt(InterruptType interrupt)
 {
     current_interrupt = interrupt;
 }
 
-void Bus::clearInterrupt()
+void Memory::clearInterrupt()
 {
     current_interrupt = NO_INTERRUPT;
 }
 
-void Bus::setMapper(std::shared_ptr<Mapper> m)
-{
-    mapper = m;
-}
-
-void Bus::start()
+void Memory::start()
 {
     cpu_suspend_cycles = 0;
-    joypad_data[0] = 0;
-    joypad_data[1] = 0;
-    reg_input[0] = {};
-    reg_input[1] = {};
     // TODO APU + I/O regs
 }
 
-void Bus::reset()
+void Memory::reset()
 {
     // TODO APU + I/O regs
 }

@@ -1,10 +1,7 @@
 #include "globals.h"
-#include "cpu.h"
-#include "ppu.h"
-#include "apu.h"
-#include "bus.h"
-#include "boot.h"
-#include "display.h"
+#include "console.h"
+#include "audio.h"
+#include "video.h"
 #include "input.h"
 #include "savestate.h"
 
@@ -15,9 +12,6 @@
 // TODO find better way of handling args
 int main(int argc, char ** argv)
 {
-    // SDL_Quit should be called after audio/display shutdowns
-    atexit(SDL_Quit);
-
     #ifndef NDEBUG
     // Set up error log
     std::ofstream error_stream(ERROR_LOG_FILENAME);
@@ -45,109 +39,33 @@ int main(int argc, char ** argv)
         throw std::exception();
     }
 
-    // Initialize everything
-    Boot::loadRom(rom);
-    cpu.start();
-
-    // Main loop
-    // TODO time it so 1 frame takes 1/60 seconds
-    RunFlags run_flags = {};
-    if (argc == 3) run_flags.paused = true;
-    uint32_t ppu_cycle = 0;
-    uint32_t cycles_per_frame = 262 * 341; // Note: PPU skips a cycle every odd frame
-
     #ifdef DEBUGGER
     debug_state.filename = rom_filename;
     #endif
 
+    // Setup
+    std::shared_ptr<Audio> audio = std::make_shared<Audio>();
+    std::shared_ptr<Video> video = std::make_shared<Video>();
+    std::shared_ptr<Console> nes = std::make_shared<NES>(audio, video);
+    nes->insertROM(rom);
+    // TODO initialize Input with pointer to Video and Console
+    Input input = Input(nes, audio, video);
+
     // Timing
-    uint64_t frame_count = 0;
-    std::chrono::time_point start_time = std::chrono::steady_clock::now();
+    // uint64_t frame_count = 0;
+    // std::chrono::time_point start_time = std::chrono::steady_clock::now();
 
-    while (!run_flags.finished)
+    bool running = true;
+    while (running)
     {
-        if (run_flags.paused)
-        {
-            input.pollInputs(run_flags);
-            #ifdef DEBUGGER
-            cpu.save(debug_state);
-            #endif
-            display.displayFrame(run_flags);
-        }
-        else
-        {
-            ppu.tick();
-            if ((ppu_cycle % 3) == 2) 
-            {
-                cpu.tick();
-
-                if ((ppu_cycle % 6) == 5)
-                    apu.tick();
-
-                #ifdef DEBUGGER
-                if (run_flags.tick)
-                {
-                    run_flags.paused = true;
-                    run_flags.tick = false;
-                    ppu.addDebug();
-                }
-                if (run_flags.steps > 0 && cpu.ready())
-                {
-                    run_flags.steps--;
-                    if (run_flags.steps == 0)
-                    {
-                        run_flags.paused = true;
-                        ppu.addDebug();
-                    }
-                }
-                #endif
-            }
-            ppu_cycle++;
-            if ((ppu_cycle == cycles_per_frame) || (ppu_cycle == (cycles_per_frame * 2 - 1)))
-            {
-                using namespace std::chrono;
-                #ifdef DEBUGGER
-                cpu.save(debug_state); // Save registers for use by the debugger
-                #endif
-
-                display.displayFrame(run_flags);
-                ppu_cycle %= cycles_per_frame * 2 - 1;
-                frame_count++;
-                time_point frame_time = start_time + frame(frame_count);
-                if (frame_time < steady_clock::now())
-                {
-                    // TODO FPS count
-                    //milliseconds delay = duration_cast<milliseconds>(steady_clock::now() - frame_time);
-                    //std::cerr << "Warning: frame " << frame_count << " is behind schedule by ";
-                    //std::cerr << delay.count() << " ms" << std::endl;
-                }
-                else
-                {
-                    std::this_thread::sleep_until(frame_time);
-                }
-
-                #ifdef DEBUGGER
-                if (run_flags.frame)
-                {
-                    run_flags.paused = true;
-                    run_flags.frame = false;
-                }
-                else // Take inputs as normal if not advancing by 1 frame
-                {
-                    input.pollInputs(run_flags);
-                }
-                ppu.addDebug(); //TODO move between cpu.save and display frame?
-                #else
-                input.pollInputs(run_flags);
-                #endif
-            }
-            #ifdef DEBUGGER
-            debug_state.ppu_cycle = ppu_cycle;
-            #endif
-        }
+        running = input.poll();
+        nes->run(Scheduler::FRAME_SLOW);
+        video->displayFrame();
     }
-    apu.~APU();
-    display.~Display();
+    nes->~Console(); // Might need to destroy PPU or APU before destroying SDL frontend classes
+    audio->~Audio();
+    video->~Video();
+    SDL_Quit();
 
     #ifndef NDEBUG
     // Reset cerr buffer

@@ -3,42 +3,14 @@
 // TODO clang, MSVC, etc.
 // #pragma GCC diagnostic warning "-Wunused-parameter"
 
+// Forward declaration
+struct Header;
+
 #include "../globals.h"
 #include "../savestate.h"
 
 // TODO check nes20db for min/max RAM/ROM sizes
-
-// https://wiki.nesdev.com/w/index.php/Mirroring#Nametable_Mirroring
-enum class MirrorType
-{
-    HORIZONTAL,             // Horizontal or mapper-controlled (set by ROM header)
-    VERTICAL,
-    SINGLE_SCREEN_LOWER,    // lower or upper bank
-    SINGLE_SCREEN_UPPER, 
-    FOUR_SCREEN,
-    OTHER                   // Mapper-controlled (set by mapper)
-};
-
-enum class HeaderType
-{
-    NONE,       // Not an iNES, NES 2.0, or UNIF header
-    INES,
-    NES20,
-    UNIF        // Currently unimplemented
-};
-
-struct Header
-{
-    HeaderType type = HeaderType::NONE;
-    uint mapper = 0;
-    uint submapper = 0;
-    bool trainer = false;
-    uint64_t prg_rom_size = 0;
-    uint64_t chr_rom_size = 0;
-    uint64_t prg_ram_size = 0;
-    uint64_t chr_ram_size = 0;
-    MirrorType mirroring;
-};
+// TODO address mirroring w/ references
 
 class Mapper
 {
@@ -52,7 +24,40 @@ public:
     // virtual bool load(Savestate& savestate) = 0;
     // inline void tick() {return;} // Probably won't use this
     MirrorType mirroring = MirrorType::HORIZONTAL;
+    // Only call this from ppuRead/Write
+    void mirrorNametables(uword& address)
+    {
+        if (address >= 0x2000 && address < 0x3F00)
+        {
+            uint table_i = ((address - 0x2000) % 0x1000) / 0x0400;
+            uint tile_i = ((address - 0x2000) % 0x1000) % 0x0400;
+            switch (mirroring)
+            {
+                case MirrorType::HORIZONTAL:
+                    table_i /= 2;
+                    break;
+                case MirrorType::VERTICAL:
+                    table_i %= 2;
+                    break;
+                case MirrorType::SINGLE_SCREEN_LOWER:
+                    table_i = 0;
+                    break;
+                case MirrorType::SINGLE_SCREEN_UPPER:
+                    table_i = 1;
+                    break;
+                case MirrorType::OTHER:
+                    std::cerr << "Error: Unsupported mirroring mode" << std::endl;
+                    throw std::exception();
+                default: // currently just 4-screen
+                    break;
+            }
+            address = 0x2000 + 0x0400 * table_i + tile_i;
+        }
+    }
 };
+
+// TODO uword& address for all ppuRead/Write
+// TODO add mirrorNametables to all ppuRead/Write
 
 /* NROM
 * http://wiki.nesdev.com/w/index.php/NROM

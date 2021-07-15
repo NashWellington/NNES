@@ -1,17 +1,21 @@
 #pragma once
 
-// Forward declaration
-//class Audio;
-//void Audio::pushSample(float sample){};
-
 #include "globals.h"
+#include "processor.h"
 #include "audio.h"
-#include "bus.h" // please please please no circular dependency issues
+#include "mem.h"
 
-class APU
+class APU : public Processor
 {
 public:
-    APU();
+    APU(std::shared_ptr<Audio> _audio);
+    void setRegion(Region _region);
+
+    // TODO
+    void reset() { return; }
+    // void save(Savestate& savestate) { return; }
+    // void load(Savestate& savestate) { return; }
+
     void tick();
 
     /* Envelope data
@@ -46,6 +50,8 @@ public:
     */
     void getStatus();
 
+    std::shared_ptr<Memory> mem;
+    std::shared_ptr<Audio> audio;
 private:
     void mix(); // Mix all channel outputs and push that to audio queue
     void clockPulse(int i);
@@ -56,11 +62,7 @@ private:
     void clockEnvelope(int i);
     void clockLengthCounter(int i);
 
-// Audio frontend reference //TODO shared_ptr? unique_ptr?
-    std::unique_ptr<Audio> audio;
-
 // APU + channel variables
-    uint cycle = 0;
     uint frame_ctr = 0;
     uint sample_i = 0; // Sample index (goes from 0 to sample_rate/15)
 
@@ -220,5 +222,3 @@ public:
         ubyte reg;
     } reg_frame_ctr {.reg = 0}; // TODO start/reset 
 };
-
-extern APU apu;

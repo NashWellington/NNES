@@ -1,25 +1,40 @@
 #include "cpu.h"
 
-CPU cpu;
-
-// Address of the stack (used for push and pop)
-const uword STACK_START = 0x0100;
+void CPU::setRegion(Region _region)
+{
+    region = _region;
+    switch (region)
+    {
+        case Region::NTSC:
+            name = "Ricoh 2A03";
+            time_scale = 12;
+            break;
+        case Region::PAL:
+            name = "Ricoh 2A07";
+            time_scale = 16;
+            break;
+        case Region::Dendy:
+            name = "UMC UA6527P";
+            time_scale = 15;
+            break;
+    }
+}
 
 ubyte CPU::read(uword address)
 {
-    return bus.cpuRead(address);
+    return mem->cpuRead(address);
 }
 
 void CPU::write(uword address, ubyte data)
 {
-    bus.cpuWrite(address, data);
+    mem->cpuWrite(address, data);
 }
 
 ubyte CPU::pop()
 {
     ubyte old_sp = reg_sp;
     reg_sp++;
-    uword address = STACK_START + reg_sp;
+    uword address = 0x0100 + reg_sp;
 
     #ifndef NDEBUG
     if (reg_sp < old_sp)
@@ -28,13 +43,13 @@ ubyte CPU::pop()
     }
     #endif
 
-    return bus.cpuRead(address);
+    return mem->cpuRead(address);
 }
 
 void CPU::push(ubyte data)
 {
     ubyte old_sp = reg_sp;
-    uword address = STACK_START + reg_sp;
+    uword address = 0x0100 + reg_sp;
     reg_sp--;
 
     #ifndef NDEBUG
@@ -44,13 +59,13 @@ void CPU::push(ubyte data)
     }
     #endif
 
-    bus.cpuWrite(address, data);
+    mem->cpuWrite(address, data);
 }
 
 ubyte CPU::nextByte()
 {
     // This is a bit of a misnomer because it could also be an operand
-    ubyte instruction = bus.cpuRead(reg_pc);
+    ubyte instruction = mem->cpuRead(reg_pc);
     reg_pc++;
     return instruction;
 }
@@ -61,7 +76,7 @@ int CPU::executeInstruction()
     ubyte instruction = nextByte();
 
     // Step 2: process opcode
-    return ISA::executeOpcode(instruction);
+    return ISA::executeOpcode(*this, instruction);
 }
 
 bool CPU::ready()
@@ -73,7 +88,7 @@ void CPU::tick()
 {
     if (cycle == 0)
     {
-        if (!bus.oamWrite(odd_cycle)) 
+        if (!mem->oamWrite(odd_cycle)) 
         {
             step();
         }
@@ -85,10 +100,10 @@ void CPU::tick()
 void CPU::step()
 {
     // Check for interrupts
-    if (InterruptType i = bus.getInterrupt())
+    if (InterruptType i = mem->getInterrupt())
     {
         cycle += handleInterrupt(i);
-        bus.clearInterrupt();
+        mem->clearInterrupt();
     }
     
     if (cycle == 0)
@@ -97,21 +112,21 @@ void CPU::step()
 
 void CPU::start()
 {
-    ubyte pcl = bus.cpuRead(0xFFFC);
-    ubyte pch = bus.cpuRead(0xFFFD);
+    ubyte pcl = mem->cpuRead(0xFFFC);
+    ubyte pch = mem->cpuRead(0xFFFD);
     reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
-    bus.start();
+    mem->start();
     cycle = 7;
 }
 
 void CPU::reset()
 {
-    ubyte pcl = bus.cpuRead(0xFFFC);
-    ubyte pch = bus.cpuRead(0xFFFD);
+    ubyte pcl = mem->cpuRead(0xFFFC);
+    ubyte pch = mem->cpuRead(0xFFFD);
     reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
     reg_sp += 3;
     reg_sr.i = true;     // I flag
-    bus.reset();
+    mem->reset();
     cycle = 7;
 }
 
@@ -141,7 +156,7 @@ void CPU::load(Savestate& savestate)
 
 void CPU::addInterrupt(InterruptType interrupt)
 {
-    bus.addInterrupt(interrupt);
+    mem->addInterrupt(interrupt);
 }
 
 // TODO emulate interrupt hijacking
@@ -152,9 +167,9 @@ int CPU::handleInterrupt(InterruptType type)
     switch (type)
     {
         case IRQ:
-            return ISA::IRQ();
+            return ISA::IRQ(*this);
         case NMI:
-            return ISA::NMI();
+            return ISA::NMI(*this);
         case RESET:
             reset();
             break;

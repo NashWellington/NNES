@@ -17,29 +17,6 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <SDL.h>
 
-struct RunFlags
-{
-    bool finished = false;  
-    bool paused = false;
-
-    #ifdef DEBUGGER
-    bool tick = false;      // If true, execute one cpu cycle (& 3 ppu cycles)
-    uint steps = 0;         // Number of cpu instructions to execute
-    bool frame = false;     // Cycles until the end of the frame
-    #endif
-};
-
-// FIXME copy/move constructor
-// TODO alpha value
-struct Pixel
-{
-    Pixel() {}
-    Pixel(ubyte red, ubyte green, ubyte blue) : r(red), g(green), b(blue) {}
-    ubyte r = 0;
-    ubyte g = 0;
-    ubyte b = 0;
-};
-
 struct Shader
 {
 public:
@@ -89,13 +66,13 @@ private:
     GLuint font_vbo = 0;
 };
 
-class Display
+class Video
 {
 public:
-    Display();
-    ~Display();
+    Video();
+    ~Video();
 
-    void displayFrame(RunFlags& run_flags);
+    void displayFrame();
 
 #ifdef DEBUGGER
     uint palette_selected = 0;
@@ -143,5 +120,3 @@ private:
 // FreeType variables
     Font roboto_black;
 };
-
-extern Display display;
