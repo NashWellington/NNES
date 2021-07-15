@@ -116,10 +116,9 @@ int main(int argc, char ** argv)
                 time_point frame_time = start_time + frame(frame_count);
                 if (frame_time < steady_clock::now())
                 {
-                    // TODO FPS count
-                    //milliseconds delay = duration_cast<milliseconds>(steady_clock::now() - frame_time);
-                    //std::cerr << "Warning: frame " << frame_count << " is behind schedule by ";
-                    //std::cerr << delay.count() << " ms" << std::endl;
+                    nanoseconds duration = steady_clock::now() - start_time;
+                    auto fps = 1'000'000'000.0 / (duration.count() / static_cast<double>(frame_count));
+                    std::cerr << "Frame rate: " << fps << " fps" << std::endl;
                 }
                 else
                 {

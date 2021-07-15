@@ -4,7 +4,7 @@ mapper_objects = mapper000.o mapper001.o mapper002.o mapper003.o mapper004.o map
 
 compiler = g++
 
-flags = -g -std=c++17 -Wall -Werror -Wextra
+flags = -std=c++17 -Wall -Werror -Wextra
 flags += -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align
 flags += -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion
 flags += -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches
