@@ -113,7 +113,7 @@ void Input::pollControllers()
                 if (pressed)
                 {
                     auto bind_iter = joypad_binds.find({static_cast<SDL_GameControllerButton>(button_i), joypad_i});
-                    bind_iter->second.press(true, false);
+                    if (bind_iter != joypad_binds.end()) bind_iter->second.press(true, false);
                 }
             }
         }
@@ -126,11 +126,9 @@ void Input::pollKeyboard(SDL_Event& event)
     {
         SDL_Keycode key = event.key.keysym.sym;
         auto emu_bind_iter = emu_binds.find(key);
-        while (emu_bind_iter != emu_binds.end())
-        {
+        if (emu_bind_iter != emu_binds.end()) 
             emu_bind_iter->second();
-            emu_bind_iter++;
-        }
+
         #ifdef DEBUGGER
         auto debug_bind_iter = debug_binds.find(key);
         while (debug_bind_iter != debug_binds.end())
@@ -139,12 +137,10 @@ void Input::pollKeyboard(SDL_Event& event)
             debug_bind_iter++;
         }
         #endif
+
         auto key_bind_iter = key_binds.find(key);
-        while (key_bind_iter != key_binds.end())
-        {
+        if (key_bind_iter != key_binds.end())
             key_bind_iter->second.press(true, true);
-            key_bind_iter++;
-        }
     }
     else if (event.type == SDL_KEYUP)
     {

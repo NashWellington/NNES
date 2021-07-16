@@ -20,8 +20,8 @@ ubyte NESStandardController::read()
 void NESStandardController::keyboardActivate(uint button_id, bool pressed)
 {
     assert(button_id < 8);
-    if (pressed) keyboard_buffer[button_id]++;
-    else if (keyboard_buffer[button_id] > 0) keyboard_buffer[button_id]--;
+    if (pressed) keyboard_buffer[button_id] = 1;
+    else keyboard_buffer[button_id] = 0;
 }
 
 void NESStandardController::joypadActivate(uint button_id)
