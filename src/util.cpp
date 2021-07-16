@@ -190,3 +190,10 @@ ubyte reverseByte(ubyte b)
     b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
     return b;
 }
+
+std::optional<std::string_view> getOpt(std::vector<std::string_view> args, std::string_view option)
+{
+    auto iter = std::find(args.begin(), args.end(), option);
+    if (iter == args.end()) return {};
+    else return *(++iter);
+}

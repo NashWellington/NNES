@@ -1,5 +1,6 @@
 #pragma once
 
+// TODO make this agnostic to memory/NES specifics
 // Forward declaration
 class Memory;
 
@@ -15,3 +16,6 @@ std::string peekMem(uword address, std::shared_ptr<Memory> mem);
 // TODO parameterize
 // Reverse the order of bits in a byte
 ubyte reverseByte(ubyte b);
+
+// Returns the value for a command line option, if it exists
+std::optional<std::string_view> getOpt(std::vector<std::string_view> args, std::string_view option);

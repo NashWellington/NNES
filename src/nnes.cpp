@@ -9,9 +9,17 @@
 #define ERROR_LOG_FILENAME "./log/error.log"
 #endif
 
-// TODO find better way of handling args
+#define LICENSE_STRING "NNES Copyright (C) 2021 Nash Wellington"
+
+/* Args:
+* -f,-r : ROM filename
+* -d    : Dump state log to file specified // TODO
+* -p    : start paused                     // TODO
+*/
 int main(int argc, char ** argv)
 {
+    std::cout << LICENSE_STRING << std::endl;
+
     #ifndef NDEBUG
     // Set up error log
     std::ofstream error_stream(ERROR_LOG_FILENAME);
@@ -21,17 +29,26 @@ int main(int argc, char ** argv)
         throw std::exception();
     }
     std::cerr.rdbuf(error_stream.rdbuf());
-
-    // Check number of arguments
-    if (argc < 2 || argc > 3)
-    {
-        std::cout << "Too few or too many arguments" << std::endl;
-        throw std::exception();
-    }
     #endif
 
+    // Argument parsing
+    std::vector<std::string_view> args = {};
+    args.resize(argc);
+    for(int i = 0; i < argc; i++) args[i] = argv[i];
+
+    std::string rom_filename;
+    std::optional<std::string_view> arg;
+    if ((arg = getOpt(args, "-f")))
+        rom_filename = arg.value();
+    else if ((arg = getOpt(args, "-r")))
+        rom_filename = arg.value();
+    else
+    {
+        std::cout << "Enter ROM filename:" << std::endl;
+        std::cin >> rom_filename;
+    }
+
     // Open ROM file
-    std::string rom_filename = argv[1];
     std::ifstream rom(rom_filename, std::ios::binary);
     if (!rom.is_open())
     {
