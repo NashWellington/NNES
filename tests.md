@@ -44,3 +44,36 @@ Note: "240p test suite" is not included, and has been added to .gitignore, becau
 | Sprite Hit Tests | blargg | 1/11 | <l><li>Tests 1-4 fail #2</li> <li>Test 5 fails #4</li> <li>Tests 6-10 fail #3</li> <li>Test 11 passes somehow</li></l> |
 | Sprite Overflow Tests | blargg | 1/5 | <l><li>Test 1 fails #6 (shouldn't be set when all rendering off)</li> <li>Test 2 fails #6 (shouldn't be set when sprite y coords are 240)</li> <li>Test 3 fails #5</li> <li>Test 4 passes</li> <li>Test 5 fails #3</li></l> |
 | VBL NMI Tests | blargg | 0/10 | <l><li>Test 1 fails #7 (vbl period too short w/ bg off)</li> <li>Test 4 fails #5</li> <li>Tests 9 and 10 fail #2 (clock skipped too soon relative to enabling bg)</li> <li>All other tests have complex error messages that wouldn't make sense to type out in this table</li> <li>Note: it seems vblank flags are being set 2-3 frames early (relative to the CPU's clock)</li></l> |
+
+## APU Tests
+
+| Test | Author | Status | Details |
+| :--- | :----: | :----: | :------ |
+| APU Envelope Test | blargg | | |
+| APU Mixer | blargg | | |
+| APU Phase Reset | Rahsennor | | |
+| APU Reset | blargg | | |
+| APU Sweep Test | blargg | | |
+| APU Test | blargg | | |
+| APU Tests 2 | x0000 | | |
+| APU Timer Test | blargg | | |
+| APU Triangle Linear Counter Test | blargg | | |
+| Blargg APU Tests | blargg | 0/11 | <l><li>Test 1 fails #4. Other tests wouldn't be worth trying because basic length counter functionality isn't correct</li></l> |
+| DMC DMA During Read | blargg | | |
+| DMC Tests | ??? | | |
+| DPCM Letterbox | tepples | | |
+| PAL APU Tests | blargg | | |
+| Square Timer Div 2 | blargg | | |
+| Volume Tests | tepples | | |
+
+## Mapper Tests
+
+None yet
+
+## Input Tests
+
+None yet
+
+## Misc Tests
+
+None yet
