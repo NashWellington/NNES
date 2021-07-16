@@ -37,9 +37,12 @@ public:
     };
     enum Mode
     {
-        SLOW,   // No multithreading, ticks each processor one at a time
-        BROKEN  // Puts all processors in three differnt threads and runs them
-    } mode = BROKEN;
+        // No multithreading, ticks each processor one at a time
+        SLOW,
+        // Puts all processors in three differnt threads and runs them
+        // Currently only displays a black screen
+        BROKEN
+    } mode = SLOW;
     void run(Length length);
     void sync();
 private:

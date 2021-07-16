@@ -40,10 +40,7 @@ void NES::insertROM(std::ifstream& rom)
 
 void NES::run(Scheduler::Length length)
 {
-    auto start = std::chrono::steady_clock::now();
     scheduler->run(length);
-    auto duration = std::chrono::steady_clock::now() - start;
-    std::cerr << "Frame rate: " << 1'000'000'000.0 / duration.count() << " fps" <<  std::endl;
 }
 
 void NES::processInputs()

@@ -52,15 +52,17 @@ int main(int argc, char ** argv)
     Input input = Input(nes, audio, video);
 
     // Timing
-    // uint64_t frame_count = 0;
-    // std::chrono::time_point start_time = std::chrono::steady_clock::now();
+    uint64_t frame_count = 0;
+    std::chrono::time_point start_time = std::chrono::steady_clock::now();
 
     bool running = true;
     while (running)
     {
+        using namespace std::chrono;
         running = input.poll();
         nes->run(Scheduler::FRAME);
         video->displayFrame();
+        std::this_thread::sleep_until(start_time + ++frame_count * frame(1));
     }
     nes->~Console(); // Might need to destroy PPU or APU before destroying SDL frontend classes
     audio->~Audio();

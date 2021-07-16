@@ -1,10 +1,17 @@
-objects =  nnes.o boot.o cart.o console.o cpu.o ppu.o apu.o mem.o $(mapper_objects) isa.o mode.o scheduler.o savestate.o video.o audio.o input.o controller.o util.o imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
+objects =  nnes.o boot.o cart.o console.o cpu.o ppu.o apu.o mem.o 
+objects += $(mapper_objects) 
+objects += isa.o mode.o scheduler.o savestate.o video.o audio.o input.o 
+objects += controller.o util.o 
+objects += imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
 
 mapper_objects = mapper000.o mapper001.o mapper002.o mapper003.o mapper007.o mapper009.o
 
 compiler = g++
 
-flags =  -std=c++17 -Wall -Werror -Wextra
+optimizations = -O3 -march=native -flto
+
+flags = $(optimizations)
+flags += -std=c++17 -Wall -Werror -Wextra
 flags += -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align
 flags += -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion
 flags += -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches
