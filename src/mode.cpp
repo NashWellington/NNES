@@ -27,7 +27,8 @@ std::pair<uword,int> Mode::absolute(CPU& cpu, std::optional<ubyte> offset, bool 
         // Dummy read of address pre-fixing of high byte
         aa += offset.value();
         uword pre_fixed_addr = (static_cast<uword>(bb) << 8) + static_cast<uword>(aa);
-        cpu.read(pre_fixed_addr);
+        // TODO this seems to break controller input
+        //cpu.read(pre_fixed_addr);
 
         // add one cycle if read instr and page cross
         if (address != pre_fixed_addr)
