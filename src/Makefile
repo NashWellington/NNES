@@ -8,10 +8,13 @@ mapper_objects = mapper000.o mapper001.o mapper002.o mapper003.o mapper007.o map
 
 compiler = g++
 
-optimizations = -O3 -march=native -flto
+optimizations = -march=native
+# Comment out if debugging
+optimizations += -O3 -flto
 
-flags = $(optimizations)
-flags += -std=c++17 -Wall -Werror -Wextra
+flags = -std=c++17
+flags += $(optimizations)
+flags += -Wall -Werror -Wextra
 flags += -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align
 flags += -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion
 flags += -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches
