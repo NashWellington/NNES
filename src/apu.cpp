@@ -1,5 +1,10 @@
 #include "apu.h"
 
+// TODO other sound channels
+const uint tri_out = 0;
+const uint nse_out = 0;
+const uint dmc_out = 0;
+
 // TODO let SDL handle resampling???
 
 // clock these every quarter frame
@@ -103,12 +108,18 @@ void APU::tick()
 }
 
 /* For more info on mixing: https://wiki.nesdev.com/w/index.php/APU_Mixer
+* Note: pulse, triangle, and noise channels output values 0-15
+        DMC channel outputs 0-127
 */
 void APU::mix()
 {
-    float pulse_out = 95.88f / ((8128.0f / (pulse[0].output + pulse[1].output)) + 100.0f);
-    // float tnd_out
-    float output = pulse_out /*+ tnd_out*/ * 2; // TODO the rest of this
+    uint pulse_sum = pulse[0].out + pulse[1].out;
+    float pulse_out = !pulse_sum ? 0 : 95.88f / ((8128.0f / static_cast<float>(pulse_sum)) + 100.0f);
+    uint tnd_sum = (static_cast<float>(tri_out) / 8227.0f) 
+                 + (static_cast<float>(nse_out) / 12241.0f) 
+                 + (static_cast<float>(dmc_out) / 22638.0f);
+    float tnd_out = !tnd_sum ? 0 : 159.79f / ((1.0f / static_cast<float>(tnd_sum)) + 100.0f);
+    float output = pulse_out + tnd_out;
     audio->pushSample(output);
 }
 
@@ -119,17 +130,17 @@ void APU::clockPulse(int i)
 
     if (pulse[i].timer == pulse_timer[i])
     {
-        float volume;
+        uint volume;
         if (reg_pulse_ctrl[i].constant_vol)
         {
-            volume = static_cast<float>(reg_pulse_ctrl[i].volume)/15.0f;
+            volume = reg_pulse_ctrl[i].volume;
         }
         else
         {
-            volume = static_cast<float>(envelope[i].decay)/15.0f;
+            volume = envelope[i].decay;
         }
         if (pulse_timer[i] < 8) volume = 0;
-        pulse[i].output = volume * pulse_waveforms[reg_pulse_ctrl[i].duty][pulse[i].sequence];
+        pulse[i].out = volume * pulse_waveforms[reg_pulse_ctrl[i].duty][pulse[i].sequence];
         pulse[i].sequence--;
         if (pulse[i].sequence < 0) pulse[i].sequence = 7;
     }

@@ -71,7 +71,7 @@ private:
         int timer = 0;
         int sequence = 7; // 8-step sequencer value
         int length = 0;
-        float output = 0; // The value to be mixed. Read at 44.1kHz
+        uint out = 0; // The value to be mixed (0-15)
     } pulse[2] = {};
 
 // Channel constants (mostly lookup tables)
