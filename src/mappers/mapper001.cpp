@@ -119,8 +119,23 @@ bool Mapper001::cpuWrite(uword address, ubyte data)
     if (address < 0x6000) return false;
     else if (address < 0x8000)
     {
-        if (!prg_ram_enabled) return false;
-        else return true;
+        if (!prg_ram_enabled || prg_ram.size() == 0) return false;
+        else 
+        {
+            switch (prg_ram.size())
+            {
+                case 1: // No bank switching
+                    prg_ram[0][address - 0x6000] = data; break;
+                case 2: // 16 KiB PRG-RAM
+                    prg_ram[chr_bank[0].s][address-0x6000] = data; break;
+                case 4: // 32 KiB PRG-RAM
+                    prg_ram[chr_bank[0].ss][address-0x6000] = data; break;
+                default:
+                    std::cerr << "Error: Unsupported PRG-RAM size: " << (prg_ram.size() * 0x6000) << std::endl;
+                    throw std::exception();
+            }
+            return true;
+        }
     }
     else 
     {
