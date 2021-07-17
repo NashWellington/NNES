@@ -121,7 +121,6 @@ None yet
 * Pac-Man's top left background tile is set to 0 when it shouldn't be
 
 ## APU
-* Volume too quiet/too loud/not correctly implemented. Try using unsigned 16-bit ints
 * In Pac-Man, at some point, tones change from being not constant (i.e. playing notes normally) to constantly playing. This stops every time a big pellet gets eaten (and the sfx change). This probably has something to do with timers being messed up. Maybe tones are played constantly once a timer's value hits 0?
 
 ## Mapper
@@ -155,4 +154,4 @@ None yet
 ## Input
 
 ## Misc
-* Program segfaults at exit
+* Program leaks memory at exit (only viewable with address sanitizer)
