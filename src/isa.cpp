@@ -1,5 +1,7 @@
 #include "isa.h"
 
+const ubyte MAGIC_CONST = 0xFF;
+
 // TODO clean up code so it's simpler and formatted better
 // TODO IRQ, NMI, RESET, BRK dummy CPU reads w/o incrementing
 
@@ -734,6 +736,11 @@ int ISA::executeOpcode(CPU& cpu, ubyte instr)
         case 0x8A: // TXA impl
             return TXA(cpu);
 
+        // Unstable
+        case 0x8B: // ANE #
+            std::tie(val, cycles) = Mode::immediate(cpu);
+            return ANE(cpu, cycles, val);
+
         case 0x8C: // STY abs
             std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
             cycles += 1;
@@ -767,6 +774,7 @@ int ISA::executeOpcode(CPU& cpu, ubyte instr)
         // Unofficial
         case 0x93: // SHA ind,Y
             std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_y, 2, false);
+            cycles += 1;
             return SHA(cpu, cycles, address);
 
         case 0x94: // STY zpg,X
@@ -803,8 +811,8 @@ int ISA::executeOpcode(CPU& cpu, ubyte instr)
 
         // Unofficial
         case 0x9B: // SHS abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, true);
-            cycles += 1;
+            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, false);
+            cycles += 2;
             return SHS(cpu, cycles, address);
 
         // Unofficial
@@ -963,6 +971,13 @@ int ISA::executeOpcode(CPU& cpu, ubyte instr)
 
         case 0xBA: // TSX impl
             return TSX(cpu);
+
+        // Unofficial
+        case 0xBB: // LAS abs,Y
+            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, true);
+            cycles += 1;
+            val = cpu.read(address);
+            return LAS(cpu, cycles, val);
 
         case 0xBC: // LDY abs,X
             std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, true);
@@ -2091,19 +2106,21 @@ int ISA::ISC(CPU& cpu, int cycles, uword address)
     return cycles;
 }
 
+int ISA::LAS(CPU& cpu, int cycles, ubyte val)
+{
+    val &= cpu.reg_sp;
+    cpu.reg_a = val;
+    cpu.reg_x = val;
+    cpu.reg_sp = val;
+    cpu.reg_sr.z = (val == 0);
+    cpu.reg_sr.n = (val & 0x80);
+    return cycles;
+}
+
 int ISA::LAX(CPU& cpu, int cycles, ubyte val)
 {
     LDA(cpu, 0, val);
     TAX(cpu);
-    return cycles;
-}
-
-int ISA::LXA(CPU& cpu, int cycles, ubyte val)
-{
-    cpu.reg_a = val;
-    cpu.reg_x = val;
-    cpu.reg_sr.z = (val == 0);
-    cpu.reg_sr.n = (static_cast<byte>(val) < 0);
     return cycles;
 }
 
@@ -2132,43 +2149,66 @@ int ISA::SAX(CPU& cpu, int cycles, uword address)
     return cycles;
 }
 
-//TODO flags?
 int ISA::SHA(CPU& cpu, int cycles, uword address)
 {
     ubyte a = cpu.reg_a;
     ubyte x = cpu.reg_x;
-    ubyte result = a & x & ((address >> 8) + 1);
+    ubyte addr_high = address >> 8;
+    ubyte addr_low = address & 0x00FF;
+    if (cpu.reg_y > addr_low) // Weird page-cross behavior
+    {
+        addr_high &= (a & x);
+        address = (addr_high << 8) | addr_low;
+    }
+    ubyte result = a & x & (addr_high + 1);
     cpu.write(address, result);
     return cycles;
 }
 
-//TODO flags?
 int ISA::SHS(CPU& cpu, int cycles, uword address)
 {
-    address++; // To prevent the compiler from giving me an unused param warning
-    cpu.reg_sp = cpu.reg_a & cpu.reg_x;
+    ubyte a = cpu.reg_a;
+    ubyte x = cpu.reg_x;
+    cpu.reg_sp = a & x;
+    ubyte addr_high = address >> 8;
+    ubyte addr_low = address & 0x00FF;
+    if (cpu.reg_y > addr_low) // Weird page-cross behavior
+    {
+        addr_high &= (a & x);
+        address = (addr_high << 8) | addr_low;
+    }
+    ubyte result = a & x & (addr_high + 1);
+    cpu.write(address, result);
     return cycles;
 }
 
 int ISA::SHX(CPU& cpu, int cycles, uword address)
 {
-    // Detect page cross
-    if (cpu.reg_y > static_cast<ubyte>(address & 0x00FF))
+    ubyte x = cpu.reg_x;
+    ubyte addr_high = address >> 8;
+    ubyte addr_low = address & 0x00FF;
+    if (cpu.reg_y > addr_low) // Weird page-cross behavior
     {
-        address &= ((static_cast<uword>(cpu.reg_x) << 8) + 0xFF);
+        addr_high &= x;
+        address = (addr_high << 8) | addr_low;
     }
-    cpu.write(address, cpu.reg_x & (static_cast<ubyte>(address >> 8) + 1));
+    ubyte result = x & (addr_high + 1);
+    cpu.write(address, result);
     return cycles;
 }
 
 int ISA::SHY(CPU& cpu, int cycles, uword address)
 {
-    // Detect page cross
-    if (cpu.reg_x > static_cast<ubyte>(address & 0x00FF))
+    ubyte y = cpu.reg_y;
+    ubyte addr_high = address >> 8;
+    ubyte addr_low = address & 0x00FF;
+    if (cpu.reg_y > addr_low) // Weird page-cross behavior
     {
-        address &= ((static_cast<uword>(cpu.reg_y) << 8) + 0xFF);
+        addr_high &= y;
+        address = (addr_high << 8) | addr_low;
     }
-    cpu.write(address, cpu.reg_y & (static_cast<ubyte>(address >> 8) + 1));
+    ubyte result = y & (addr_high + 1);
+    cpu.write(address, result);
     return cycles;
 }
 
@@ -2187,5 +2227,25 @@ int ISA::SRE(CPU& cpu, int cycles, uword address)
     LSR(cpu, 0, address, val, false);
     val = cpu.read(address);
     EOR(cpu, 0, val);
+    return cycles;
+}
+
+// Unstable
+int ISA::ANE(CPU& cpu, int cycles, ubyte val)
+{
+    ubyte accu = cpu.reg_a;
+    cpu.reg_sr.z = (accu == 0);
+    cpu.reg_sr.n = (accu & 0x80);
+    cpu.reg_a = (accu | MAGIC_CONST) & cpu.reg_x & val;
+    return cycles;
+}
+
+int ISA::LXA(CPU& cpu, int cycles, ubyte val)
+{
+    ubyte accu = cpu.reg_a;
+    cpu.reg_sr.z = (accu == 0);
+    cpu.reg_sr.n = (accu & 0x80);
+    cpu.reg_a = (accu & MAGIC_CONST) & val;
+    cpu.reg_x = cpu.reg_a;
     return cycles;
 }

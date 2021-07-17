@@ -589,6 +589,8 @@ namespace ISA
     int TYA(CPU& cpu);
 
 // Unofficial instructions
+// The best documentation I've found for these is here:
+// https://csdb.dk/release/?id=185341
 
     /* And + LsR accumulator
     * AKA "ASR"
@@ -622,6 +624,7 @@ namespace ISA
 
     /* Accumulator and index X with Subtraction
     * AKA "SBX"
+    * Type: read
     * (A and X) - M -> X
     * Flags: C, Z, N
     * addressing	        opc	    bytes	cycles
@@ -632,6 +635,7 @@ namespace ISA
     /* Dec + CmP
     * M - 1 -> M
     * A - M
+    * Type: RMW
     * Flags: C, Z, N
     * addressing	        opc	    bytes	cycles
     * (indirect,X)          C3      2       8
@@ -648,6 +652,7 @@ namespace ISA
     * AKA "ISB"
     * M + 1 -> M
     * A - M - (1 - C) -> A
+    * Type: RMW
     * Flags: C, Z, V, N
     * addressing	        opc	    bytes	cycles
     * (indirect,X)          E3      2       8
@@ -659,6 +664,16 @@ namespace ISA
     * absolute,X            FF      3       7
     */
     int ISC(CPU& cpu, int cycles, uword address);
+
+    /* LdA + tSx 
+    * AKA "LAR"
+    * {addr} & SP -> A,X,SP
+    * Type: read
+    * Flags: Z, N
+    * addressing	        opc	    bytes	cycles
+    * absolute,Y            BB      3       4*
+    */
+    int LAS(CPU& cpu, int cycles, ubyte val);
 
     /* Lda + tAX
     * M -> A -> X
@@ -673,17 +688,6 @@ namespace ISA
     * absolute,Y            BF      3       4
     */
     int LAX(CPU& cpu, int cycles, ubyte val);
-
-    /* Load to index X and Accumulator
-    * AKA "ATX"
-    * val -> A -> X
-    * NOTE: this has weirder behavior on an actual system
-    * Type: read
-    * Flags: N, Z
-    * addressing	        opc	    bytes	cycles
-    * immediate             AB	    2	    2
-    */
-    int LXA(CPU& cpu, int cycles, ubyte val);
 
     /* RoL + And
     * Flags: C, Z, N
@@ -723,45 +727,6 @@ namespace ISA
     */
     int SAX(CPU& cpu, int cycles, uword address);
 
-    /* Store High address bits and Accumulator and register X in memory
-    * (A & X & (ADDR_HI + 1)) -> M
-    * Type: write
-    * //TODO flags
-    * addressing	        opc	    bytes	cycles
-    * (indirect),Y          93      2       6
-    * absolute,Y            9F      3       5
-    * //TODO testing
-    */
-    int SHA(CPU& cpu, int cycles, uword address);
-
-    /* SHa + txS (where X is replaced by (A & X))
-    * (A & X) -> SP????
-    * Type: read
-    * //TODO flags
-    * addressing	        opc	    bytes	cycles
-    * absolute,Y            9B      2       4
-    * //TODO testing
-    */
-    int SHS(CPU& cpu, int cycles, uword address);
-
-    /* Store High address bits and register X in memory
-    * AKA "SXA"
-    * (X & (ADDR_HI + 1)) -> M
-    * Type: write
-    * addressing	        opc	    bytes	cycles
-    * absolute,Y            9E      2       5
-    */
-    int SHX(CPU& cpu, int cycles, uword address);
-
-    /* Store High address bits and register Y in memory
-    * AKA "SYA"
-    * (Y & (ADDR_HI + 1)) -> M
-    * Type: write
-    * addressing	        opc	    bytes	cycles
-    * absolute,X            9C      2       5
-    */
-    int SHY(CPU& cpu, int cycles, uword address);
-
     /* aSL + Ora
     * Flags: C, Z, N
     * addressing	        opc	    bytes	cycles
@@ -787,4 +752,84 @@ namespace ISA
     * absolute,X            5F      3       7
     */
     int SRE(CPU& cpu, int cycles, uword address);
+
+// Unstable addresss high byte instructions
+//  These opcodes are now known to be fully deterministic,
+// but have two "instabilities":
+//  1. If indexing causes a page boundary cross, the address's high byte
+// gets ANDed with the value stored (after incrementing)
+//  2. If sprite DMA starts in the second-last cycle of the instruction,
+// ANDing with addr_high + 1 doesn't happen, and the instructions act as
+// ST_ instead of SH_
+// TODO emulate that second thing once I do a cycle-accurate CPU
+
+    /* Store High address bits and Accumulator and register X in memory
+    * AKA "AXA", "AAX", "TEA"
+    * {addr} = A & X & {addr_high + 1}
+    * Type: write
+    * Flags: none
+    * addressing	        opc	    bytes	cycles
+    * (indirect),Y          93      2       6
+    * absolute,Y            9F      3       5
+    */
+    int SHA(CPU& cpu, int cycles, uword address);
+
+    /* SHa + txS (where X is replaced by (A & X))
+    * AKA "TAS", "XAS"
+    * SP = A & X
+    * {addr} = A & X & {addr_high + 1}
+    * Type: read
+    * Flags: none
+    * addressing	        opc	    bytes	cycles
+    * absolute,Y            9B      2       5
+    */
+    int SHS(CPU& cpu, int cycles, uword address);
+
+    /* Store High address bits and register X in memory
+    * AKA "SXA"
+    * {addr} = X & {addr_high + 1}
+    * Type: write
+    * Flags: none
+    * addressing	        opc	    bytes	cycles
+    * absolute,Y            9E      2       5
+    */
+    int SHX(CPU& cpu, int cycles, uword address);
+
+    /* Store High address bits and register Y in memory
+    * AKA "SYA"
+    * {addr} = Y & {addr_high + 1}
+    * Type: write
+    * addressing	        opc	    bytes	cycles
+    * absolute,X            9C      2       5
+    */
+    int SHY(CPU& cpu, int cycles, uword address);
+
+// Magic Constant instructions
+//  These instructions seem to be dependent on a "magic constant",
+// which is dependent on the chip revision, temperature, bus conflicts,
+// and possibly more. For now, I've just set "MAGIC_CONST" to $FF
+
+    /* ANE
+    * AKA "XAA", "AXM"
+    * A = (A | CONST) & X & #{imm}
+    * Note: CONST (the "magic constant") is dependent on the chip,
+    * temperature of the room, and maybe bus/DMA conflicts.
+    * The result is only deterministic if either A is $FF, X is $00, or
+    * ${imm} is $00
+    * Type: read
+    * Flags: N, Z (set according to A before operation)
+    * addressing	        opc	    bytes	cycles
+    * immediate             8B      2       2
+    */
+    int ANE(CPU& cpu, int cycles, ubyte val);
+    
+    /* Load to index X and Accumulator
+    * AKA "ATX", "LAX imm", "OAL", "ANX"
+    * A,X = (A | CONST) & #{imm}
+    * Type: read
+    * Flags: N, Z (set according to A before operation)
+    * addressing	        opc	    bytes	cycles
+    * immediate             AB	    2	    2
+    */
+    int LXA(CPU& cpu, int cycles, ubyte val);
 };

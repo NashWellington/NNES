@@ -6,7 +6,7 @@ None of these tests were written by me. Credit is given in this file to each tes
 
 Note: "240p test suite" is not included, and has been added to .gitignore, because its license (GPL v2) is incompatible with NNES's license (GPL v3).
 
-Note: some tests (notably mapper tests by rainwarrior) are missing because of corruption of the NesDev forums database.
+Note: some tests (notably mapper/input tests by rainwarrior) are missing because of corruption of the NesDev forums database.
 
 Note: blargg's APU tests (not v2) are in 2 separate folders until I can identify if there's a redundancy
 
@@ -23,8 +23,8 @@ Note: blargg's APU tests (not v2) are in 2 separate folders until I can identify
 | CPU Timing Test v6 | Zepper | Pass | |
 | Instruction Behavior Misc Tests | blargg | 2/4 | <l><li>Tests 1 and 2 pass</li> <li>Test 3 fails #3 (LDA abs,X) (Note: this tests mid-instruction reads, and will likely not pass until I make the CPU cycle-accurate)</li> <li>Test 4: a long list of opcodes fail #2. Note: this probably won't work until I get all APU regs emulated</li></l> |
 | Instruction Test v5 | blargg | Pass | |
-| Instruction Timing Tests | blargg | 1/3 | <l><li>Test 1 crashes on opcode $8B. This opcode is intentionally not emulated because it is shown to be unreliable on hardware.</li> <li>Test 2 passes</li></l> |
-| Interrupt Test v2 | blargg | 0/5 | <l><li>Test 1 fails #4 (exactly one execution after CLI should execute before IRQ is taken)</li> <li>Tests 2-5 fail with no error code</li> <li>Note: tests 2-4 are likely failing beccause interrupt hijacking isn't emulated</li></l> |
+| Instruction Timing Tests | blargg | Pass | |
+| Interrupt Test v2 | blargg | 0/5 | <l><li>Test 1 fails #3</li> <li>Tests 2-5 fail with no error code</li> <li>Note: tests 2-4 are likely failing beccause interrupt hijacking isn't emulated</li></l> |
 | nestest | kevtris | Pass | |
 
 ## PPU Tests
