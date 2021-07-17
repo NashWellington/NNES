@@ -1,6 +1,11 @@
 #include "util.h"
 
-const std::array<std::string,256> instructions = 
+enum Mode
+{
+    IMPL, REL, ACC, IND, INDX, INDY, IMM, ZPG, ZPGX, ZPGY, ABS, ABSX, ABSY
+};
+
+const std::array<std::string_view,256> instructions = 
 {
 //    X0     X1     X2     X3     X4     X5     X6     X7     X8     X9     XA     XB     XC     XD     XE     XF
     "BRK", "ORA", "STP", "SLO", "NOP", "ORA", "ASL", "SLO", "PHP", "ORA", "ASL", "ANC", "NOP", "ORA", "ASL", "SLO", // 0X
@@ -21,169 +26,153 @@ const std::array<std::string,256> instructions =
     "BEQ", "SBC", "STP", "ISC", "NOP", "SBC", "INC", "ISC", "SED", "SBC", "NOP", "ISC", "NOP", "SBC", "INC", "ISC"  // FX
 };
 
-// Disassemble addressing mode
-std::string disassembleMode(uword& address, ubyte instr, std::shared_ptr<Memory> mem)
+const std::array<Mode,256> modes =
 {
-    std::string mode = " ";
-    switch (instr%32)
+//   X0    X1    X2    X3    X4    X5    X6    X7    X8    X9    XA    XB    XC    XD    XE    XF
+    IMPL, INDX, IMPL, INDX, ZPG,  ZPG,  ZPG,  ZPG,  IMPL, IMM,  ACC,  IMM,  ABS,  ABS,  ABS,  ABS,  // 0X
+    REL,  INDY, IMPL, INDY, ZPGX, ZPGX, ZPGX, ZPGX, IMPL, ABSY, IMPL, ABSY, ABSX, ABSX, ABSX, ABSX, // 1X
+    IMPL, INDX, IMPL, INDX, ZPG,  ZPG,  ZPG,  ZPG,  IMPL, IMM,  ACC,  IMM,  ABS,  ABS,  ABS,  ABS,  // 2X
+    REL,  INDY, IMPL, INDY, ZPGX, ZPGX, ZPGX, ZPGX, IMPL, ABSY, IMPL, ABSY, ABSX, ABSX, ABSX, ABSX, // 3X
+    IMPL, INDX, IMPL, INDX, ZPG,  ZPG,  ZPG,  ZPG,  IMPL, IMM,  ACC,  IMM,  ABS,  ABS,  ABS,  ABS,  // 4X
+    REL,  INDY, IMPL, INDY, ZPGX, ZPGX, ZPGX, ZPGX, IMPL, ABSY, IMPL, ABSY, ABSX, ABSX, ABSX, ABSX, // 5X
+    IMPL, INDX, IMPL, INDX, ZPG,  ZPG,  ZPG,  ZPG,  IMPL, IMM,  ACC,  IMM,  IND,  ABS,  ABS,  ABS,  // 6X
+    REL,  INDY, IMPL, INDY, ZPGX, ZPGX, ZPGX, ZPGX, IMPL, ABSY, IMPL, ABSY, ABSX, ABSX, ABSX, ABSX, // 7X
+    IMM,  INDX, IMM,  INDX, ZPG,  ZPG,  ZPG,  ZPG,  IMPL, IMM,  IMPL, IMM,  ABS,  ABS,  ABS,  ABS,  // 8X
+    REL,  INDY, IMPL, INDY, ZPGX, ZPGX, ZPGY, ZPGY, IMPL, ABSY, IMPL, ABSY, ABSX, ABSX, ABSY, ABSY, // 9X
+    IMM,  INDX, IMM,  INDX, ZPG,  ZPG,  ZPG,  ZPG,  IMPL, IMM,  IMPL, IMM,  ABS,  ABS,  ABS,  ABS,  // AX
+    REL,  INDY, IMPL, INDY, ZPGX, ZPGX, ZPGY, ZPGY, IMPL, ABSY, IMPL, ABSY, ABSX, ABSX, ABSY, ABSY, // BX
+    IMM,  INDX, IMM,  INDX, ZPG,  ZPG,  ZPG,  ZPG,  IMPL, IMM,  IMPL, IMM,  ABS,  ABS,  ABS,  ABS,  // CX
+    REL,  INDY, IMPL, INDY, ZPGX, ZPGX, ZPGX, ZPGX, IMPL, ABSY, IMPL, ABSY, ABSX, ABSX, ABSX, ABSX, // DX
+    IMM,  INDX, IMM,  INDX, ZPG,  ZPG,  ZPG,  ZPG,  IMPL, IMM,  IMPL, IMM,  ABS,  ABS,  ABS,  ABS,  // EX
+    REL,  INDY, IMPL, INDY, ZPGX, ZPGX, ZPGX, ZPGX, IMPL, ABSY, IMPL, ABSY, ABSX, ABSX, ABSX, ABSX  // FX
+};
+
+std::vector<std::string_view> disassemble(std::queue<ubyte>& byte_queue) noexcept
+{
+    std::vector<std::string_view> dis; // Disassembled instruction
+    ubyte instr = byte_queue.front();
+    dis.push_back(instructions[instr]); byte_queue.pop();
+    switch (modes[instr])
     {
-        case 0x00:
-            if (instr == 0x20) // JSR Absolute
-            {
-                mode += "$";
-                mode += hex(mem->cpuRead(address+1));
-                mode += hex(mem->cpuRead(address));
-                address += 2;
-            }
-            else if (instr >= 0x80) // Immediate
-            {
-                mode += "#$";
-                mode += hex(mem->cpuRead(address++));
-            }
+        case IMPL:
             break;
-
-        case 0x01: // X-indexed, indirect
-        case 0x03:
-            mode += "(#$";
-            mode += hex(mem->cpuRead(address++));
-            mode += ",X)";
+        case ACC:
+            dis.push_back("A");
             break;
-
-        case 0x02: // Immediate
-        case 0x09:
-        case 0x0B:
-            if (instr != 0x02 && instr != 0x22 && instr != 0x42 && instr != 0x62)
+        case IMM:
+            if (byte_queue.empty()) return dis;
+            else
             {
-                mode += "#$";
-                mode += hex(mem->cpuRead(address++));
+                dis.push_back("#$" + hex(byte_queue.front()));
+                byte_queue.pop();
             }
             break;
-
-        case 0x04: // Zero Page
-        case 0x05:
-        case 0x06:
-        case 0x07:
-            mode += "$";
-            mode += hex(mem->cpuRead(address++));
-            break;
-
-        case 0x0C: // Absolute or indirect
-        case 0x0D:
-        case 0x0E:
-        case 0x0F:
-            if (instr == 0x6C) // Un-indexed indirect
+        case ABS:
+            if (byte_queue.size() < 2)
             {
-                mode += "($";
-                mode += hex(mem->cpuRead(address+1));
-                mode += hex(mem->cpuRead(address));
-                mode += ")";
-                address += 2;
-            }
-            else // Absolute
-            {
-                mode += "$";
-                mode += hex(mem->cpuRead(address+1));
-                mode += hex(mem->cpuRead(address));
-                address += 2;
-            }
-            break;
-
-        case 0x10: // Relative
-            mode += "$";
-            mode += hex(mem->cpuRead(address++));
-            break;
-
-        case 0x11: // indirect, Y-indexed
-        case 0x13:
-            mode += "(#$";
-            mode += hex(mem->cpuRead(address++));
-            mode += "),Y";
-            break;
-
-        case 0x14: // Zero Page, X-indexed=
-        case 0x15:
-            mode += "$";
-            mode += hex(mem->cpuRead(address++));
-            mode += ",X";
-            break;
-
-        case 0x16: // Zero Page, X & Y -indexed
-        case 0x17:
-            if (instr >= 0x96) // Y-indexed
-            {
-                mode += "$";
-                mode += hex(mem->cpuRead(address++));
-                mode += ",Y";
-            }
-            else // X-indexed
-            {
-                mode += "$";
-                mode += hex(mem->cpuRead(address++));
-                mode += ",X";
-            }
-            break;
-
-        case 0x19: // Absolute, Y-indexed
-        case 0x1B:
-            mode += "$";
-            mode += hex(mem->cpuRead(address+1));
-            mode += hex(mem->cpuRead(address));
-            mode += ",Y";
-            address += 2;
-            break;
-        
-        case 0x1C: // Absolute, X-indexed
-        case 0x1D:
-        case 0x1E:
-        case 0x1F:
-            if (instr == 0x9E || instr == 0xBE || instr == 0x9F || instr == 0xBF) // Y-indexed
-            {
-                mode += "$";
-                mode += hex(mem->cpuRead(address+1));
-                mode += hex(mem->cpuRead(address));
-                mode += ",Y";
-                address += 2;
+                for (uint i = 0; i < byte_queue.size(); i++) byte_queue.pop();
+                return dis;
             }
             else
             {
-                mode += "$";
-                mode += hex(mem->cpuRead(address+1));
-                mode += hex(mem->cpuRead(address));
-                mode += ",X";
-                address += 2;
+                uword low_byte = byte_queue.front(); byte_queue.pop();
+                uword high_byte = byte_queue.front(); byte_queue.pop();
+                dis.push_back("$" + hex((high_byte << 8) | low_byte));
             }
             break;
-
-        default: // implied/accumulator mode or unsupported opcode
+        case ABSX:
+            if (byte_queue.size() < 2)
+            {
+                for (uint i = 0; i < byte_queue.size(); i++) byte_queue.pop();
+                return dis;
+            }
+            else
+            {
+                uword low_byte = byte_queue.front(); byte_queue.pop();
+                uword high_byte = byte_queue.front(); byte_queue.pop();
+                dis.push_back("$" + hex((high_byte << 8) | low_byte) + ",");
+                dis.push_back("X");
+            }
             break;
-    }   
-    return mode; 
-}
-
-std::optional<std::string> disassemble(uword& address, std::shared_ptr<Memory> mem)
-{
-    uword start_address = address;
-    std::string line = hex(address) + ": ";
-    ubyte instr = mem->cpuRead(address++);
-    line += instructions[instr];
-    line += disassembleMode(address, instr, mem);
-    if (start_address > (address - 1)) return {};
-    for (int i = 0; i < (20 - static_cast<int>(line.size())); i++) line += ' ';
-    return line;
-}
-
-std::string peekMem(uword address, std::shared_ptr<Memory> mem)
-{
-    std::string line = hex(address) + ":";
-    for (int i = 0; i < 16; i++)
-    {
-        line += ' ';
-        line += hex(mem->cpuRead(address++));
+        case ABSY:
+            if (byte_queue.size() < 2)
+            {
+                for (uint i = 0; i < byte_queue.size(); i++) byte_queue.pop();
+                return dis;
+            }
+            else
+            {
+                uword low_byte = byte_queue.front(); byte_queue.pop();
+                uword high_byte = byte_queue.front(); byte_queue.pop();
+                dis.push_back("$" + hex((high_byte << 8) | low_byte) + ",");
+                dis.push_back("Y");
+            }
+            break;
+        case ZPG:
+            if (byte_queue.empty()) return dis;
+            else
+            {
+                dis.push_back("$" + hex(byte_queue.front())); byte_queue.pop();
+            }
+            break;
+        case ZPGX:
+            if (byte_queue.empty()) return dis;
+            else
+            {
+                dis.push_back("$" + hex(byte_queue.front()) + ","); byte_queue.pop();
+                dis.push_back("X");
+            }
+            break;
+        case ZPGY:
+            if (byte_queue.empty()) return dis;
+            else
+            {
+                dis.push_back("$" + hex(byte_queue.front()) + ","); byte_queue.pop();
+                dis.push_back("Y");
+            }
+            break;
+        case IND:
+            if (byte_queue.size() < 2) 
+            {
+                for (uint i = 0; i < byte_queue.size(); i++) byte_queue.pop();
+                return dis;
+            }
+            else
+            {
+                ubyte low_byte = byte_queue.front(); byte_queue.pop();
+                ubyte high_byte = byte_queue.front(); byte_queue.pop();
+                dis.push_back("($" + hex((high_byte << 8) | low_byte));
+                dis.push_back(")");
+            }
+            break;
+        case INDX:
+            if (byte_queue.empty()) return dis;
+            else
+            {
+                dis.push_back("($" + hex(byte_queue.front())); byte_queue.pop();
+                dis.push_back(",X)");
+            }
+            break;
+        case INDY:
+            if (byte_queue.empty()) return dis;
+            else
+            {
+                dis.push_back("($" + hex(byte_queue.front())); byte_queue.pop();
+                dis.push_back("),Y");
+            }
+            break;
+        case REL:
+            if (byte_queue.empty()) return dis;
+            else
+            {
+                dis.push_back("$" + hex(byte_queue.front())); byte_queue.pop();
+            }
+            break;
     }
-    return line;
+    return dis;
 }
 
-ubyte reverseByte(ubyte b)
+ubyte reverseByte(ubyte b) noexcept
 {
     b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
     b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
@@ -191,7 +180,7 @@ ubyte reverseByte(ubyte b)
     return b;
 }
 
-std::optional<std::string_view> getOpt(std::vector<std::string_view> args, std::string_view option)
+std::optional<std::string_view> getOpt(std::vector<std::string_view> args, std::string_view option) noexcept
 {
     auto iter = std::find(args.begin(), args.end(), option);
     if (iter == args.end()) return {};
