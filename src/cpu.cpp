@@ -114,8 +114,7 @@ void CPU::start()
 {
     ubyte pcl = nes.mem->cpuRead(0xFFFC);
     ubyte pch = nes.mem->cpuRead(0xFFFD);
-    reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
-    nes.mem->start();
+    reg_pc = (pch << 8) | pcl;
     cycle = 7;
 }
 
@@ -123,10 +122,9 @@ void CPU::reset()
 {
     ubyte pcl = nes.mem->cpuRead(0xFFFC);
     ubyte pch = nes.mem->cpuRead(0xFFFD);
-    reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
-    reg_sp += 3;
-    reg_sr.i = true;     // I flag
-    nes.mem->reset();
+    reg_pc = (pch << 8) | pcl;
+    reg_sp -= 3;
+    reg_sr.i = true;
     cycle = 7;
 }
 

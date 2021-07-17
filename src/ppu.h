@@ -47,8 +47,7 @@ public:
 
     void setRegion(Region _region);
 
-    // TODO
-    void reset() { return; }
+    void reset();
     // void save(Savestate& savestate) { return; }
     // void load(Savestate& savestate) { return; }
 

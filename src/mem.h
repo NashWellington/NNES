@@ -46,6 +46,12 @@ class Memory
 public:
     Memory(NES& _nes) : nes(_nes) {}
 
+    // Randomize contents of RAM
+    void start();
+
+    // Probably unnecessary because RAM contents are retained after reset
+    // void reset();
+
     ubyte    cpuRead(uword address);
     void    cpuWrite(uword address, ubyte data);
 
@@ -67,10 +73,6 @@ public:
     InterruptType getInterrupt();
     void addInterrupt(InterruptType interrupt);
     void clearInterrupt();
-
-    //TODO start() and reset()
-    void start();
-    void reset();
 
 private:
     NES& nes;

@@ -53,6 +53,10 @@ void Input::loadBinds(std::string config)
         [this]() { mute(); }
     });
 
+    emu_binds.insert({SDLK_r, 
+        [this]() { reset(); }
+    });
+
     #ifdef DEBUGGER
     // TODO debugger controls
     #endif
@@ -97,6 +101,11 @@ void Input::pause()
 void Input::mute()
 {
 
+}
+
+void Input::reset()
+{
+    console.reset();
 }
 
 void Input::pollControllers()

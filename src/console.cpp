@@ -12,9 +12,8 @@ void NES::reset()
 {
     // TODO reset methods for all
     cpu->reset();
-    //ppu->reset();
-    //apu->reset();
-    mem.reset();
+    ppu->reset();
+    apu->reset();
 }
 
 void NES::insertROM(std::ifstream& rom)
@@ -31,7 +30,8 @@ void NES::insertROM(std::ifstream& rom)
     // TODO support for non-ROM carts
     cart = std::make_unique<Cartridge>(header, rom);
     cpu->start();
-    // TODO have vals depend on region
+    mem->start();
+    // TODO have master cycle/frame vals depend on region
     std::vector<std::shared_ptr<Processor>> processors = {cpu, apu, ppu};
     scheduler = std::make_unique<Scheduler>(processors, 178683 * 2);
 }

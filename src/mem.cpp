@@ -389,13 +389,14 @@ void Memory::clearInterrupt()
     current_interrupt = NO_INTERRUPT;
 }
 
+// Some games rely on random RAM contents to seed RNG
+// TODO option to set all to $00, $FF, or random
 void Memory::start()
 {
     cpu_suspend_cycles = 0;
-    // TODO APU + I/O regs
-}
-
-void Memory::reset()
-{
-    // TODO APU + I/O regs
+    // TODO I/O regs
+    std::srand(std::time(nullptr));
+    std::for_each(zero_page.begin(), zero_page.end(), [](ubyte& n){n = std::rand() % 256;});
+    std::for_each(stack.begin(), stack.end(), [](ubyte& n){n = std::rand() % 256;});
+    std::for_each(ram.begin(), ram.end(), [](ubyte& n){n = std::rand() % 256;});
 }

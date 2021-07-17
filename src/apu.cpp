@@ -61,6 +61,15 @@ void APU::setRegion(Region _region)
     }
 }
 
+// https://wiki.nesdev.com/w/index.php/CPU_power_up_state
+void APU::reset()
+{
+    reg_apu_ctrl.reg = 0;
+    // TODO reset triangle phase to 0
+    // TODO AND APU DPCM output with 1
+    // TODO reset APU Frame Counter if 2A03G
+}
+
 // TODO should I run this at CPU freq and only do other APU stuff every other cycle?
 void APU::tick()
 {

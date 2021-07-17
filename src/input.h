@@ -34,8 +34,10 @@ public:
 
 // Emulator/Debug control methods
     void quit();
-    void pause(); // Toggles
-    void mute();  // Toggles volume
+    void pause();
+    void mute();
+    void reset();
+    
 private:
     void loadBinds(std::string config);
 // Input polling methods

@@ -55,6 +55,22 @@ void PPU::setRegion(Region _region)
     }
 }
 
+// https://wiki.nesdev.com/w/index.php/PPU_power_up_state
+void PPU::reset()
+{
+    nes.mem->reg_ppu_ctrl.reg = 0;
+    nes.mem->reg_ppu_mask.reg = 0;
+    nes.mem->reg_ppu_scroll.x = 0;
+    nes.mem->reg_ppu_scroll.y = 0;
+    nes.mem->reg_ppu_scroll.i = 0; // latch clear (I think)
+    nes.mem->reg_ppu_addr.i = 0;   // latch clear (I think)
+    nes.mem->reg_ppu_data = 0;
+
+    scanline = -1;
+    sc_cycle = 0;
+    odd_frame = false;
+}
+
 /*TODO
 void PPU::save(Savestate& savestate)
 {

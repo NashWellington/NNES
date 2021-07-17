@@ -19,13 +19,14 @@ Note: blargg's APU tests (not v2) are in 2 separate folders until I can identify
 | CPU Dummy Writes | bisqwit | 0/2 | <l><li>OAM test fails #2 (OAM reads not reliable)</li> <li>PPU test fails #5 (single write to $2006 shouldn't change PPUADDR when vblank is on</li></l> | 
 | CPU Exec Space | bisqwit | 0/2 | <l><li>APU test fails $3F01. This may be because many APU registers aren't emulated at all.</li> <li>PPU test fails #6</li> <li>Note: this also tests open bus behavior, which is not fully emulated yet</li></l> |
 | CPU Flag Concurrency | bisqwit | 0/1 | Regression: test never finishes |
-| CPU Reset | blargg | N/A | Not tested yet as resets aren't fully implemented |
+| CPU Reset | blargg | Pass | |
 | CPU Timing Test v6 | Zepper | Pass | |
 | Instruction Behavior Misc Tests | blargg | 2/4 | <l><li>Tests 1 and 2 pass</li> <li>Test 3 fails #3 (LDA abs,X) (Note: this tests mid-instruction reads, and will likely not pass until I make the CPU cycle-accurate)</li> <li>Test 4: a long list of opcodes fail #2. Note: this probably won't work until I get all APU regs emulated</li></l> |
 | Instruction Test v5 | blargg | Pass | |
 | Instruction Timing Tests | blargg | Pass | |
 | Interrupt Test v2 | blargg | 0/5 | <l><li>Test 1 fails #3</li> <li>Tests 2-5 fail with no error code</li> <li>Note: tests 2-4 are likely failing beccause interrupt hijacking isn't emulated</li></l> |
 | nestest | kevtris | Pass | |
+| RAM Retention Test | rainwarrior | | ROM unavailable; this might be the same as the one included in blargg's CPU Reset test folder |
 
 ## PPU Tests
 
@@ -34,7 +35,7 @@ Note: blargg's APU tests (not v2) are in 2 separate folders until I can identify
 | 240p Test Suite | tepples | 0/? | <l>Mapper 2 is supported, but this is probably not worth testing until I make an attempt at color emphasis and a few other things</l> |
 | Color Test | rainwarrior | 0/1 | Emphasis/chroma/luma not implemented yet |
 | Full Palette Test | blargg | 0/3 | <l><li>full_palette and full_palette_smooth show four different shades of blue (i.e. not correct but a step in the right direction)</li> <li>flowing_palette crashes because it has PRG-RAM size set to $C4,000 (I need to check boot.cpp for this)</li></l> |
-| Misc PPU Tests | blargg | 1/5 | <l><li>palette_ram passes</li> <li>power_up_palette fails #2 (start/reset palette setting not implemented yet)</li> <li>sprite_ram fails #4</li> <li>vbl_clear_time fails #3 (vbl flag cleared too late)</li> <li>vram_access fails #6</li></l> |
+| Misc PPU Tests | blargg | 1/4 | <l><li>palette_ram passes</li> <li>power_up_palette is ignored because palette values are undefined on startup</li> <li>sprite_ram fails #4</li> <li>vbl_clear_time fails #3 (vbl flag cleared too late)</li> <li>vram_access fails #6</li></l> |
 | NMI Sync Test | blargg | 0/1 | |
 | NTSC Torture Test | rainwarrior | 0/1 | No color display |
 | OAM Read Test | blargg | Pass | |
@@ -120,6 +121,8 @@ None yet
 
 ## PPU
 * Pac-Man's top left background tile is set to 0 when it shouldn't be
+* PPU should output a solid color based on the value at PPU $3F00 (palette RAM index 0)
+* translating palette values to pixel values may be doable with integer math, instead of pre-defined values (http://forums.nesdev.com/viewtopic.php?f=2&t=14338)
 
 ## APU
 * In Pac-Man, at some point, tones change from being not constant (i.e. playing notes normally) to constantly playing. This stops every time a big pellet gets eaten (and the sfx change). This probably has something to do with timers being messed up. Maybe tones are played constantly once a timer's value hits 0?
@@ -129,6 +132,8 @@ None yet
 ## Input
 
 ## Misc
+* Dr. Mario halts after playing for 5-10 minutes or so. It's possible that all games do this (maybe an issue with frame/cycle count integer overflow?) but it hasn't been tested.
+* Note: I haven't checked this since the major interface change, so it's possible this is no longer true.
 
 # Regressions
 
