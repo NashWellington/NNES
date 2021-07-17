@@ -372,9 +372,10 @@ void Memory::load(Savestate& savestate)
 
 InterruptType Memory::getInterrupt()
 {
-    if (current_interrupt == InterruptType::NO_INTERRUPT
-        && nes.apu->frame_interrupt)
-        addInterrupt(IRQ);
+    // FIXME adding APU interrupts caused major CPU test result regressions
+    // TODO fully and correctly implement audio & uncomment this out
+    //if (current_interrupt == InterruptType::NO_INTERRUPT && nes.apu->frame_interrupt)
+    //    addInterrupt(IRQ);
     return current_interrupt;
 }
 

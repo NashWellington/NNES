@@ -20,11 +20,11 @@ Note: blargg's APU tests (not v2) are in 2 separate folders until I can identify
 | CPU Exec Space | bisqwit | 0/2 | <l><li>APU test fails $3F01. This may be because many APU registers aren't emulated at all.</li> <li>PPU test fails #6</li> <li>Note: this also tests open bus behavior, which is not fully emulated yet</li></l> |
 | CPU Flag Concurrency | bisqwit | 0/1 | Regression: test never finishes |
 | CPU Reset | blargg | N/A | Not tested yet as resets aren't fully implemented |
-| CPU Timing Test v6 | Zepper | Fail | Regression: crash |
+| CPU Timing Test v6 | Zepper | Pass | |
 | Instruction Behavior Misc Tests | blargg | 2/4 | <l><li>Tests 1 and 2 pass</li> <li>Test 3 fails #3 (LDA abs,X) (Note: this tests mid-instruction reads, and will likely not pass until I make the CPU cycle-accurate)</li> <li>Test 4: a long list of opcodes fail #2. Note: this probably won't work until I get all APU regs emulated</li></l> |
-| Instruction Test v5 | blargg | 0/13 | Regression: Individual tests display nothing. Combined tests halt after they begin test 1 |
-| Instruction Timing Tests | blargg | 0/3 | Regression: test 1 crashes, test 2 and combined test halt |
-| Interrupt Test v2 | blargg | 0/5 | <l><li>Test 1 fails #4 (exactly one execution after CLI should execute before IRQ is taken)</li> <li>Tests 2 and 5 fail with no error code</li> <li>Note: tests 2-4 are likely failing beccause interrupt hijacking isn't emulated</li> <li>Regression: tests 3 and 4 halt after writing to unemulated regs</li></l> |
+| Instruction Test v5 | blargg | Pass | |
+| Instruction Timing Tests | blargg | 1/3 | <l><li>Test 1 crashes on opcode $8B. This opcode is intentionally not emulated because it is shown to be unreliable on hardware.</li> <li>Test 2 passes</li></l> |
+| Interrupt Test v2 | blargg | 0/5 | <l><li>Test 1 fails #4 (exactly one execution after CLI should execute before IRQ is taken)</li> <li>Tests 2-5 fail with no error code</li> <li>Note: tests 2-4 are likely failing beccause interrupt hijacking isn't emulated</li></l> |
 | nestest | kevtris | Pass | |
 
 ## PPU Tests
@@ -116,6 +116,7 @@ None yet
 
 ## CPU
 * $4020 to $40FF should exhibit open bus behavior that is unemulated
+* Emulate unstable opcodes (such as $8B)
 
 ## PPU
 * Pac-Man's top left background tile is set to 0 when it shouldn't be
@@ -134,14 +135,9 @@ None yet
 ## CPU
 * CPU Flag Concurrency Test doesn't finish
 * Prior behavior: test fails #2
-* CPU Timing Test v6 has stack overflow x48, then crashes on opcode $02
-* Prior behavior: test passes
-* CPU Instruction Test v5: all tests halt
-* Prior behavior: all tests pass
-* CPU Instruction Timing Test: test 1 crashes (stack overflow/underflow -> opcode $8B), test 2 & combined test show black screen and halt
-* Prior behavior: test 1 fails #5, test 2 fails with no error code
-* CPU Interrupt Test v2: tests 3 and 4 halt after writing to unemulated regs
-* Prior behavior: both tests fail with no error codes
+* CPU Interrupt Test v2: Test 1 fails #3 (no IRQ generated when $4017=0)
+* Note: This is because I intentionally disabled APU IRQs to fix other regressions
+* Prior behavior: Test 1 fails #4
 
 ## PPU
 
