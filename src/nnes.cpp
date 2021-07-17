@@ -37,34 +37,37 @@ int main(int argc, char ** argv)
     for(int i = 0; i < argc; i++) args[i] = argv[i];
 
     // Open ROM file
-    std::string rom_filename;
-    std::optional<std::string_view> arg;
-    if ((arg = getOpt(args, "-f")))
-        rom_filename = arg.value();
-    else if ((arg = getOpt(args, "-r")))
-        rom_filename = arg.value();
-    else
+    std::optional<std::string> rom_filename;
+    if ((rom_filename = getOpt(args, "-f")));
+    else ((rom_filename = getOpt(args, "-r")));
+    
+    std::ifstream rom;
+    while (!rom.is_open())
     {
-        std::cout << "Enter ROM filename:" << std::endl;
-        std::cin >> rom_filename;
-    }
-    std::ifstream rom(rom_filename, std::ios::binary);
-    if (!rom.is_open())
-    {
-        std::cerr << "File not found: " << rom_filename << std::endl;
-        throw std::exception();
+        if (!rom_filename)
+        {
+            std::cout << "Enter ROM filename:" << std::endl;
+            rom_filename = "";
+            std::cin >> rom_filename.value();
+        }
+        rom = std::ifstream(rom_filename.value(), std::ios::binary);
+        if (!rom.is_open())
+        {
+            std::cout << "File not found: " << rom_filename.value() << std::endl;
+            rom_filename.reset();
+        }
     }
     
     // Setup console and frontends
-    Audio audio = Audio();
-    Video video = Video();
-    NES nes = NES(audio, video);
+    std::unique_ptr<Audio> audio = std::make_unique<Audio>();
+    std::unique_ptr<Video> video = std::make_unique<Video>();
+    std::unique_ptr<NES> nes = std::make_unique<NES>(*audio, *video);
 
-    nes.insertROM(rom);
+    nes->insertROM(rom);
     // For now, input has to be initialized after a ROM is loaded
     // This is because controllers don't get initialized until after ROM loading
     // TODO handle binds after Input is initialized and/or initialize controllers at console initialization
-    Input input = Input(nes, audio, video);
+    Input input = Input(*nes, *audio, *video);
 
     // Timing
     uint64_t frame_count = 0;
@@ -75,13 +78,13 @@ int main(int argc, char ** argv)
     {
         using namespace std::chrono;
         running = input.poll();
-        nes.run(Scheduler::FRAME);
-        video.displayFrame();
+        nes->run(Scheduler::FRAME);
+        video->displayFrame();
         std::this_thread::sleep_until(start_time + ++frame_count * frame(1));
     }
-    nes.~NES(); // Might need to destroy PPU or APU before destroying SDL frontend classes
-    audio.~Audio();
-    video.~Video();
+    nes.reset(); // Might need to destroy PPU or APU before destroying SDL frontend classes
+    audio.reset();
+    video.reset();
     SDL_Quit();
 
     #ifndef NDEBUG
