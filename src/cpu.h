@@ -1,7 +1,7 @@
 #pragma once
 
 // Forward declaration
-class Memory;
+class NES;
 
 // Include
 #include "globals.h"
@@ -13,6 +13,7 @@ class Memory;
 class CPU : public Processor
 {
 public:
+    CPU(NES& _nes) : nes(_nes) {}
     void setRegion(Region _region);
 
     ubyte read(uword address);
@@ -54,7 +55,7 @@ public:
     void save(Savestate& savestate);
     void load(Savestate& savestate);
 
-    std::shared_ptr<Memory> mem;
+    NES& nes;
 
     // CPU registers
 

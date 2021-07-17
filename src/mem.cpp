@@ -4,7 +4,7 @@
 
 ubyte Memory::cpuRead(uword address)
 {
-    std::optional<ubyte> data = nes->cart->cpuRead(address); // Cartridge mem
+    std::optional<ubyte> data = nes.cart->cpuRead(address); // Cartridge mem
     if (data) return data.value();
     else if (address < 0x2000) // zpg, stack, RAM, or their mirrors
     {
@@ -35,7 +35,7 @@ ubyte Memory::cpuRead(uword address)
 
 void Memory::cpuWrite(uword address, ubyte data)
 {
-    if (nes->cart->cpuWrite(address, data)) return; // Cartridge mem
+    if (nes.cart->cpuWrite(address, data)) return; // Cartridge mem
     else if (address < 0x2000) // zpg, stack, RAM, or their mirrors
     {
         address %= 0x0800;
@@ -65,7 +65,7 @@ void Memory::cpuWrite(uword address, ubyte data)
 
 ubyte Memory::ppuRead(uword address)
 {
-    std::optional<ubyte> data = nes->cart->ppuRead(address); // Pattern tables
+    std::optional<ubyte> data = nes.cart->ppuRead(address); // Pattern tables
     if (data) return data.value();
     else if (address < 0x2000)
     {
@@ -93,7 +93,7 @@ ubyte Memory::ppuRead(uword address)
 
 void Memory::ppuWrite(uword address, ubyte data)
 {
-    if (nes->cart->ppuWrite(address, data)) return;
+    if (nes.cart->ppuWrite(address, data)) return;
     else if (address < 0x2000)
     {
         #ifndef NDEBUG
@@ -170,18 +170,18 @@ ubyte Memory::cpuReadReg(uword address)
 
 // Another APU reg
         case 0x4015: // APU status
-            nes->apu->getStatus();
-            data = nes->apu->reg_apu_status.reg;
+            nes.apu->getStatus();
+            data = nes.apu->reg_apu_status.reg;
             return data;
 
 // Input/misc regs
         case 0x4016: // Input port 1
-            data |= nes->controllers[0]->read();
+            data |= nes.controllers[0]->read();
             // TODO expansion etc.
             return data;
 
         case 0x4017: // Input port 2
-            data |= nes->controllers[1]->read();
+            data |= nes.controllers[1]->read();
             // TODO expansion etc.
             return data;
 
@@ -252,45 +252,45 @@ void Memory::cpuWriteReg(uword address, ubyte data)
             break;
 // APU regs
         case 0x4000: // Pulse 1 control
-            nes->apu->reg_pulse_ctrl[0].reg = data;
+            nes.apu->reg_pulse_ctrl[0].reg = data;
             break;
         
         case 0x4001: // Pulse 1 sweep control
-            nes->apu->reg_sweep[0].reg = data;
+            nes.apu->reg_sweep[0].reg = data;
             break;
 
         case 0x4002: // Pulse 1 timer (low 8 bits)
-            nes->apu->pulse_timer[0] &= 0xFF00;
-            nes->apu->pulse_timer[0] |= static_cast<uword>(data);
+            nes.apu->pulse_timer[0] &= 0xFF00;
+            nes.apu->pulse_timer[0] |= static_cast<uword>(data);
             break;
         
         case 0x4003: // Pulse 1 length counter load + timer (high 3 bits)
-            nes->apu->pulse_length_ctr_load[0] = ((data & 0xF8) >> 3);
-            nes->apu->pulse_timer[0] &= 0x00FF;
-            nes->apu->pulse_timer[0] |= (static_cast<uword>(data & 0x07) << 8);
-            nes->apu->envelope[0].start = true;
-            nes->apu->loadLengthCounter(0);
+            nes.apu->pulse_length_ctr_load[0] = ((data & 0xF8) >> 3);
+            nes.apu->pulse_timer[0] &= 0x00FF;
+            nes.apu->pulse_timer[0] |= (static_cast<uword>(data & 0x07) << 8);
+            nes.apu->envelope[0].start = true;
+            nes.apu->loadLengthCounter(0);
             break;
         
         case 0x4004: // Pulse 2 control
-            nes->apu->reg_pulse_ctrl[1].reg = data;
+            nes.apu->reg_pulse_ctrl[1].reg = data;
             break;
         
         case 0x4005: // Pulse 2 sweep control
-            nes->apu->reg_sweep[1].reg = data;
+            nes.apu->reg_sweep[1].reg = data;
             break;
 
         case 0x4006: // Pulse 2 timer (low 8 bits)
-            nes->apu->pulse_timer[1] &= 0xFF00;
-            nes->apu->pulse_timer[1] |= static_cast<uword>(data);
+            nes.apu->pulse_timer[1] &= 0xFF00;
+            nes.apu->pulse_timer[1] |= static_cast<uword>(data);
             break;
         
         case 0x4007: // Pulse 2 length counter load + timer (high 3 bits)
-            nes->apu->pulse_length_ctr_load[1] = ((data & 0xF8) >> 3);
-            nes->apu->pulse_timer[1] &= 0x00FF;
-            nes->apu->pulse_timer[1] |= (static_cast<uword>(data & 0x07) << 8);
-            nes->apu->envelope[1].start = true;
-            nes->apu->loadLengthCounter(1);
+            nes.apu->pulse_length_ctr_load[1] = ((data & 0xF8) >> 3);
+            nes.apu->pulse_timer[1] &= 0x00FF;
+            nes.apu->pulse_timer[1] |= (static_cast<uword>(data & 0x07) << 8);
+            nes.apu->envelope[1].start = true;
+            nes.apu->loadLengthCounter(1);
             break;
 
 // Another PPU reg
@@ -302,17 +302,17 @@ void Memory::cpuWriteReg(uword address, ubyte data)
 
 // Another APU reg
         case 0x4015: // APU ctrl
-            nes->apu->reg_apu_ctrl.reg = data;
-            if (nes->apu->reg_apu_ctrl.lce_p1 == 0) nes->apu->clearLengthCounter(0);
-            if (nes->apu->reg_apu_ctrl.lce_p2 == 0) nes->apu->clearLengthCounter(1);
-            if (nes->apu->reg_apu_ctrl.lce_tr == 0) nes->apu->clearLengthCounter(2);
-            if (nes->apu->reg_apu_ctrl.lce_ns == 0) nes->apu->clearLengthCounter(3);
+            nes.apu->reg_apu_ctrl.reg = data;
+            if (nes.apu->reg_apu_ctrl.lce_p1 == 0) nes.apu->clearLengthCounter(0);
+            if (nes.apu->reg_apu_ctrl.lce_p2 == 0) nes.apu->clearLengthCounter(1);
+            if (nes.apu->reg_apu_ctrl.lce_tr == 0) nes.apu->clearLengthCounter(2);
+            if (nes.apu->reg_apu_ctrl.lce_ns == 0) nes.apu->clearLengthCounter(3);
             break;
 
 // Misc regs
         case 0x4016: // Poll input
-            nes->controllers[0]->poll(data & 0x01);
-            nes->controllers[1]->poll(data & 0x01);
+            nes.controllers[0]->poll(data & 0x01);
+            nes.controllers[1]->poll(data & 0x01);
             // TODO expansion ports (if I ever get there)
             ppu_latch &= 0xF8;
             ppu_latch |= (data & 0x07);
@@ -320,9 +320,9 @@ void Memory::cpuWriteReg(uword address, ubyte data)
 
         case 0x4017: // APU frame counter
             // TODO buffer for 3-4 CPU cycles
-            nes->apu->reg_frame_ctr.reg = data & 0xC0;
+            nes.apu->reg_frame_ctr.reg = data & 0xC0;
             // TODO interrupts?
-            ppu_latch = nes->apu->reg_frame_ctr.reg;
+            ppu_latch = nes.apu->reg_frame_ctr.reg;
             break;
 
         default:
@@ -373,7 +373,7 @@ void Memory::load(Savestate& savestate)
 InterruptType Memory::getInterrupt()
 {
     if (current_interrupt == InterruptType::NO_INTERRUPT
-        && nes->apu->frame_interrupt)
+        && nes.apu->frame_interrupt)
         addInterrupt(IRQ);
     return current_interrupt;
 }

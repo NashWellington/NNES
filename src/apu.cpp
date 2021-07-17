@@ -1,5 +1,25 @@
 #include "apu.h"
 
+// Channel constants (mostly lookup tables)
+/* The number of APU cycles in four PPU frames
+* (Note: I would do APU cycles per frame, but that wouldn't be an integer)
+*/
+const uint MAX_CYCLE = 59561;
+
+const std::array<std::array<int,8>,4> pulse_waveforms =
+{
+    0, 1, 0, 0, 0, 0, 0, 0,    // 12.5%
+    0, 1, 1, 0, 0, 0, 0, 0,    // 25%
+    0, 1, 1, 1, 1, 0, 0, 0,    // 50%
+    1, 0, 0, 1, 1, 1, 1, 1     // 25% negated
+};
+
+const std::array<int,32> length_table = 
+{//    0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+/*00-0F*/  10,254, 20,  2, 40,  4, 80,  6,160,  8, 60, 10, 14, 12, 26, 14,
+/*10-1F*/  12, 16, 24, 18, 48, 20, 96, 22,192, 24, 72, 26, 16, 28, 32, 30
+};
+
 // TODO other sound channels
 const uint tri_out = 0;
 const uint nse_out = 0;
@@ -22,8 +42,6 @@ clockEnvelope(1);\
 clockLengthCounter(0);\
 clockLengthCounter(1);\
 }
-
-APU::APU(std::shared_ptr<Audio> _audio) : audio(_audio) {}
 
 void APU::setRegion(Region _region)
 {
@@ -94,7 +112,7 @@ void APU::tick()
     clockNoise();
     clockDMC();*/
 
-    if ((cycle*audio->sample_rate / (15*MAX_CYCLE)) >= (sample_i+1)) // Should make 44.1k samples/sec
+    if ((cycle*audio.sample_rate / (15*MAX_CYCLE)) >= (sample_i+1)) // Should make 44.1k samples/sec
     {
         sample_i++;
         mix();
@@ -120,7 +138,7 @@ void APU::mix()
                  + (static_cast<float>(dmc_out) / 22638.0f);
     float tnd_out = !tnd_sum ? 0 : 159.79f / ((1.0f / static_cast<float>(tnd_sum)) + 100.0f);
     float output = pulse_out + tnd_out;
-    audio->pushSample(output);
+    audio.pushSample(output);
 }
 
 void APU::clockPulse(int i)

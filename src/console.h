@@ -2,6 +2,12 @@
 
 #include "globals.h"
 
+class Processor;
+class CPU;
+class APU;
+class PPU;
+class Memory;
+
 #include "scheduler.h"
 #include "cpu.h"
 #include "ppu.h"
@@ -27,7 +33,7 @@ public:
 class NES : public Console
 {
 public:
-    NES(std::shared_ptr<Audio> audio, std::shared_ptr<Video> video);
+    NES(Audio& audio, Video& video);
     void reset();
     void insertROM(std::ifstream& rom);
     void run(Scheduler::Length length);
@@ -37,10 +43,10 @@ public:
     std::shared_ptr<CPU> cpu;
     std::shared_ptr<PPU> ppu;
     std::shared_ptr<APU> apu;
-    std::shared_ptr<Memory> mem;
+    std::unique_ptr<Memory> mem;
 
-    std::shared_ptr<Cartridge> cart;
-    std::shared_ptr<Expansion> expansion;
+    std::unique_ptr<Cartridge> cart;
+    std::unique_ptr<Expansion> expansion;
     std::unique_ptr<Scheduler> scheduler;
 
     // TODO testing

@@ -47,8 +47,8 @@ public:
     void sync();
 private:
     // The main process that other processes will sync to is at index 0
-    std::vector<Process> processes;
-    uint min_cycles = 0;
+    std::vector<std::unique_ptr<Process>> processes;
+    uint64_t min_cycles = UINT64_MAX;
     uint64_t cycle = 0;
     uint frame = 0;
     uint64_t cycles_per_frame = 0;

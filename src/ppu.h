@@ -1,7 +1,7 @@
 #pragma once
 
 // Forward declaration
-class Memory;
+class NES;
 class Video;
 
 #include "globals.h"
@@ -43,7 +43,8 @@ struct Table
 class PPU : public Processor
 {
 public:
-    PPU(std::shared_ptr<Video> _video);
+    PPU(NES& _nes, Video& _video);
+
     void setRegion(Region _region);
 
     // TODO
@@ -65,8 +66,8 @@ public:
     // void save(Savestate& savestate);
     // void load(Savestate& savestate);
 
-    std::shared_ptr<Memory> mem;
-    std::shared_ptr<Video> video;
+    NES& nes;
+    Video& video;
 
     enum Revision
     {

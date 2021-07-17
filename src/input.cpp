@@ -2,9 +2,7 @@
 
 #define CONTROL_CONFIG "./cfg/controls.cfg"
 
-Input::Input(std::shared_ptr<Console> _console, 
-             std::shared_ptr<Audio>   _audio,
-             std::shared_ptr<Video> _video)
+Input::Input(Console& _console, Audio&_audio, Video& _video)
     : console(_console), audio(_audio), video(_video)
 {
     if (SDL_Init(SDL_INIT_GAMECONTROLLER) != 0)
@@ -60,7 +58,7 @@ void Input::loadBinds(std::string config)
     #endif
     
     // Game Input controls
-    std::vector<std::shared_ptr<Controller>>& controllers = console->controllers;
+    std::vector<std::shared_ptr<Controller>> controllers = console.controllers;
     assert(controllers.size() > 0);
     key_binds.insert({SDLK_v, Bind(0, controllers[0])}); // V -> A
     key_binds.insert({SDLK_c, Bind(1, controllers[0])}); // C -> B
@@ -261,6 +259,6 @@ bool Input::poll()
         pollKeyboard(event);
     }
     pollControllers();
-    console->processInputs();
+    console.processInputs();
     return running;
 }

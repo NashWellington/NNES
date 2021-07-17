@@ -28,9 +28,7 @@ struct Bind
 class Input
 {
 public:
-    Input(std::shared_ptr<Console> _console, 
-          std::shared_ptr<Audio>   _audio,
-          std::shared_ptr<Video>   _video);
+    Input(Console& _console, Audio&_audio, Video& _video);
     ~Input();
     bool poll();
 
@@ -46,10 +44,10 @@ private:
 
     bool running = true;
 
-    std::shared_ptr<Console> console;
+    Console& console;
     // TODO shared_ptr to debugger object
-    std::shared_ptr<Audio> audio;
-    std::shared_ptr<Video> video;
+    Audio& audio;
+    Video& video;
 
     // ifdef SDL
     std::map<SDL_Keycode,std::function<void()>> emu_binds = {};

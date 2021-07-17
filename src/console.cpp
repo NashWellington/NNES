@@ -1,14 +1,11 @@
 #include "console.h"
 
-NES::NES(std::shared_ptr<Audio> audio, std::shared_ptr<Video> video)
+NES::NES(Audio& audio, Video& video)
 {
-    cpu = std::make_shared<CPU>();
-    ppu = std::make_shared<PPU>(video);
-    apu = std::make_shared<APU>(audio);
-    mem = std::make_shared<Memory>(std::shared_ptr<NES>(this));
-    cpu->mem = mem;
-    ppu->mem = mem;
-    apu->mem = mem;
+    cpu = std::make_shared<CPU>(*this);
+    apu = std::make_shared<APU>(*this, audio);
+    ppu = std::make_shared<PPU>(*this, video);
+    mem = std::make_unique<Memory>(*this);
 }
 
 void NES::reset()
@@ -17,7 +14,7 @@ void NES::reset()
     cpu->reset();
     //ppu->reset();
     //apu->reset();
-    mem->reset();
+    mem.reset();
 }
 
 void NES::insertROM(std::ifstream& rom)
@@ -28,14 +25,15 @@ void NES::insertROM(std::ifstream& rom)
     ppu->setRegion(Region::NTSC);
     apu->setRegion(Region::NTSC);
     // TODO use header to determine controller/expansion ports
-    controllers.push_back(std::make_shared<NESStandardController>());
-    controllers.push_back(std::make_shared<NESStandardController>());
+    controllers.resize(2);
+    controllers[0] = std::make_shared<NESStandardController>();
+    controllers[1] = std::make_shared<NESStandardController>();
     // TODO support for non-ROM carts
-    cart = std::make_shared<Cartridge>(header, rom);
+    cart = std::make_unique<Cartridge>(header, rom);
     cpu->start();
     // TODO have vals depend on region
-    std::vector<std::shared_ptr<Processor>> processors;
-    scheduler = std::make_unique<Scheduler>(std::vector<std::shared_ptr<Processor>>({cpu, apu, ppu}), 178683 * 2);
+    std::vector<std::shared_ptr<Processor>> processors = {cpu, apu, ppu};
+    scheduler = std::make_unique<Scheduler>(processors, 178683 * 2);
 }
 
 void NES::run(Scheduler::Length length)
@@ -45,9 +43,9 @@ void NES::run(Scheduler::Length length)
 
 void NES::processInputs()
 {
-    //cart->processInputs();
+    //cart.processInputs();
     controllers[0]->processInputs();
     controllers[1]->processInputs();
-    //expansion->processInputs();
+    //expansion.processInputs();
     // Input doesn't touch expansion or cartridge slots yet
 }

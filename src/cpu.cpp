@@ -22,12 +22,12 @@ void CPU::setRegion(Region _region)
 
 ubyte CPU::read(uword address)
 {
-    return mem->cpuRead(address);
+    return nes.mem->cpuRead(address);
 }
 
 void CPU::write(uword address, ubyte data)
 {
-    mem->cpuWrite(address, data);
+    nes.mem->cpuWrite(address, data);
 }
 
 ubyte CPU::pop()
@@ -43,7 +43,7 @@ ubyte CPU::pop()
     }
     #endif
 
-    return mem->cpuRead(address);
+    return nes.mem->cpuRead(address);
 }
 
 void CPU::push(ubyte data)
@@ -59,13 +59,13 @@ void CPU::push(ubyte data)
     }
     #endif
 
-    mem->cpuWrite(address, data);
+    nes.mem->cpuWrite(address, data);
 }
 
 ubyte CPU::nextByte()
 {
     // This is a bit of a misnomer because it could also be an operand
-    ubyte instruction = mem->cpuRead(reg_pc);
+    ubyte instruction = nes.mem->cpuRead(reg_pc);
     reg_pc++;
     return instruction;
 }
@@ -88,7 +88,7 @@ void CPU::tick()
 {
     if (cycle == 0)
     {
-        if (!mem->oamWrite(odd_cycle)) 
+        if (!nes.mem->oamWrite(odd_cycle)) 
         {
             step();
         }
@@ -100,10 +100,10 @@ void CPU::tick()
 void CPU::step()
 {
     // Check for interrupts
-    if (InterruptType i = mem->getInterrupt())
+    if (InterruptType i = nes.mem->getInterrupt())
     {
         cycle += handleInterrupt(i);
-        mem->clearInterrupt();
+        nes.mem->clearInterrupt();
     }
     
     if (cycle == 0)
@@ -112,21 +112,21 @@ void CPU::step()
 
 void CPU::start()
 {
-    ubyte pcl = mem->cpuRead(0xFFFC);
-    ubyte pch = mem->cpuRead(0xFFFD);
+    ubyte pcl = nes.mem->cpuRead(0xFFFC);
+    ubyte pch = nes.mem->cpuRead(0xFFFD);
     reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
-    mem->start();
+    nes.mem->start();
     cycle = 7;
 }
 
 void CPU::reset()
 {
-    ubyte pcl = mem->cpuRead(0xFFFC);
-    ubyte pch = mem->cpuRead(0xFFFD);
+    ubyte pcl = nes.mem->cpuRead(0xFFFC);
+    ubyte pch = nes.mem->cpuRead(0xFFFD);
     reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
     reg_sp += 3;
     reg_sr.i = true;     // I flag
-    mem->reset();
+    nes.mem->reset();
     cycle = 7;
 }
 
@@ -156,7 +156,7 @@ void CPU::load(Savestate& savestate)
 
 void CPU::addInterrupt(InterruptType interrupt)
 {
-    mem->addInterrupt(interrupt);
+    nes.mem->addInterrupt(interrupt);
 }
 
 // TODO emulate interrupt hijacking

@@ -36,6 +36,7 @@ int main(int argc, char ** argv)
     args.resize(argc);
     for(int i = 0; i < argc; i++) args[i] = argv[i];
 
+    // Open ROM file
     std::string rom_filename;
     std::optional<std::string_view> arg;
     if ((arg = getOpt(args, "-f")))
@@ -47,25 +48,22 @@ int main(int argc, char ** argv)
         std::cout << "Enter ROM filename:" << std::endl;
         std::cin >> rom_filename;
     }
-
-    // Open ROM file
     std::ifstream rom(rom_filename, std::ios::binary);
     if (!rom.is_open())
     {
         std::cerr << "File not found: " << rom_filename << std::endl;
         throw std::exception();
     }
+    
+    // Setup console and frontends
+    Audio audio = Audio();
+    Video video = Video();
+    NES nes = NES(audio, video);
 
-    #ifdef DEBUGGER
-    debug_state.filename = rom_filename;
-    #endif
-
-    // Setup
-    std::shared_ptr<Audio> audio = std::make_shared<Audio>();
-    std::shared_ptr<Video> video = std::make_shared<Video>();
-    std::shared_ptr<Console> nes = std::make_shared<NES>(audio, video);
-    nes->insertROM(rom);
-    // TODO initialize Input with pointer to Video and Console
+    nes.insertROM(rom);
+    // For now, input has to be initialized after a ROM is loaded
+    // This is because controllers don't get initialized until after ROM loading
+    // TODO handle binds after Input is initialized and/or initialize controllers at console initialization
     Input input = Input(nes, audio, video);
 
     // Timing
@@ -77,13 +75,13 @@ int main(int argc, char ** argv)
     {
         using namespace std::chrono;
         running = input.poll();
-        nes->run(Scheduler::FRAME);
-        video->displayFrame();
+        nes.run(Scheduler::FRAME);
+        video.displayFrame();
         std::this_thread::sleep_until(start_time + ++frame_count * frame(1));
     }
-    nes->~Console(); // Might need to destroy PPU or APU before destroying SDL frontend classes
-    audio->~Audio();
-    video->~Video();
+    nes.~NES(); // Might need to destroy PPU or APU before destroying SDL frontend classes
+    audio.~Audio();
+    video.~Video();
     SDL_Quit();
 
     #ifndef NDEBUG

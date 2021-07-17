@@ -1,5 +1,7 @@
 #pragma once
 
+class NES;
+
 #include "globals.h"
 #include "processor.h"
 #include "audio.h"
@@ -8,7 +10,7 @@
 class APU : public Processor
 {
 public:
-    APU(std::shared_ptr<Audio> _audio);
+    APU(NES& _nes, Audio& _audio) : nes(_nes), audio(_audio) {}
     void setRegion(Region _region);
 
     // TODO
@@ -50,8 +52,8 @@ public:
     */
     void getStatus();
 
-    std::shared_ptr<Memory> mem;
-    std::shared_ptr<Audio> audio;
+    NES& nes;
+    Audio& audio;
 private:
     void mix(); // Mix all channel outputs and push that to audio queue
     void clockPulse(int i);
@@ -73,26 +75,6 @@ private:
         int length = 0;
         uint out = 0; // The value to be mixed (0-15)
     } pulse[2] = {};
-
-// Channel constants (mostly lookup tables)
-    /* The number of APU cycles in four PPU frames
-    * (Note: I would do APU cycles per frame, but that wouldn't be an integer)
-    */
-    const uint MAX_CYCLE = 59561;
-
-    const std::array<std::array<int,8>,4> pulse_waveforms =
-    {
-        0, 1, 0, 0, 0, 0, 0, 0,    // 12.5%
-        0, 1, 1, 0, 0, 0, 0, 0,    // 25%
-        0, 1, 1, 1, 1, 0, 0, 0,    // 50%
-        1, 0, 0, 1, 1, 1, 1, 1     // 25% negated
-    };
-
-    const std::array<int,32> length_table = 
-    {//    0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
-/*00-0F*/  10,254, 20,  2, 40,  4, 80,  6,160,  8, 60, 10, 14, 12, 26, 14,
-/*10-1F*/  12, 16, 24, 18, 48, 20, 96, 22,192, 24, 72, 26, 16, 28, 32, 30
-    };
 
 public:
 // IRQ line

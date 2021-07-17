@@ -2,9 +2,6 @@
 
 // Forward declaration
 class NES;
-class CPU;
-class PPU;
-class APU;
 
 #include "globals.h"
 #include "console.h"
@@ -47,7 +44,7 @@ class APU;
 class Memory
 {
 public:
-    Memory(std::shared_ptr<NES> _nes) : nes(_nes) {}
+    Memory(NES& _nes) : nes(_nes) {}
 
     ubyte    cpuRead(uword address);
     void    cpuWrite(uword address, ubyte data);
@@ -76,7 +73,7 @@ public:
     void reset();
 
 private:
-    std::shared_ptr<NES> nes;
+    NES& nes;
     InterruptType current_interrupt = NO_INTERRUPT;
 
 // CPU memory arrays
