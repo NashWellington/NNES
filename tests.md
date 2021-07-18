@@ -56,7 +56,7 @@ Note: blargg's APU tests (not v2) are in 2 separate folders until I can identify
 | :--- | :----: | :----: | :------ |
 | APU Envelope Test | blargg | 0/1 | |
 | APU Mixer | blargg | 1/4 | <l><li>Square wave test fails, possibly due to lack of APU sweep emulation</li> <l><li>Triangle wave test passes</li> <li>Other sound channels not supported</li></l> |
-| APU Phase Reset | Rahsennor | | Crashes at CHR-ROM/RAM assertion |
+| APU Phase Reset | Rahsennor | | Unsupported region (not NTSC) |
 | APU Reset | blargg | 1/6 | <l> <li>len_ctrs_enabled passes</li> <li>Other tests fail, likely because APU IRQs are disabled</li></l> |
 | APU Sweep Test | blargg | | APU sweep not supported |
 | APU Tests | blargg | 0/12 | <l><li>Test 1 fails #4</li> <li>Test 2 fails and displays "$F8 $FF $1E $02"</li> <li>Test 3 fails #5</li> <li>Test 4 fails #2</li> <li>Test 5 fails #3</li> <li>Test 6 fails #3</li> <li>Test 7 fails #2</li> <li>Test 8 shows a gray screen</li> <li>Test 9 fails #4</li> <li>Test 10 fails #3</li> <li>Test 11 fails #2</li> <li>Combined ROM test 1 fails #4</li></l> |
@@ -74,14 +74,14 @@ Note: blargg's APU tests (not v2) are in 2 separate folders until I can identify
 
 | Test | Author | Status | Details |
 | :--- | :----: | :----: | :------ |
-| BNTest | tepples | 0/3 | <l><li>AxROM test segfaults</li> <li>Other tests fail because of no support for mapper 34</li><l> |
+| BNTest | tepples | 1/3 | <l><li>AxROM passes</li> <li>Other tests fail because of no support for mapper 34</li><l> |
 | BxROM 512k Test | rainwarrior | | ROM unavailable |
 | exram Test | Quietust | 0/1 | Mapper 5 unsupported |
 | FDS IRQ Tests v7 | Sour | 0/1 | FDS format unsupported |
 | Famicom Audio Swap Tests | rainwarrior | | ROM unavailable |
 | FME-7 Ack Test | tepples | 0/1 | Mapper 69 unsupported |
 | FME-7 RAM Test | tepples | 0/1 | Mapper 69 unsupported |
-| Holy Mapperel/Holy Diver Batman | tepples | 3/26 | <l><li>Mapper 0 test passes</li> <li>Mapper 1 P128K test fails #5300. This is because WRAM/misc RAM isn't properly emulated yet. Also, it seems there's a problem with PRG-ROM?</li> <li>Mapper 1 P128K C32K fails #1300</li> <li>Mapper 1 P128K C32K W8K fails #0300</li> <li>Mapper 1 P512K tests fail #0300</li> <li>Mapper 2 test passes</li> <li>Mapper 3 test passes</li> <li>Mapper 7 test segfaults</li> <li>Mapper 9 has both CHR-ROM and -RAM set</li> <li>All other mappers unsupported</li></l> |
+| Holy Mapperel/Holy Diver Batman | tepples | 12/26 | <l><li>Mapper 0, 2, 3, 7, 9 tests pass</li> <li>Mapper 1 P128K tests pass (7 tests)</li> <li>Mapper 1 P512K tests fail: P512K bank switching isn't working, and PRG-RAM size > 8K isn't working</li> <li>All other mappers unsupported</li></l> |
 | MMC3 Big CHR-RAM Test | tepples | | Mapper 4 unsupported |
 | MMC3 Test | blargg | | Mapper 4 unsupported |
 | MMC5 RAM Size Tests | rainwarrior | | ROM unavailable |
@@ -90,7 +90,7 @@ Note: blargg's APU tests (not v2) are in 2 separate folders until I can identify
 | Mapper 28 Tests | tepples | | Mapper 28 unsupported |
 | Mapper 31 Tests | rainwarrior | Mapper 31 unsupported | ROMs unavailable |
 | NES 2.0 Submapper Tests | rainwarrior | | ROMs unavailable |
-| SEROM Test | lidnariq | 0/1 | Fails because CHR-ROM and CHR-RAM are both set in the header |
+| SEROM Test | lidnariq | 0/1 | Fails, likely because mapper 1 submapper 5 unsupported |
 | VRC 2/4 Tests | AWJ | | Mappers 21, 22, 23, 25 unsupported |
 | VRC6 Tests | natt | | Mappers 24, 26 unsupported |
 
@@ -127,7 +127,8 @@ None yet
 * In Pac-Man, at some point, tones change from being not constant (i.e. playing notes normally) to constantly playing. This stops every time a big pellet gets eaten (and the sfx change). This probably has something to do with timers being messed up. Maybe tones are played constantly once a timer's value hits 0?
 
 ## Mapper
-* //TODO set CHR-RAM if specified, CHR-ROM otherwise
+* Cartridges don't save SRAM to file
+* Mapper 1 doesn't work correctly with 512K PRG-ROM and/or >8K PRG-RAM
 
 ## Input
 * Keyboard input seems to only take 1 key press at a time
@@ -136,10 +137,8 @@ None yet
 TODO move game-specific bugs to a compatibility.md file or something
 * Dr. Mario halts after playing for 5-10 minutes or so. It's possible that all games do this (maybe an issue with frame/cycle count integer overflow?) but it hasn't been tested.
 * Note: I haven't checked this since the major interface change, so it's possible this is no longer true.
-* Final Fantasy crashes on opcode $22
-* Castlevania II crashes on opcode $72
-* Barbie: black screen on startup
 * Program leaks memory at exit (only viewable with address sanitizer)
+* Note: this might be SDL's fault
 
 # Regressions
 
@@ -156,8 +155,10 @@ TODO move game-specific bugs to a compatibility.md file or something
 
 ## Mapper
 * Mapper 4 not compiled (intentional)
-* Mapper 7 segfaults
 
 ## Input
 
 ## Misc
+* Final Fantasy fails on assertion ((battery) == (prg_nv_ram > 0))
+* Prior: crashes on opcode $22
+* Note: figure out difference between battery-backed and nv
