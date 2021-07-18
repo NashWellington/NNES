@@ -7,7 +7,7 @@ Mapper000::Mapper000(Header& header, std::ifstream& rom)
     assert(!header.trainer);
     assert(header.prg_ram_size <= 0x2000);
     assert(header.prg_rom_size == 0x4000 || header.prg_rom_size == 0x8000);
-    assert((header.chr_rom_size == 0x2000) != (header.chr_ram_size == 0x2000));
+    assert((header.chr_rom_size > 0) != (header.chr_ram_size > 0));
 
     if (header.prg_ram_size == 0 && header.type == HeaderType::INES)
     {
@@ -23,10 +23,17 @@ Mapper000::Mapper000(Header& header, std::ifstream& rom)
     prg_rom.resize(header.prg_rom_size);
     rom.read(reinterpret_cast<char*>(prg_rom.data()), prg_rom.size());
 
-    rom.read(reinterpret_cast<char*>(chr_mem.data()), chr_mem.size());    
-    if (header.chr_ram_size > 0) chr_ram = true;
-
-    assert(header.prg_rom_size == prg_rom.size());
+    uint64_t chr_size = 0;
+    if (header.chr_ram_size > 0) 
+    {
+        chr_size = header.chr_ram_size;
+        chr_ram = true;
+    }
+    else
+    {
+        chr_size = header.chr_rom_size;
+    }
+    rom.read(reinterpret_cast<char*>(chr_mem.data()), chr_size);
 }
 
 std::optional<ubyte> Mapper000::cpuRead(uword address)
