@@ -21,7 +21,7 @@ class Console
 public:
     virtual ~Console() {}
     virtual void reset() = 0;
-    virtual void insertROM(std::ifstream& rom) = 0;
+    virtual void insertROM(std::ifstream& rom, std::string filename) = 0;
     virtual void run(Scheduler::Length length) = 0;
     virtual void processInputs() = 0;
     std::string revision = {};
@@ -35,7 +35,7 @@ class NES : public Console
 public:
     NES(Audio& audio, Video& video);
     void reset();
-    void insertROM(std::ifstream& rom);
+    void insertROM(std::ifstream& rom, std::string filename);
     void run(Scheduler::Length length);
     // Called at the end of Input polling (not NES software input polling)
     void processInputs();

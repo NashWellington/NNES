@@ -34,6 +34,11 @@ Mapper000::Mapper000(Header& header, std::ifstream& rom)
         chr_size = header.chr_rom_size;
     }
     rom.read(reinterpret_cast<char*>(chr_mem.data()), chr_size);
+    
+    #ifndef NDEBUG
+    if (chr_size != 0x2000)
+        std::cerr << "Warning: CHR has a weird size" << std::endl;
+    #endif
 }
 
 std::optional<ubyte> Mapper000::cpuRead(uword address)

@@ -59,6 +59,10 @@ void APU::setRegion(Region _region)
         case Region::Dendy:
             time_scale = 30;
             break;
+        default:
+            std::cerr << "Error: unsupported region" << std::endl;
+            throw std::exception();
+            break;
     }
 }
 

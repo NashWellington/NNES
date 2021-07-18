@@ -3,21 +3,7 @@
 #include "globals.h"
 #include "savestate.h"
 
-// TODO move this to Scheduler
-/* Master clock cycles per processer cycle
-*        PPU | CPU | APU
-* NTSC:   4     12    24   
-* PAL:    5     16    32
-* Dendy:  5     15    30
-*/
-
 // TODO experimental abstract class for processors to interact with the scheduler
-enum class Region
-{
-    NTSC,
-    PAL,
-    Dendy
-};
 
 class Processor
 {

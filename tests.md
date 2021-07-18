@@ -81,7 +81,7 @@ Note: blargg's APU tests (not v2) are in 2 separate folders until I can identify
 | Famicom Audio Swap Tests | rainwarrior | | ROM unavailable |
 | FME-7 Ack Test | tepples | 0/1 | Mapper 69 unsupported |
 | FME-7 RAM Test | tepples | 0/1 | Mapper 69 unsupported |
-| Holy Mapperel/Holy Diver Batman | tepples | 3/26 | <l><li>Mapper 0 test passes</li> <li>Mapper 1 P128K test fails #4300</li> <li>Mapper 1 P128K tests with CHR memory fail because the headers have CHR-ROM and CHR-RAM sizes set</li> <li>Mapper 1 P512K tests fail #0300</li> <li>Mapper 2 test passes</li> <li>Mapper 3 test passes</li> <li>Mapper 7 test segfaults</li> <li>Mapper 9 has both CHR-ROM and -RAM set</li> <li>All other mappers unsupported</li></l> |
+| Holy Mapperel/Holy Diver Batman | tepples | 3/26 | <l><li>Mapper 0 test passes</li> <li>Mapper 1 P128K test fails #5300. This is because WRAM/misc RAM isn't properly emulated yet. Also, it seems there's a problem with PRG-ROM?</li> <li>Mapper 1 P128K C32K fails #1300</li> <li>Mapper 1 P128K C32K W8K fails #0300</li> <li>Mapper 1 P512K tests fail #0300</li> <li>Mapper 2 test passes</li> <li>Mapper 3 test passes</li> <li>Mapper 7 test segfaults</li> <li>Mapper 9 has both CHR-ROM and -RAM set</li> <li>All other mappers unsupported</li></l> |
 | MMC3 Big CHR-RAM Test | tepples | | Mapper 4 unsupported |
 | MMC3 Test | blargg | | Mapper 4 unsupported |
 | MMC5 RAM Size Tests | rainwarrior | | ROM unavailable |
@@ -130,6 +130,7 @@ None yet
 * //TODO set CHR-RAM if specified, CHR-ROM otherwise
 
 ## Input
+* Keyboard input seems to only take 1 key press at a time
 
 ## Misc
 TODO move game-specific bugs to a compatibility.md file or something

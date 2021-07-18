@@ -17,6 +17,10 @@ void CPU::setRegion(Region _region)
             name = "UMC UA6527P";
             time_scale = 15;
             break;
+        default:
+            std::cerr << "Error: unsupported region" << std::endl;
+            throw std::exception();
+            break;
     }
 }
 

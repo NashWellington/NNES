@@ -52,6 +52,10 @@ void PPU::setRegion(Region _region)
             time_scale = 5;
             revision = UMC;
             break;
+        default:
+            std::cerr << "Error: unsupported region" << std::endl;
+            throw std::exception();
+            break;
     }
 }
 

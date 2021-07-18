@@ -16,13 +16,13 @@ void NES::reset()
     apu->reset();
 }
 
-void NES::insertROM(std::ifstream& rom)
+void NES::insertROM(std::ifstream& rom, std::string filename)
 {
-    Header header = Boot::readHeader(rom);
-    // TODO use header to determine revision & region
-    cpu->setRegion(Region::NTSC);
-    ppu->setRegion(Region::NTSC);
-    apu->setRegion(Region::NTSC);
+    Header header = Boot::readHeader(rom, filename);
+    // TODO use header to determine revision?
+    cpu->setRegion(header.region);
+    ppu->setRegion(header.region);
+    apu->setRegion(header.region);
     // TODO use header to determine controller/expansion ports
     controllers.resize(2);
     controllers[0] = std::make_shared<NESStandardController>();

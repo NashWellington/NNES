@@ -1,8 +1,19 @@
 #include "boot.h"
 
-Header Boot::readHeader(std::ifstream& rom)
+// TODO move this to globals/util? Return file extension?
+std::string Boot::getName(std::string filename)
+{
+    std::string name = filename.substr(filename.rfind("/")+1);
+    int i = name.find(".");
+    std::string extension = name.substr(i+1);
+    name = name.substr(0, i);
+    return name;
+}
+
+Header Boot::readHeader(std::ifstream& rom, std::string filename)
 {
     Header header = Header();
+    header.name = getName(filename);
 
     ubyte header_data[16] = {0};
     rom.read(reinterpret_cast<char*>(header_data), sizeof(header_data));
@@ -18,8 +29,19 @@ Header Boot::readHeader(std::ifstream& rom)
 
     assert(header.type == HeaderType::INES || header.type == HeaderType::NES20);
 
+    // Detect mirroring type
+    // Note: setting to horizontal here could also mean mapper-controlled
+    header.mirroring = (header_data[6] & 0x01) ? MirrorType::HORIZONTAL : MirrorType::VERTICAL;
+
+    // Detect battery
+    header.battery = (header_data[6] & 0x02) >> 1;
+
     // Detect trainer
     header.trainer = (header_data[6] & 0x04) >> 2;
+
+    // TODO hard-wired four-screen mode
+
+    // TODO console type (NES, Vs. System, etc.)
 
     // Detect mapper type
     if (header.type == HeaderType::INES || header.type == HeaderType::NES20) 
@@ -33,7 +55,6 @@ Header Boot::readHeader(std::ifstream& rom)
 
     // Detect PRG-ROM size
     uword prg_rom_ctrl = header_data[4];
-
     if (header.type == HeaderType::NES20) 
         prg_rom_ctrl += static_cast<uword>((header_data[9] & 0x0F) << 8);
 
@@ -74,26 +95,75 @@ Header Boot::readHeader(std::ifstream& rom)
             header.prg_ram_size = static_cast<uint>(64) << prg_ram_ctrl;
     }
 
+    // Detect PRG-NV-RAM/EEPROM size
+    if (header.type == HeaderType::NES20)
+    {
+        ubyte prg_nv_ram_ctrl = (header_data[10] & 0xF0) >> 4;
+        if (prg_nv_ram_ctrl) header.prg_nv_ram_size = 64 << prg_nv_ram_ctrl;
+    }
+    // This must be true (for iNES compatibility)
+    assert((header.battery) == (header.prg_nv_ram_size > 0));
+
     // Detect CHR-RAM size
     if (header.type == HeaderType::INES)
     {
         if (header.chr_rom_size == 0) header.chr_ram_size = 0x2000;
     }
-    else if (header.type == HeaderType::NES20) 
-        header.chr_ram_size = static_cast<uint>(64) << (header_data[11] & 0x0F);
+    else if (header.type == HeaderType::NES20)
+    {
+        uint chr_ram_ctrl = header_data[11] & 0x0F;
+        if (chr_ram_ctrl != 0) header.chr_ram_size = 64 << chr_ram_ctrl;
+    }
 
-    // TODO Detect CHR-NV-RAM size
+    // Detect CHR-NV-RAM size
+    if (header.type == HeaderType::NES20)
+    {
+        ubyte chr_nv_ram_ctrl = (header_data[11] & 0xF0) >> 4;
+        if (chr_nv_ram_ctrl) header.chr_nv_ram_size = 64 << chr_nv_ram_ctrl;
+    }
 
-    // Detect mirroring type
-    if (header_data[6] & 0x01) header.mirroring = MirrorType::VERTICAL;
-    else header.mirroring = MirrorType::HORIZONTAL;
+    // Detect Region
+    switch (header_data[12])
+    {
+        case 0:
+            header.region = Region::NTSC;
+            break;
+        case 1:
+            header.region = Region::PAL;
+            break;
+        case 2:
+            header.region = Region::OTHER; // Multi-region
+            break;
+        case 3:
+            header.region = Region::Dendy;
+            break;
+    }
+    // TODO non-NTSC region support
+    if (header.region != Region::NTSC)
+    {
+        std::cerr << "Error: unsupported region" << std::endl;
+        throw std::exception();
+    }
+
+    // TODO Vs. System/Extended Console type
+
+    // Miscellaneous ROM presence
+    header.misc_rom_num = header_data[14];
+
+    // TODO default expansion device
 
     // Log cartridge memory bank sizes
     #ifndef NDEBUG
+    std::cerr << "Mapper: " << header.mapper << std::endl;
+    std::cerr << "Submapper: " << header.submapper << std::endl;
+    std::cerr << "Battery? " << header.battery << std::endl;
     std::cerr << "PRG-ROM size: " << header.prg_rom_size << std::endl;
     std::cerr << "PRG-RAM size: " << header.prg_ram_size << std::endl;
+    std::cerr << "PRG-NV-RAM size: " << header.prg_nv_ram_size << std::endl;
     std::cerr << "CHR-ROM size: " << header.chr_rom_size << std::endl;
     std::cerr << "CHR-RAM size: " << header.chr_ram_size << std::endl;
+    std::cerr << "CHR-NV-RAM size: " << header.chr_nv_ram_size << std::endl;
+    std::cerr << "Misc ROMs: " << header.misc_rom_num << std::endl;
     #endif
 
     return header;
@@ -142,8 +212,5 @@ std::shared_ptr<Mapper> Boot::getMapper(Header& header, std::ifstream& rom)
             std::cerr << "Error: unsupported mapper type: " << header.mapper << std::endl;
             throw std::exception();
     }
-    #ifndef NDEBUG
-    std::cerr << "Mapper: " << header.mapper << std::endl;
-    #endif
     return mapper;
 }

@@ -63,11 +63,11 @@ int main(int argc, char ** argv)
     std::unique_ptr<Video> video = std::make_unique<Video>();
     std::unique_ptr<NES> nes = std::make_unique<NES>(*audio, *video);
 
-    nes->insertROM(rom);
+    nes->insertROM(rom, rom_filename.value());
     // For now, input has to be initialized after a ROM is loaded
     // This is because controllers don't get initialized until after ROM loading
     // TODO handle binds after Input is initialized and/or initialize controllers at console initialization
-    Input input = Input(*nes, *audio, *video);
+    std::unique_ptr<Input> input = std::make_unique<Input>(*nes, *audio, *video);
 
     // Timing
     uint64_t frame_count = 0;
@@ -77,14 +77,16 @@ int main(int argc, char ** argv)
     while (running)
     {
         using namespace std::chrono;
-        running = input.poll();
+        running = input->poll();
         nes->run(Scheduler::FRAME);
         video->displayFrame();
         std::this_thread::sleep_until(start_time + ++frame_count * frame(1));
     }
-    nes.reset(); // Might need to destroy PPU or APU before destroying SDL frontend classes
+    // Call destructors so SDL subsystems quit before SDL_Quit()
+    nes.reset();
     audio.reset();
     video.reset();
+    input.reset();
     SDL_Quit();
 
     #ifndef NDEBUG

@@ -71,6 +71,20 @@ enum class HeaderType
     UNIF        // Currently unimplemented
 };
 
+/* Master clock cycles per processer cycle
+*        PPU | CPU | APU
+* NTSC:   4     12    24   
+* PAL:    5     16    32
+* Dendy:  5     15    30
+*/
+enum class Region
+{
+    NTSC,
+    PAL,
+    OTHER,
+    Dendy
+};
+
 // https://wiki.nesdev.com/w/index.php/Mirroring#Nametable_Mirroring
 enum class MirrorType
 {
@@ -84,16 +98,23 @@ enum class MirrorType
 
 struct Header
 {
+    std::string name = "";
+
     HeaderType type = HeaderType::NO_HEADER;
     MirrorType mirroring = MirrorType::HORIZONTAL;
+    Region region = Region::NTSC;
 
     uint mapper = 0;
     uint submapper = 0;
     bool trainer = false;
+    bool battery = false;  // Battery-backed save
     uint64_t prg_rom_size = 0;
     uint64_t chr_rom_size = 0;
     uint64_t prg_ram_size = 0;
+    uint64_t prg_nv_ram_size = 0;
     uint64_t chr_ram_size = 0;
+    uint64_t chr_nv_ram_size = 0;
+    uint misc_rom_num = 0; // Number of misc ROMs present
 };
 
 struct Pixel
