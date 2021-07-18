@@ -43,10 +43,23 @@ Mapper000::Mapper000(Header& header, std::ifstream& rom)
 
 std::optional<ubyte> Mapper000::cpuRead(uword address)
 {
-    if (address < 0x6000) return {};
-    else if (address < 0x8000) // PRG RAM
+    if (address < 0x4020) return {};
+    else if (address >= 0x4020 && address < 0x6000)
     {
-        if (!prg_ram_enabled) return {};
+        #ifndef NDEBUG
+        std::cerr << "Warning: CPU read from unmapped address " << hex(address) << std::endl;
+        #endif
+        return 0;
+    }
+    else if (address >= 0x6000 && address < 0x8000) // PRG RAM
+    {
+        if (!prg_ram_enabled) 
+        {
+            #ifndef NDEBUG
+            std::cerr << "Warning: CPU read from unmapped address " << hex(address) << std::endl;
+            #endif
+            return 0;
+        }
         else 
         {
             address -=0x6000;
@@ -65,9 +78,22 @@ std::optional<ubyte> Mapper000::cpuRead(uword address)
 bool Mapper000::cpuWrite(uword address, ubyte data)
 {
     if (address < 0x6000) return false;
-    else if (address < 0x8000)
+    else if (address >= 0x4020 && address < 0x6000)
     {
-        if (!prg_ram_enabled) return false;
+        #ifndef NDEBUG
+        std::cerr << "Warning: CPU write to unmapped address " << hex(address) << std::endl;
+        #endif
+        return true;
+    }
+    else if (address >= 0x6000 && address < 0x8000)
+    {
+        if (!prg_ram_enabled) 
+        {
+            #ifndef NDEBUG
+            std::cerr << "Warning: CPU write to unmapped address " << hex(address) << std::endl;
+            #endif
+            return true;
+        }
         else
         {
             address -= 0x6000;
@@ -79,7 +105,7 @@ bool Mapper000::cpuWrite(uword address, ubyte data)
     else
     {
         #ifndef NDEBUG
-        std::cerr << "Warning: unsupported CPU write to " << hex(address) << std::endl;
+        std::cerr << "Warning: write to PRG-ROM at " << hex(address) << std::endl;
         #endif
         return true;
     }
@@ -103,7 +129,7 @@ bool Mapper000::ppuWrite(uword address, ubyte data)
         else
         {
             #ifndef NDEBUG
-            std::cerr << "Warning: unsupported PPU write to " << hex(address) << std::endl;
+            std::cerr << "Warning: write to CHR-ROM at " << hex(address) << std::endl;
             #endif
         }
         return true;
