@@ -55,14 +55,14 @@ Note: blargg's APU tests (not v2) are in 2 separate folders until I can identify
 | Test | Author | Status | Details |
 | :--- | :----: | :----: | :------ |
 | APU Envelope Test | blargg | 0/1 | |
-| APU Mixer | blargg | 0/4 | <l><li>Square wave test fails (probably something to do with the mixer)</li> <li>Other sound channels not supported</li></l> |
-| APU Phase Reset | Rahsennor | | Resets not fully supported |
-| APU Reset | blargg | | Resets not fully supported |
+| APU Mixer | blargg | 1/4 | <l><li>Square wave test fails, possibly due to lack of APU sweep emulation</li> <l><li>Triangle wave test passes</li> <li>Other sound channels not supported</li></l> |
+| APU Phase Reset | Rahsennor | | Crashes at CHR-ROM/RAM assertion |
+| APU Reset | blargg | 1/6 | <l> <li>len_ctrs_enabled passes</li> <li>Other tests fail, likely because APU IRQs are disabled</li></l> |
 | APU Sweep Test | blargg | | APU sweep not supported |
 | APU Tests | blargg | 0/12 | <l><li>Test 1 fails #4</li> <li>Test 2 fails and displays "$F8 $FF $1E $02"</li> <li>Test 3 fails #5</li> <li>Test 4 fails #2</li> <li>Test 5 fails #3</li> <li>Test 6 fails #3</li> <li>Test 7 fails #2</li> <li>Test 8 shows a gray screen</li> <li>Test 9 fails #4</li> <li>Test 10 fails #3</li> <li>Test 11 fails #2</li> <li>Combined ROM test 1 fails #4</li></l> |
 | APU Tests 2 | x0000 | 4/11 | <l><li>Note: this is supposed to fail after some resets on real hardware, likely because of CPU/PPU alignments</li> <li>Note: there's no readme provided so I'll have to figure out the specifics of these tests (beyond testing the frame counter)</li> <li>Tests 1, 2, 5, 6 pass</li> <li>Tests 3, 4, 7, 8, 9, 10, 11 fail</li></l> |
 | APU Timer Test | blargg | | <l><li>Square wave sounds like it probably should (minus some periods of audio delay) but I can't tell the difference between square_pitch_wave.wav and square_pitch_wave_bad.wav</li></l> |
-| APU Triangle Linear Counter Test | blargg | | Triangle channel unsupported |
+| APU Triangle Linear Counter Test | blargg | | 5-step sequence mode not supported |
 | DMC DMA During Read | blargg | 2/5 | <l><li>DMA $2007 write/read-write pass</li> <li>DMA/Double $2007 read fail with unintelligible error codes<li>DMA $4016 read fails</li> <li> |
 | DMC Tests | ??? | 0/4 | All tests show gray screens. This test probably depends on other sound channels |
 | DPCM Letterbox | tepples | | DPCM unsupported |
@@ -117,7 +117,6 @@ None yet
 
 ## CPU
 * $4020 to $40FF should exhibit open bus behavior that is unemulated
-* Emulate unstable opcodes (such as $8B)
 
 ## PPU
 * Pac-Man's top left background tile is set to 0 when it shouldn't be
@@ -128,12 +127,18 @@ None yet
 * In Pac-Man, at some point, tones change from being not constant (i.e. playing notes normally) to constantly playing. This stops every time a big pellet gets eaten (and the sfx change). This probably has something to do with timers being messed up. Maybe tones are played constantly once a timer's value hits 0?
 
 ## Mapper
+* //TODO set CHR-RAM if specified, CHR-ROM otherwise
 
 ## Input
 
 ## Misc
+TODO move game-specific bugs to a compatibility.md file or something
 * Dr. Mario halts after playing for 5-10 minutes or so. It's possible that all games do this (maybe an issue with frame/cycle count integer overflow?) but it hasn't been tested.
 * Note: I haven't checked this since the major interface change, so it's possible this is no longer true.
+* Final Fantasy crashes on opcode $22
+* Castlevania II crashes on opcode $72
+* Barbie: black screen on startup
+* Program leaks memory at exit (only viewable with address sanitizer)
 
 # Regressions
 
@@ -155,4 +160,3 @@ None yet
 ## Input
 
 ## Misc
-* Program leaks memory at exit (only viewable with address sanitizer)

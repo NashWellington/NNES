@@ -7,13 +7,29 @@ class NES;
 #include "audio.h"
 #include "mem.h"
 
+struct LengthCounter
+{
+    void load(ubyte length);
+    void clear();
+    void clock(bool enable, bool halt);
+    int count = 0;
+};
+
+struct LinearCounter
+{
+    void load(ubyte length);
+    void clear();
+    void clock(ubyte length, bool control);
+    int count = 0;
+    bool reload = false;
+};
+
 class APU : public Processor
 {
 public:
     APU(NES& _nes, Audio& _audio) : nes(_nes), audio(_audio) {}
     void setRegion(Region _region);
 
-    // TODO
     void reset();
     // void save(Savestate& savestate) { return; }
     // void load(Savestate& savestate) { return; }
@@ -31,6 +47,7 @@ public:
         int decay = 15;
         int divider = 0;
     } envelope[3] = {};
+
 
     /* Load the length counter of a channel
     * The index parameter corresponds to a channel
@@ -54,6 +71,7 @@ public:
 
     NES& nes;
     Audio& audio;
+    
 private:
     void mix(); // Mix all channel outputs and push that to audio queue
     void clockPulse(int i);
@@ -63,7 +81,7 @@ private:
 
     void clockEnvelope(int i);
     void clockLengthCounter(int i);
-
+public:
 // APU + channel variables
     uint frame_ctr = 0;
     uint sample_i = 0; // Sample index (goes from 0 to sample_rate/15)
@@ -72,15 +90,24 @@ private:
     {
         int timer = 0;
         int sequence = 7; // 8-step sequencer value
-        int length = 0;
+        LengthCounter len = {};
         uint out = 0; // The value to be mixed (0-15)
     } pulse[2] = {};
+
+    struct
+    {
+        int timer = 0;
+        int sequence = 15; // 32-step sequencer value
+        LengthCounter len = {};
+        LinearCounter lin = {};
+        uint out = 0; // the value to be mixed (0-15)
+    } triangle = {};
 
 public:
 // IRQ line
     bool frame_interrupt = false;
 
-// Registers
+// Square/Pulse wave channel registers
     /* Pulse control registers
     * $4000 and $4004
     * 
@@ -128,10 +155,41 @@ public:
     uword pulse_timer[2] = {}; //TODO name change? start vals?
 
     /* Pulse length counter load
-    * bits 4-7 of $4003 and $4007
+    * bits 3-7 of $4003 and $4007
     */
     ubyte pulse_length_ctr_load[2] = {}; //TODO better name? etc.
 
+// Triangle wave channel registers
+    /* Triangle linear counter
+    * $4008
+    */
+    union
+    {
+        struct
+        {
+            unsigned reload  : 7;
+            unsigned control : 1; // Control + length counter halt
+        };
+        ubyte reg;
+    } reg_lin_ctr {.reg = 0};
+
+    /* Triangle timer (11 bits)
+    * $400A (and bits 0-2 of $400B)
+    */
+    uword tri_timer = 0;
+
+    /* Triangle length counter load
+    * $400B (bits 3-7)
+    */
+    ubyte tri_length_ctr_load = 0;
+
+// Noise channel registers
+    // TODO
+
+// DMC registers
+    // TODO
+
+// Control/Status registers
     /* APU control register
     * $4015 write
     * 

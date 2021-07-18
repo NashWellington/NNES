@@ -21,7 +21,6 @@ const std::array<int,32> length_table =
 };
 
 // TODO other sound channels
-const uint tri_out = 0;
 const uint nse_out = 0;
 const uint dmc_out = 0;
 
@@ -33,14 +32,16 @@ const uint dmc_out = 0;
 #define clockQF() {\
 clockEnvelope(0);\
 clockEnvelope(1);\
+triangle.lin.clock(reg_lin_ctr.reload, reg_lin_ctr.control);\
 }
 
 // clock these every half frame
-// TODO noise & triangle length ctrs
+// TODO noise length ctr
 // TODO sweep units
 #define clockHF() {\
-clockLengthCounter(0);\
-clockLengthCounter(1);\
+pulse[0].len.clock(reg_apu_ctrl.lce_p1, reg_pulse_ctrl[0].loop);\
+pulse[1].len.clock(reg_apu_ctrl.lce_p2, reg_pulse_ctrl[1].loop);\
+triangle.len.clock(reg_apu_ctrl.lce_tr, reg_lin_ctr.control);\
 }
 
 void APU::setRegion(Region _region)
@@ -93,8 +94,7 @@ void APU::tick()
             if (reg_frame_ctr.mode == 0)
             {
                 // Generate IRQ if interrupt inhibit is clear
-                if (!reg_frame_ctr.irq_disable)
-                    frame_interrupt = true;
+                if (!reg_frame_ctr.irq_disable) frame_interrupt = true;
                 clockQF()
                 clockHF() 
                 frame_ctr = 0;
@@ -116,8 +116,8 @@ void APU::tick()
 
     clockPulse(0);
     clockPulse(1);
-    /*
     clockTriangle();
+    /*
     clockNoise();
     clockDMC();*/
 
@@ -140,12 +140,12 @@ void APU::tick()
 */
 void APU::mix()
 {
-    uint pulse_sum = pulse[0].out + pulse[1].out;
-    float pulse_out = !pulse_sum ? 0 : 95.88f / ((8128.0f / static_cast<float>(pulse_sum)) + 100.0f);
-    uint tnd_sum = (static_cast<float>(tri_out) / 8227.0f) 
+    float pulse_sum = static_cast<float>(pulse[0].out + pulse[1].out);
+    float pulse_out = !pulse_sum ? 0 : 95.88f / ((8128.0f / pulse_sum) + 100.0f);
+    float tnd_sum = (static_cast<float>(triangle.out) / 8227.0f) 
                  + (static_cast<float>(nse_out) / 12241.0f) 
                  + (static_cast<float>(dmc_out) / 22638.0f);
-    float tnd_out = !tnd_sum ? 0 : 159.79f / ((1.0f / static_cast<float>(tnd_sum)) + 100.0f);
+    float tnd_out = !tnd_sum ? 0 : 159.79f / ((1.0f / tnd_sum) + 100.0f);
     float output = pulse_out + tnd_out;
     audio.pushSample(output);
 }
@@ -153,8 +153,7 @@ void APU::mix()
 void APU::clockPulse(int i)
 {
     pulse[i].timer--;
-    if (pulse[i].timer < 0) pulse[i].timer = pulse_timer[i];
-
+    if (pulse[i].timer < 0) pulse[i].timer = pulse_timer[i]; // Reload timer
     if (pulse[i].timer == pulse_timer[i])
     {
         uint volume;
@@ -167,9 +166,23 @@ void APU::clockPulse(int i)
             volume = envelope[i].decay;
         }
         if (pulse_timer[i] < 8) volume = 0;
+        if (pulse[i].len.count == 0) volume = 0;
         pulse[i].out = volume * pulse_waveforms[reg_pulse_ctrl[i].duty][pulse[i].sequence];
         pulse[i].sequence--;
         if (pulse[i].sequence < 0) pulse[i].sequence = 7;
+    }
+}
+
+void APU::clockTriangle()
+{
+    triangle.timer -= 2; // TODO validate
+    if (triangle.timer < 0) triangle.timer = tri_timer; // Reload timer
+    if (!triangle.lin.count || !triangle.len.count) triangle.out = 0;
+    else if (triangle.timer == tri_timer)
+    {
+        triangle.out = abs(triangle.sequence);
+        triangle.sequence--;
+        if (triangle.sequence < -15) triangle.sequence = 15;
     }
 }
 
@@ -201,64 +214,46 @@ void APU::clockEnvelope(int i)
     }
 }
 
-void APU::loadLengthCounter(int i)
+void LengthCounter::load(ubyte length)
 {
-    assert(i >= 0 && i < 4);
-    switch (i)
-    {
-        case 0:
-        case 1:
-            pulse[i].length = length_table[pulse_length_ctr_load[i]];
-            break;
-        // TODO triangle
-        // TODO noise
-        default:
-            break;
-    }
+    count = length_table[length];
 }
 
-void APU::clearLengthCounter(int i)
+void LengthCounter::clear()
 {
-    assert(i >= 0 && i < 4);
-    switch (i)
-    {
-        case 0:
-        case 1:
-            pulse[i].length = 0;
-        // TODO triangle
-        // TODO noise
-        default:
-            break;
-    }
+    count = 0;
 }
 
-void APU::clockLengthCounter(int i)
+void LengthCounter::clock(bool enable, bool halt)
 {
-    assert(i >= 0 && i < 4);
-    switch (i)
-    {
-        case 0:
-            if (reg_apu_ctrl.lce_p1 && pulse[i].length > 0 && !reg_pulse_ctrl[i].loop)
-                pulse[i].length--;
-            break;
-        case 1:
-            if (reg_apu_ctrl.lce_p2 && pulse[i].length > 0 && !reg_pulse_ctrl[i].loop)
-                pulse[i].length--;
-            break;
-        // TODO noise & triangle
-        default:
-            break;
-    }
+    if (enable && !halt && count > 0)
+        count--;
+}
+
+void LinearCounter::load(ubyte length)
+{
+    count = length;
+}
+
+void LinearCounter::clear()
+{
+    count = 0;
+}
+
+void LinearCounter::clock(ubyte length, bool control)
+{
+    if (reload) { count = length; reload = false; }
+    if (!control) count = 0;
 }
 
 void APU::getStatus()
 {
     reg_apu_status.reg = 0;
-    reg_apu_status.lc_p1 = (pulse[0].length > 0) ? 1 : 0;
-    reg_apu_status.lc_p2 = (pulse[1].length > 0) ? 1 : 0;
-    // TODO triangle length counter
+    reg_apu_status.lc_p1 = (pulse[0].len.count > 0);
+    reg_apu_status.lc_p2 = (pulse[1].len.count > 0);
+    reg_apu_status.lc_tr = (triangle.len.count > 0);
     // TODO noise length counter
     // TODO DMC activity
-    reg_apu_status.frame_interrupt = frame_interrupt ? 1 : 0;
+    reg_apu_status.frame_interrupt = frame_interrupt;
     // TODO DMC interrupt
 }
