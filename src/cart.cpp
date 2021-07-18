@@ -31,5 +31,20 @@ Cartridge::Cartridge(Header& header, std::ifstream& rom)
     */
 
     mapper = Boot::getMapper(header, rom);
+    
+    // Check that the whole file has been read
+    #ifndef NDEBUG
+    uint64_t size = 0;
+    while (!rom.eof())
+    {
+        rom.get();
+        size++;
+    }
+    if (size > 0)
+    {
+        std::cerr << "Error: " << size << " bytes not read" << std::endl;
+        throw std::exception();
+    }
+    #endif
     rom.close();
 }
