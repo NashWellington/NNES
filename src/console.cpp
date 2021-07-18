@@ -10,10 +10,10 @@ NES::NES(Audio& audio, Video& video)
 
 void NES::reset()
 {
-    // TODO reset methods for all
     cpu->reset();
     ppu->reset();
     apu->reset();
+    cart->reset();
 }
 
 void NES::insertROM(std::ifstream& rom, std::string filename)

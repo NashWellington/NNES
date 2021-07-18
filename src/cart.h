@@ -17,6 +17,8 @@ public:
 
     void processInputs() { return; }
 
+    void reset() { mapper->reset(); }
+
 private:
     /* Not going to implement these until I get further along in savestate development
     std::vector<ubyte> misc_rom = {};

@@ -1,13 +1,9 @@
 #pragma once
 
-// TODO clang, MSVC, etc.
-// #pragma GCC diagnostic warning "-Wunused-parameter"
-
-// Forward declaration
-struct Header;
-
 #include "../globals.h"
 #include "../savestate.h"
+
+#include <algorithm> // Needed to .fill(0) PRG-RAM after resets
 
 // TODO check nes20db for min/max RAM/ROM sizes
 // TODO address mirroring w/ references
@@ -23,6 +19,7 @@ public:
     // virtual bool save(Savestate& savestate) = 0; // Most mappers won't need these
     // virtual bool load(Savestate& savestate) = 0;
     // inline void tick() {return;} // Probably won't use this
+    virtual void reset() = 0;
     MirrorType mirroring = MirrorType::HORIZONTAL;
     // Only call this from ppuRead/Write
     void mirrorNametables(uword& address)
@@ -74,6 +71,11 @@ public:
     bool cpuWrite(uword address, ubyte data);
     std::optional<ubyte> ppuRead(uword address);
     bool ppuWrite(uword address, ubyte data);
+    void reset() 
+    {
+        std::fill(prg_ram.begin(), prg_ram.end(), 0);
+        if (chr_ram) chr_mem.fill(0);
+    }
 private:
     /* Program RAM
     * NOTE: only available in Family Basic mode
@@ -95,10 +97,6 @@ private:
     * window:   $2000
     */
     std::array<ubyte, 0x2000> chr_mem = {};
-
-    /* Determines if chr_mem acts as CHR-RAM
-    * Used for compatibility with some test roms and homebrew games
-    */
     bool chr_ram = false;
 };
 
@@ -118,6 +116,12 @@ public:
     bool cpuWrite(uword address, ubyte data);
     std::optional<ubyte> ppuRead(uword address);
     bool ppuWrite(uword address, ubyte data);
+    void reset() 
+    {
+        uint v_ram_end = (nv_ram_i < 0) ? prg_ram.size() : nv_ram_i;
+        std::for_each(prg_ram.begin(), prg_ram.begin() + v_ram_end, [](auto& a){ a.fill(0); });
+        if (chr_ram) std::for_each(chr_mem.begin(), chr_mem.end(), [](auto& a){ a.fill(0); });
+    }
 private:
     uint submapper = 0;
 
@@ -142,58 +146,8 @@ private:
     ubyte prg_ram_bank = 0;
 
     // https://wiki.nesdev.com/w/index.php/MMC1#Variants
-    union
-    {
-        struct
-        {
-            union
-            {
-                struct // default
-                {
-                    unsigned chr_bank : 5;
-                };
-                struct // SNROM
-                {
-                    unsigned : 4;
-                    
-                    /* Toggles PRG-RAM
-                    * Only used if //TODO when?
-                    */
-                    unsigned        e : 1;
-                };
-                struct // SOROM, SUROM, SXROM
-                {
-                    unsigned : 2;
-
-                    union
-                    {
-                        struct
-                        {
-                            /* Selects 8KiB PRG-RAM bank
-                            * Only used if PRG-RAM size == 32KiB
-                            * //TODO should I reverse this?
-                            */
-                            unsigned       ss : 2;
-                        };
-                        struct
-                        {
-                            unsigned : 1;
-                            /* Selects 8KiB PRG-RAM bank
-                            * Only used if PRG-RAM size == 16KiB
-                            */
-                            unsigned        s : 1;
-                        };
-                    };
-                    /* Selects 256 PRG-ROM bank
-                    * Only if PRG-ROM size == 512KiB
-                    */
-                    unsigned        p : 1;
-                };
-            };
-            unsigned : 3; // unused
-        };
-        ubyte reg = 0;
-    } chr_bank[2] {};
+    // TODO check to see if this bitfield is fucked
+    std::array<ubyte,2> chr_bank = {};
 
 // Banks
     /* Program RAM (optional)
@@ -203,6 +157,13 @@ private:
     */
     std::vector<std::array<ubyte,0x2000>> prg_ram = {};
     bool prg_ram_enabled = false;
+    int nv_ram_i = -1; // Index of the first PRG-RAM bank that's battery-backed
+
+    /* Determines which PRG-RAM bank is non-volatile
+    * -1 - no NV-RAM
+    * 0,1 - bank 0 or 1
+    */
+    int nv = -1;
 
     /* Program ROM
     * capacity: $8,000 to $80,000 (32-512 KiB)
@@ -217,7 +178,6 @@ private:
     * window:   $1000 x 2
     */
     std::vector<std::array<ubyte,0x1000>> chr_mem = {};
-
     bool chr_ram = false;
 };
 
@@ -236,6 +196,7 @@ public:
     bool cpuWrite(uword address, ubyte data);
     std::optional<ubyte> ppuRead(uword address);
     bool ppuWrite(uword address, ubyte data);
+    void reset() { if (chr_ram) chr_mem.fill(0); }
 private:
 // Banks
     /* Program ROM
@@ -269,6 +230,7 @@ public:
     bool cpuWrite(uword address, ubyte data);
     std::optional<ubyte> ppuRead(uword address);
     bool ppuWrite(uword address, ubyte data);
+    void reset() { if (chr_ram) std::for_each(chr_mem.begin(), chr_mem.end(), [](auto& a){ a.fill(0); }); }
 private:
 // Banks
     /* Program ROM
@@ -306,6 +268,11 @@ public:
     bool cpuWrite(uword address, ubyte data);
     std::optional<ubyte> ppuRead(uword address);
     bool ppuWrite(uword address, ubyte data);
+    void reset() 
+    {
+        prg_ram.fill(0);
+        if (chr_ram) std::for_each(chr_mem.begin(), chr_mem.end(), [](auto& a){ a.fill(0); });
+    }
 private:
 // Banks
     /* Program RAM
@@ -392,6 +359,10 @@ public:
     bool cpuWrite(uword address, ubyte data);
     std::optional<ubyte> ppuRead(uword address);
     bool ppuWrite(uword address, ubyte data);
+    void reset()
+    {
+        std::for_each(prg_ram.begin(), prg_ram.end(), [](auto& a){ a.fill(0); });  
+    }
 private:
 // Banks
     /* Program RAM
@@ -436,6 +407,10 @@ public:
     bool cpuWrite(uword address, ubyte data);
     std::optional<ubyte> ppuRead(uword address);
     bool ppuWrite(uword address, ubyte data);
+    void reset()
+    {
+        if (chr_ram) std::fill(chr_mem.begin(), chr_mem.end(), 0);
+    }
 private:
 // Banks
     /* Program ROM
@@ -471,6 +446,11 @@ public:
     bool cpuWrite(uword address, ubyte data);
     std::optional<ubyte> ppuRead(uword address);
     bool ppuWrite(uword address, ubyte data);
+    void reset()
+    {
+        prg_ram.fill(0);
+        if (chr_ram) std::for_each(chr_mem.begin(), chr_mem.end(), [](auto& a){ a.fill(0); });
+    }
 private:
     /* Program RAM
     * capacity: $0000 or $2000 (0 or 8 KiB)
