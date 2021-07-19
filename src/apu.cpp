@@ -89,16 +89,10 @@ void APU::setRegion(Region _region)
 void APU::reset()
 {
     // Reset reg $4015
-    write(4015, 0);
-    write(4017, 0);
+    write(0x4015, 0);
     // APU should act like 4017 was written to 9-12 cycles before start/reset
     // TODO randomize val?
     frame_ctr = 9;
-    // Enable all length counters
-    pulse_1.len.enabled = true;
-    pulse_2.len.enabled = true;
-    triangle.len.enabled = true;
-    noise.len.enabled = true;
     triangle.seq.sequence = 0;
     // TODO AND APU DPCM output with 1
     // TODO reset APU Frame Counter if 2A03G
@@ -208,7 +202,6 @@ ubyte APU::read(uword address)
 
 void APU::write(uword address, ubyte data)
 {
-    assert(address >= 0x4000);
     switch (address)
     {
         /* Pulse 1 control register
@@ -510,6 +503,7 @@ void APU::write(uword address, ubyte data)
             else
             {
                 frame_count_mode = FOUR_STEP;
+                if (!irq_inhibit) irq_line = true;
             }
             // TODO buffer
             frame_ctr = 0;
@@ -532,25 +526,24 @@ void Pulse::clock()
         seq.clock();
         seq.out = pulse_waveforms[duty][seq.sequence];
     }
-    out = (!sweep.mute && seq.out && !len.silence && enable) ? env.out : 0;
+    out = (!sweep.mute && seq.out && len.count > 0) ? env.out : 0;
 }
 
 void Triangle::clock()
 {
     if (timer.clock() || timer.clock())
     {
-        if (!len.silence && !lin.silence)
+        if (len.count > 0 && lin.count > 0)
         {
             seq.clock();
-            seq.out = abs(seq.sequence);
+            out = abs(seq.sequence);
         }
     }
-    out = enable ? seq.out : 0;
 }
 
 void Noise::clock()
 {
-    out = (timer.clock() && !len.silence && enable) ? env.out : 0;
+    out = (timer.clock() && len.count > 0) ? env.out : 0;
 }
 
 bool DMC::clock()
@@ -563,24 +556,18 @@ void LengthCounter::load(ubyte length)
 {
     assert(enabled);
     count = length_table[length];
-    silence = false;
 }
 
 void LengthCounter::clock()
 {
-    if (enabled && !halt && count > 0) count--;
-    if (enabled && count == 0) silence = true;
-    // TODO not sure about this
-    if (!enabled) silence = true;
+    if (!halt && count > 0) count--;
 }
 
 void LinearCounter::clock()
 {
-    if (reload) { count = reload_val; reload = false; silence = false; }
+    if (reload) count = reload_val;
     else if (count > 0) count--;
     if (!control) reload = false;
-    // TODO not sure about this
-    if (count == 0) silence = true;
 }
 
 void Envelope::clock()
@@ -607,24 +594,30 @@ void Envelope::clock()
 
 void Sweep::clock(Divider& timer)
 {
-    if (counter <= 0)
+    if (enabled)
     {
-        int change = timer.period >> shift;
-        if (negate)
+        count--;
+        if (count < 0)
         {
-            // Pulse 1 -> one's comp, 2 -> 2's comp
-            change = (ones_comp) ? -change - 1 : -change;
+            int change = timer.period >> shift;
+            if (negate)
+            {
+                // Pulse 1 -> one's comp, 2 -> 2's comp
+                change = (ones_comp) ? -change - 1 : -change;
+            }
+            timer.period += change;
+            if (timer.period < 8 || timer.period > 0x7FF) // TODO also mute if target > 0x7FF before?
+            {
+                mute = true;
+                enabled = false;
+            }
         }
-        int target = timer.period + change;
-        mute = (timer.period < 8) || (target > 0x7FF);
-        if (enabled) timer.period = target;
+        if (count < 0 || reload)
+        {
+            count = period;
+            reload = false;
+        }
     }
-    if (counter <= 0 || reload)
-    {
-        counter = (period) >> 4;
-        reload = false;
-    }
-    else counter--;
 }
 
 // void Divider::reload() { counter = period; }

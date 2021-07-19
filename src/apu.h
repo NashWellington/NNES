@@ -45,9 +45,8 @@ struct LengthCounter
     void load(ubyte length);
     void clock();
     int count = 0;
-    bool enabled = true;
+    bool enabled = false;
     bool halt = false;
-    bool silence = true; // Silences channel
 };
 
 struct LinearCounter
@@ -57,7 +56,6 @@ struct LinearCounter
     int count = 0;
     bool control = false; // gets buffered into reload every clock cycle
     bool reload = false;
-    bool silence = true;
 };
 
 struct Envelope
@@ -82,7 +80,7 @@ struct Sweep
     bool enabled = false;
     bool reload = false;
     bool mute = false;
-    int counter = 0;
+    int count = 0;
 };
 
 struct Pulse
@@ -95,7 +93,6 @@ struct Pulse
     Envelope env = {};
     Sweep sweep = {};
     uint out = 0; // The value to be mixed (0-15)
-    bool enable = false; // Enabled/disabled by $4015 write to bit 0/1
 };
 
 struct Triangle
@@ -106,7 +103,6 @@ struct Triangle
     LengthCounter len = {};
     LinearCounter lin = {};
     uint out = 0; // the value to be mixed (0-15)
-    bool enable = false; // Enabled/disabled by $4015 write to bit 2
 };
 
 struct Noise
@@ -117,7 +113,6 @@ struct Noise
     LengthCounter len = {};
     ubyte period = 0;
     uint out = 0; // 0-15
-    bool enable = false;
 };
 
 struct DMC
@@ -160,7 +155,7 @@ public:
 private:
     void mix(); // Mix all channel outputs and push that to audio queue
 // APU + channel variables
-    uint frame_ctr = 9;
+    uint frame_ctr = 12;
     uint sample_i = 0; // Sample index (goes from 0 to sample_rate/15)
     enum
     {
