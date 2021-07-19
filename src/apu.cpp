@@ -90,6 +90,10 @@ void APU::reset()
 {
     // Reset reg $4015
     write(4015, 0);
+    write(4017, 0);
+    // APU should act like 4017 was written to 9-12 cycles before start/reset
+    // TODO randomize val?
+    frame_ctr = 9;
     // Enable all length counters
     pulse_1.len.enabled = true;
     pulse_2.len.enabled = true;
@@ -204,6 +208,7 @@ ubyte APU::read(uword address)
 
 void APU::write(uword address, ubyte data)
 {
+    assert(address >= 0x4000);
     switch (address)
     {
         /* Pulse 1 control register

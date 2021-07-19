@@ -160,7 +160,7 @@ public:
 private:
     void mix(); // Mix all channel outputs and push that to audio queue
 // APU + channel variables
-    uint frame_ctr = 0;
+    uint frame_ctr = 9;
     uint sample_i = 0; // Sample index (goes from 0 to sample_rate/15)
     enum
     {
