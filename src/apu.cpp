@@ -29,8 +29,19 @@ const std::array<int,16> noise_period_lookup =
     4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
 };
 
-// TODO other sound channels
-const uint dmc_out = 0;
+// Rate that DMC refills buffer (in CPU cycles)
+// TODO PAL
+const std::array<int,16> rate_lookup = 
+{
+    428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106,  84,  72,  54
+};
+
+// DMC pitch table
+const std::array<uint,16> pitch_table = 
+{
+    0x1AC, 0x17C, 0x154, 0x140, 0x11E, 0x0FE, 0x0E2, 0x0D6, 
+    0x0BE, 0x0A0, 0x08E, 0x080, 0x06A, 0x054, 0x048, 0x036
+};
 
 // TODO let SDL handle resampling???
 
@@ -82,7 +93,7 @@ void APU::reset()
     // Enable all length counters
     pulse_1.len.enable = true;
     pulse_2.len.enable = true;
-    triangle.len.enable = true; // TODO don't change?
+    triangle.len.enable = true;
     noise.len.enable = true;
     triangle.seq.sequence = 0;
     // TODO AND APU DPCM output with 1
@@ -112,7 +123,7 @@ void APU::tick()
             if (frame_count_mode == 0)
             {
                 // Generate IRQ if interrupt inhibit is clear
-                if (!irq_inhibit) frame_interrupt = true;
+                if (!irq_inhibit) irq_line = true;
                 clockQF()
                 clockHF() 
                 frame_ctr = 0;
@@ -135,7 +146,7 @@ void APU::tick()
     pulse_2.clock();
     triangle.clock();
     noise.clock();
-    // dmc.clock();
+    if (dmc.clock()) irq_line = true;
 
     if ((cycle*audio.sample_rate / (15*MAX_CYCLE)) >= (sample_i+1)) // Should make 44.1k samples/sec
     {
@@ -160,7 +171,7 @@ void APU::mix()
     float pulse_out = !pulse_sum ? 0 : 95.88f / ((8128.0f / pulse_sum) + 100.0f);
     float tnd_sum = (static_cast<float>(triangle.out) / 8227.0f) 
                   + (static_cast<float>(noise.out) / 12241.0f) 
-                  + (static_cast<float>(dmc_out) / 22638.0f);
+                  + (static_cast<float>(dmc.out) / 22638.0f);
     float tnd_out = !tnd_sum ? 0 : 159.79f / ((1.0f / tnd_sum) + 100.0f);
     float output = pulse_out + tnd_out;
     audio.pushSample(output);
@@ -181,12 +192,13 @@ ubyte APU::read(uword address)
     * F       - frame interrupt
     * I       - DMC interrupt
     */
-    data |= (pulse_1.len.count > 0) ? 1 : 0;
-    data |= (pulse_2.len.count > 0) ? 1 : 0;
-    data |= (triangle.len.count > 0) ? 1 : 0;
-    data |= (noise.len.count > 0) ? 1 : 0;
-    // TODO DMC active
-    // TODO interrupts
+    data |= pulse_1.len.count > 0 ? 0x01 : 0;
+    data |= pulse_2.len.count > 0 ? 0x02 : 0;
+    data |= triangle.len.count > 0 ? 0x04 : 0;
+    data |= noise.len.count > 0 ? 0x08 : 0;
+    data |= dmc.bytes_remaining > 0 ? 0x10 : 0;
+    irq_line = false;
+    // TODO simultaneous interrupt flag set read behavior
     return data;
 }
 
@@ -397,7 +409,49 @@ void APU::write(uword address, ubyte data)
             noise.env.start = true;
             break;
 
-        // TODO DMC
+        /* DMC flags and rate
+        * $4010
+        * 
+        * 7 6 5 4   3 2 1 0
+        * I L - -   R R R R
+        * 
+        * R - rate: determines number of CPU cycles before changing
+        *           output level
+        * L - loop
+        * I - IRQ enable
+        */
+        case 0x4010:
+            dmc.rate = rate_lookup[data & 0x0F];
+            dmc.loop = data & 0x40;
+            dmc.irq_enable = data & 0x80;
+            break;
+
+        // TODO occasional improper level change
+        /* DMC direct load
+        * $4011
+        * 
+        * 7 6 5 4   3 2 1 0
+        * - D D D   D D D D
+        * 
+        * D - direct load: sets output level
+        */
+        case 0x4011:
+            dmc.out = data & 0x7F;
+            break;
+
+        /* DMC sample address
+        * $4012
+        */
+        case 0x4012:
+            dmc.sample_addr = 0xC000 + data * 64;
+            break;
+
+        /* DMC sample length
+        * $4013
+        */
+        case 0x4013:
+            dmc.sample_len = data * 16 + 1;
+            break;
 
         /* APU control
         * $4015 (write)
@@ -405,21 +459,27 @@ void APU::write(uword address, ubyte data)
         * 7 6 5 4   3 2 1 0
         * - - - D   N T 2 1
         * 
-        * 1 - Pulse 1 enable
-        * 2 - Pulse 2 enable
-        * T - Triangle enable
-        * N - Noise enable
-        * D - DMC enable
+        * 1 - Pulse 1 enable/clear length counter
+        * 2 - Pulse 2   ''
+        * T - Triangle  ''
+        * N - Noise     ''
+        * D - DMC       ''
         * 
         * Side effects: clears DMC interrupt flag
         */
         case 0x4015:
             pulse_1.enable = data & 0x01;
+            if (!pulse_1.enable) pulse_1.len.count = 0;
             pulse_2.enable = data & 0x02;
+            if (!pulse_2.enable) pulse_2.len.count = 0;
             triangle.enable = data & 0x04;
-            noise.enable = data & 0x80;
-            // TODO DMC channel enable/complicated DMC behavior
-            // TODO clear DMC interrupt flag
+            if (!triangle.enable) triangle.len.count = 0;
+            noise.enable = data & 0x08;
+            if (!noise.enable) noise.len.count = 0;
+            dmc.enable = data & 0x10;
+            if (!dmc.enable) dmc.bytes_remaining = 0;
+            // if (dmc.enable) restart (but wait to empty buffer)
+            dmc.irq_enable = false;
             break;
         
         /* APU frame counter
@@ -430,10 +490,24 @@ void APU::write(uword address, ubyte data)
         * 
         * I = IRQ inhibit flag
         * M = frame counter Mode
+        * 
+        * Side effects: after 3-4 CPU clock cycles, timer is reset
+        *               if mode flag set, quarter+half frame signals generated
         */
         case 0x4017:
             irq_inhibit = data & 0x40;
-            frame_count_mode = (data & 0x80) ? FIVE_STEP : FOUR_STEP;
+            if (data & 0x80)
+            {
+                frame_count_mode = FIVE_STEP;
+                clockQF()
+                clockHF()
+            }
+            else
+            {
+                frame_count_mode = FOUR_STEP;
+            }
+            // TODO buffer
+            frame_ctr = 0;
             break;
 
         default:
@@ -474,12 +548,17 @@ void Noise::clock()
     out = (timer.clock() && !len.silence && enable) ? env.out : 0;
 }
 
+bool DMC::clock()
+{
+    if (irq_enable) return true;
+    else return false;
+}
+
 void LengthCounter::load(ubyte length) 
 { 
     count = length_table[length];
     silence = false;
 }
-void LengthCounter::clear() { count = 0; }
 
 void LengthCounter::clock()
 {
@@ -522,7 +601,7 @@ void Envelope::clock()
 
 void Sweep::clock(Divider& timer)
 {
-    if (divider <= 0)
+    if (counter <= 0)
     {
         int change = timer.period >> shift;
         if (negate)
@@ -534,11 +613,12 @@ void Sweep::clock(Divider& timer)
         mute = (timer.period < 8) || (target > 0x7FF);
         if (enabled) timer.period = target;
     }
-    if (divider <= 0 || reload)
+    if (counter <= 0 || reload)
     {
-        divider = (period) >> 4;
+        counter = (period) >> 4;
         reload = false;
     }
+    else counter--;
 }
 
 // void Divider::reload() { counter = period; }

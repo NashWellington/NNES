@@ -27,7 +27,7 @@ struct Divider : public Timer
 struct LFSR : public Timer
 {
     bool clock();
-    uword shift_reg = 0;
+    uword shift_reg = 0; // TODO init at 0??? (or some other complicated behavior)
     bool mode = false;
 };
 
@@ -37,17 +37,12 @@ struct Sequencer
     int seq_min = 0;
     int seq_max = 0;
     int sequence = 0;
-    bool out = false;
+    uint out = 0;
 };
 
 struct LengthCounter
 {
     void load(ubyte length);
-    void clear();
-    /* Clocks the length counter
-    * enable - $4015 bit 0/1 write (reg_apu_ctrl.lce_p1/lce_p2)
-    * halt   - $4000/$4004 bit 5 (reg_pulse_ctrl)
-    */
     void clock();
     int count = 0;
     bool enable = true;
@@ -57,10 +52,6 @@ struct LengthCounter
 
 struct LinearCounter
 {
-    /* Clocks the linear counter
-    * control - $4008 bit 7
-    * length  - $4008 bits 0-6
-    */
     void clock();
     int reload_val = 0;
     int count = 0;
@@ -71,11 +62,6 @@ struct LinearCounter
 
 struct Envelope
 {
-    /* Clocks the envelope
-    * period - $4000/$4004 bits 0-3 OR //TODO noise chan
-    * loop   - $4000/$4004 bit 5 OR //TODO noise chan
-    * cv     - $4000/$4004 bit 4 (constant volume)
-    */
     void clock();
     ubyte period = 0; // used as period or constant volume control
     bool cv = false;
@@ -96,7 +82,7 @@ struct Sweep
     bool enabled = false;
     bool reload = false;
     bool mute = false;
-    int divider = 0;
+    int counter = 0;
 };
 
 struct Pulse
@@ -126,12 +112,31 @@ struct Triangle
 struct Noise
 {
     void clock();
-    // TODO linear feedback shift reg + timer
     LFSR timer = {};
     Envelope env = {};
     LengthCounter len = {};
     ubyte period = 0;
     uint out = 0; // 0-15
+    bool enable = false;
+};
+
+struct DMC
+{
+    // If true, triggers an IRQ
+    bool clock();
+    bool irq_enable = false;
+    bool loop = false;
+    int rate = 0;
+    ubyte out = 0; // 0-127
+
+    uword sample_addr = 0;
+    uword curr_addr = 0;
+    uword bytes_remaining = 0;
+    uword sample_len = 0;
+
+    ubyte sample_buf = 0;
+    ubyte bits_remaining = 0;
+
     bool enable = false;
 };
 
@@ -168,9 +173,10 @@ private:
     Pulse pulse_2 = {};
     Triangle triangle = {};
     Noise noise = {};
+    DMC dmc = {};
 
 public:
 // IRQ line
-    bool frame_interrupt = false;
+    bool irq_line = false;
 
 };
