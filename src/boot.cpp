@@ -22,8 +22,20 @@ Header Boot::readHeader(std::ifstream& rom, std::string filename)
     if (header_data[0] == 'N' && header_data[1] == 'E' && 
         header_data[2] == 'S' && header_data[3] == 0x1A)
     {
-        if ((header_data[7] & 0x0C) == 0x08) header.type = HeaderType::NES20;
-        else header.type = HeaderType::INES;
+        if ((header_data[7] & 0x0C) == 0x08) 
+        {
+            header.type = HeaderType::NES20;
+            #ifndef NDEBUG
+            std::cerr << "Header format: iNES" << std::endl;
+            #endif
+        }
+        else 
+        {
+            header.type = HeaderType::INES;
+            #ifndef NDEBUG
+            std::cerr << "Header format: iNES" << std::endl;
+            #endif
+        }
     }
     else header.type = HeaderType::NO_HEADER; // TODO UNIF headers
 
