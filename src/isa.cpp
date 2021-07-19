@@ -1491,22 +1491,19 @@ int ISA::BRK(CPU& cpu)
     // read and throw away the next byte
     cpu.nextByte();
 
-    if (!cpu.reg_sr.i)
-    {
-        uword pc = cpu.reg_pc;
-        ubyte pcl = static_cast<ubyte>(pc & 0x00FF);
-        ubyte pch = static_cast<ubyte>((pc & 0xFF00) >> 8);
+    uword pc = cpu.reg_pc;
+    ubyte pcl = static_cast<ubyte>(pc & 0x00FF);
+    ubyte pch = static_cast<ubyte>((pc & 0xFF00) >> 8);
 
-        cpu.push(pch);
-        cpu.push(pcl);
-        cpu.push(cpu.reg_sr.reg | 0x10); // push SR w/ B flag set
+    cpu.push(pch);
+    cpu.push(pcl);
+    cpu.push(cpu.reg_sr.reg | 0x10); // push SR w/ B flag set
 
-        cpu.reg_sr.i = true;
+    cpu.reg_sr.i = true;
 
-        pcl = cpu.read(0xFFFE);
-        pch = cpu.read(0xFFFF);
-        cpu.reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
-    }
+    pcl = cpu.read(0xFFFE);
+    pch = cpu.read(0xFFFF);
+    cpu.reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
     return 7;
 }
 
@@ -2240,12 +2237,18 @@ int ISA::ANE(CPU& cpu, int cycles, ubyte val)
     return cycles;
 }
 
+//  TODO I changed this to LAX behavior for compatibility with
+// blargg's instruction test v5, but behavior is documented to be
+// noticeably different in the 6510 undocumented opcode PDF.
+//  According to http://forums.nesdev.com/viewtopic.php?f=2&t=19891&p=253713,
+// it also doesn't behave like an LAX instruction on a Famicom
 int ISA::LXA(CPU& cpu, int cycles, ubyte val)
 {
-    ubyte accu = cpu.reg_a;
-    cpu.reg_sr.z = (accu == 0);
-    cpu.reg_sr.n = (accu & 0x80);
-    cpu.reg_a = (accu & MAGIC_CONST) & val;
-    cpu.reg_x = cpu.reg_a;
+    // ubyte accu = cpu.reg_a;
+    // cpu.reg_sr.z = (accu == 0);
+    // cpu.reg_sr.n = (accu & 0x80);
+    // cpu.reg_a = (accu | MAGIC_CONST) & val;
+    // cpu.reg_x = cpu.reg_a;
+    LAX(cpu, cycles, val);
     return cycles;
 }

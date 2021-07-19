@@ -15,10 +15,10 @@ Note: some tests (notably mapper/input tests by rainwarrior) are missing because
 | Branch Timing Tests | blargg | Pass | |
 | CPU Dummy Reads | blargg | 0/1 | LDA abs,X fails #3 |
 | CPU Dummy Writes | bisqwit | 0/2 | <l><li>OAM test fails #2 (OAM reads not reliable)</li> <li>PPU test fails #5 (single write to $2006 shouldn't change PPUADDR when vblank is on</li></l> | 
-| CPU Exec Space | bisqwit | 0/2 | <l><li>APU test fails $3F01. This may be because many APU registers aren't emulated at all.</li> <li>PPU test fails #6</li> <li>Note: this also tests open bus behavior, which is not fully emulated yet</li></l> |
-| CPU Flag Concurrency | bisqwit | 0/1 | Regression: test never finishes |
+| CPU Exec Space | bisqwit | 0/2 | <l><li>APU test fails #2 ($4000 error)</li> <li>PPU test fails #6</li> <li>Note: this also tests open bus behavior, which is not fully emulated yet</li></l> |
+| CPU Flag Concurrency | bisqwit | 0/1 | Flags work as expected, but APU IRQ timings are probably off (too fast?) |
 | CPU Reset | blargg | Pass | |
-| CPU Timing Test v6 | Zepper | Pass | |
+| CPU Timing Test v6 | Zepper | Fail | Regression: stack overflow/underflow -> opcode $02 |
 | Instruction Behavior Misc Tests | blargg | 2/4 | <l><li>Tests 1 and 2 pass</li> <li>Test 3 fails #3 (LDA abs,X) (Note: this tests mid-instruction reads, and will likely not pass until I make the CPU cycle-accurate)</li> <li>Test 4: a long list of opcodes fail #2. Note: this probably won't work until I get all APU regs emulated</li></l> |
 | Instruction Test v5 | blargg | Pass | |
 | Instruction Timing Tests | blargg | Pass | |
@@ -97,7 +97,7 @@ Note: some tests (notably mapper/input tests by rainwarrior) are missing because
 
 | Test | Author | Status | Details |
 | :--- | :----: | :----: | :------ |
-| Allpads | tepples | 1/? | Works for NES standard controller on port 1. All other controllers/ports are untested |
+| Allpads | tepples | 1/? | Regression: black screen (but some visual feedback on button presses) |
 | Ctrl Test | rainwarrior | | ROM unavailable |
 | DMA Sync Test 2 | Rahsennor | | DMC not yet emulated |
 | Input data line diagnostic | lidnariq | | No pass/fail because this isn't a test. I might just remove this |
@@ -115,7 +115,6 @@ None yet
 # Bugs
 
 ## CPU
-* $4020 to $40FF should exhibit open bus behavior
 
 ## PPU
 * Pac-Man's top left background tile is set to 0 when it shouldn't be
@@ -139,12 +138,13 @@ TODO move game-specific bugs to a compatibility.md file or something
 * Note: I haven't checked this since the major interface change, so it's possible this is no longer true.
 * Program leaks memory at exit (only viewable with address sanitizer)
 * Note: this might be SDL's fault
+* Open bus behavior unemulated: http://wiki.nesdev.com/w/index.php/Open_bus_behavior
 
 # Regressions
 
 ## CPU
-* CPU Flag Concurrency Test doesn't finish
-* Prior behavior: test fails #2
+* CPU timing test
+* Note: I think this probably has something to do with APU IRQs
 
 ## PPU
 
@@ -154,6 +154,7 @@ TODO move game-specific bugs to a compatibility.md file or something
 * Mapper 4 not compiled (intentional)
 
 ## Input
+* allpads test
 
 ## Misc
 * Final Fantasy fails on assertion ((battery) == (prg_nv_ram > 0))
