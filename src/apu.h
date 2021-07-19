@@ -7,15 +7,28 @@ class NES;
 #include "audio.h"
 #include "mem.h"
 
+// TODO move these inside APU somewhere
 // Really this is a timer, but a timer only contains a divider anyway
 struct Timer
 {
-    // Note: not all dividers can reload on command
-    void reload();
+    virtual ~Timer() {}
     // Returns true if a clock cycle is output
+    virtual bool clock() = 0;
+};
+
+struct Divider : public Timer
+{
     bool clock();
     int period = 0;
     int counter = 0;
+};
+
+// Linear Feedback Shift Register (used by noise channel)
+struct LFSR : public Timer
+{
+    bool clock();
+    uword shift_reg = 0;
+    bool mode = false;
 };
 
 struct Sequencer
@@ -37,7 +50,7 @@ struct LengthCounter
     */
     void clock();
     int count = 0;
-    bool enable = false;
+    bool enable = true;
     bool halt = false;
     bool silence = true; // Silences channel
 };
@@ -75,7 +88,7 @@ struct Envelope
 
 struct Sweep
 {
-    void clock(Timer& timer);
+    void clock(Divider& timer);
     bool ones_comp = false; // Set to true for Pulse 1
     ubyte shift = 0;
     bool negate = false;
@@ -88,13 +101,10 @@ struct Sweep
 
 struct Pulse
 {
-    /* Duty cycle index
-    * $4000/$4004 bits 6-7 (reg_pulse_ctrl)
-    */
     void clock();
     ubyte duty = 0;
     Sequencer seq = { .seq_min = 0, .seq_max = 7 };
-    Timer timer = {};
+    Divider timer = {};
     LengthCounter len = {};
     Envelope env = {};
     Sweep sweep = {};
@@ -105,12 +115,24 @@ struct Pulse
 struct Triangle
 {
     void clock();
-    Timer timer = {}; // This gets called twice (b/c tri timer runs at CPU clock speed)
+    Divider timer = {}; // This gets called twice (b/c tri timer runs at CPU clock speed)
     Sequencer seq = { .seq_min = -15, .seq_max = 15 };
     LengthCounter len = {};
     LinearCounter lin = {};
     uint out = 0; // the value to be mixed (0-15)
     bool enable = false; // Enabled/disabled by $4015 write to bit 2
+};
+
+struct Noise
+{
+    void clock();
+    // TODO linear feedback shift reg + timer
+    LFSR timer = {};
+    Envelope env = {};
+    LengthCounter len = {};
+    ubyte period = 0;
+    uint out = 0; // 0-15
+    bool enable = false;
 };
 
 class APU : public Processor
@@ -127,23 +149,11 @@ public:
     ubyte read(uword address);
     void write(uword address, ubyte data);
 
-    /* Fill reg_apu_status with relevant data
-    * Should only be called when $4015 is read
-    */
-    void getStatus();
-
     NES& nes;
     Audio& audio;
     
 private:
     void mix(); // Mix all channel outputs and push that to audio queue
-    void clockPulse(int i);
-    void clockTriangle();
-    void clockNoise();
-    void clockDMC();
-
-    void clockEnvelope(int i);
-public:
 // APU + channel variables
     uint frame_ctr = 0;
     uint sample_i = 0; // Sample index (goes from 0 to sample_rate/15)
@@ -157,6 +167,7 @@ public:
     Pulse pulse_1 = { .sweep = { .ones_comp = true }};
     Pulse pulse_2 = {};
     Triangle triangle = {};
+    Noise noise = {};
 
 public:
 // IRQ line

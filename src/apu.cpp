@@ -6,6 +6,7 @@
 */
 const uint MAX_CYCLE = 59561;
 
+// Used by the pulse channels' sequencers
 const std::array<std::array<int,8>,4> pulse_waveforms =
 {
     0, 1, 0, 0, 0, 0, 0, 0,    // 12.5%
@@ -14,32 +15,39 @@ const std::array<std::array<int,8>,4> pulse_waveforms =
     1, 0, 0, 1, 1, 1, 1, 1     // 25% negated
 };
 
+// Used when loading length counters
 const std::array<int,32> length_table = 
 {//    0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
 /*00-0F*/  10,254, 20,  2, 40,  4, 80,  6,160,  8, 60, 10, 14, 12, 26, 14,
 /*10-1F*/  12, 16, 24, 18, 48, 20, 96, 22,192, 24, 72, 26, 16, 28, 32, 30
 };
 
+// TODO these are just NTSC values; figure out a good way to incorporate PAL vals too
+// Used to determine the noise channel's period
+const std::array<int,16> noise_period_lookup = 
+{
+    4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
+};
+
 // TODO other sound channels
-const uint nse_out = 0;
 const uint dmc_out = 0;
 
 // TODO let SDL handle resampling???
 
 // clock these every quarter frame
-// TODO noise envelope
 #define clockQF() {\
 pulse_1.env.clock();\
 pulse_2.env.clock();\
+noise.env.clock();\
 triangle.lin.clock();\
 }
 
 // clock these every half frame
-// TODO noise length ctr
 #define clockHF() {\
 pulse_1.len.clock();\
 pulse_2.len.clock();\
 triangle.len.clock();\
+noise.len.clock();\
 pulse_1.sweep.clock(pulse_1.timer);\
 pulse_2.sweep.clock(pulse_1.timer);\
 }
@@ -69,8 +77,14 @@ void APU::setRegion(Region _region)
 // https://wiki.nesdev.com/w/index.php/CPU_power_up_state
 void APU::reset()
 {
+    // Reset reg $4015
     write(4015, 0);
-    // TODO reset triangle phase to 0 // TODO phase??
+    // Enable all length counters
+    pulse_1.len.enable = true;
+    pulse_2.len.enable = true;
+    triangle.len.enable = true; // TODO don't change?
+    noise.len.enable = true;
+    triangle.seq.sequence = 0;
     // TODO AND APU DPCM output with 1
     // TODO reset APU Frame Counter if 2A03G
 }
@@ -106,7 +120,6 @@ void APU::tick()
             break;
             
         case 18641: // APU cycle 18640.5 -> step 5
-            assert(frame_count_mode == 1);
             clockQF()
             clockHF()
             frame_ctr = 0;
@@ -121,9 +134,8 @@ void APU::tick()
     pulse_1.clock();
     pulse_2.clock();
     triangle.clock();
-    /*
-    clockNoise();
-    clockDMC();*/
+    noise.clock();
+    // dmc.clock();
 
     if ((cycle*audio.sample_rate / (15*MAX_CYCLE)) >= (sample_i+1)) // Should make 44.1k samples/sec
     {
@@ -147,7 +159,7 @@ void APU::mix()
     float pulse_sum = static_cast<float>(pulse_1.out + pulse_2.out);
     float pulse_out = !pulse_sum ? 0 : 95.88f / ((8128.0f / pulse_sum) + 100.0f);
     float tnd_sum = (static_cast<float>(triangle.out) / 8227.0f) 
-                  + (static_cast<float>(nse_out) / 12241.0f) 
+                  + (static_cast<float>(noise.out) / 12241.0f) 
                   + (static_cast<float>(dmc_out) / 22638.0f);
     float tnd_out = !tnd_sum ? 0 : 159.79f / ((1.0f / tnd_sum) + 100.0f);
     float output = pulse_out + tnd_out;
@@ -172,7 +184,7 @@ ubyte APU::read(uword address)
     data |= (pulse_1.len.count > 0) ? 1 : 0;
     data |= (pulse_2.len.count > 0) ? 1 : 0;
     data |= (triangle.len.count > 0) ? 1 : 0;
-    // TODO noise
+    data |= (noise.len.count > 0) ? 1 : 0;
     // TODO DMC active
     // TODO interrupts
     return data;
@@ -340,7 +352,52 @@ void APU::write(uword address, ubyte data)
             triangle.lin.reload = true;
             break;
 
-        // TODO noise & DMC
+        /* Noise channel control
+        * $400C
+        * 
+        * 7 6 5 4   3 2 1 0
+        * - - L C   V V V V
+        * 
+        * V - volume/envelope divider period
+        * C - constant volume
+        * L - length counter halt
+        */
+        case 0x400C:
+            noise.env.period = data & 0x0F;
+            noise.env.cv = data & 0x10;
+            noise.len.halt = data & 0x20;
+            break;
+
+        /* Noise channel mode and period
+        * $400E
+        * 
+        * 7 6 5 4   3 2 1 0
+        * M - - -   P P P P
+        * 
+        * P - timer period
+        * M - noise channel mode
+        */
+        case 0x400E:
+            noise.period = noise_period_lookup[data & 0x0F];
+            noise.timer.mode = data & 0x80;
+            break;
+
+        /* Noise channel length counter load
+        * $400F
+        * 
+        * 7 6 5 4   3 2 1 0
+        * l l l l   l - - -
+        * 
+        * l - length counter load
+        * 
+        * Side effects: envelope start flag set
+        */
+        case 0x400F:
+            noise.len.load(data >> 3);
+            noise.env.start = true;
+            break;
+
+        // TODO DMC
 
         /* APU control
         * $4015 (write)
@@ -360,7 +417,7 @@ void APU::write(uword address, ubyte data)
             pulse_1.enable = data & 0x01;
             pulse_2.enable = data & 0x02;
             triangle.enable = data & 0x04;
-            // TODO noise channel enable
+            noise.enable = data & 0x80;
             // TODO DMC channel enable/complicated DMC behavior
             // TODO clear DMC interrupt flag
             break;
@@ -396,7 +453,7 @@ void Pulse::clock()
         seq.clock();
         seq.out = pulse_waveforms[duty][seq.sequence];
     }
-    out = (!sweep.mute && seq.out && !len.silence) ? env.out : 0;
+    out = (!sweep.mute && seq.out && !len.silence && enable) ? env.out : 0;
 }
 
 void Triangle::clock()
@@ -409,7 +466,12 @@ void Triangle::clock()
             seq.out = abs(seq.sequence);
         }
     }
-    out = seq.out;
+    out = enable ? seq.out : 0;
+}
+
+void Noise::clock()
+{
+    out = (timer.clock() && !len.silence && enable) ? env.out : 0;
 }
 
 void LengthCounter::load(ubyte length) 
@@ -458,7 +520,7 @@ void Envelope::clock()
     out = cv ? period : decay;
 }
 
-void Sweep::clock(Timer& timer)
+void Sweep::clock(Divider& timer)
 {
     if (divider <= 0)
     {
@@ -479,11 +541,19 @@ void Sweep::clock(Timer& timer)
     }
 }
 
-void Timer::reload() { counter = period; }
-bool Timer::clock()
+// void Divider::reload() { counter = period; }
+bool Divider::clock()
 {
     if (counter == 0) { counter = period; return true; }
     else { counter--; return false; }
+}
+
+bool LFSR::clock()
+{
+    uword feedback = (shift_reg & 1) ^ (mode ? (shift_reg & 0x40) >> 5 : (shift_reg & 0x02) >> 1);
+    shift_reg >>= 1;
+    shift_reg |= feedback << 14;
+    return shift_reg & 1;
 }
 
 //  Note: out value is handled externally, so I don't have to 

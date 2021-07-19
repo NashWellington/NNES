@@ -8,8 +8,6 @@ Note: "240p test suite" is not included, and has been added to .gitignore, becau
 
 Note: some tests (notably mapper/input tests by rainwarrior) are missing because of corruption of the NesDev forums database.
 
-Note: blargg's APU tests (not v2) are in 2 separate folders until I can identify if there's a redundancy
-
 ## CPU Tests
 
 | Test | Author | Status | Details |
@@ -49,19 +47,21 @@ Note: blargg's APU tests (not v2) are in 2 separate folders until I can identify
 | Sprite Hit Tests | blargg | 1/11 | <l><li>Tests 1-4 fail #2</li> <li>Test 5 fails #4</li> <li>Tests 6-10 fail #3</li> <li>Test 11 passes somehow</li></l> |
 | Sprite Overflow Tests | blargg | 1/5 | <l><li>Test 1 fails #6 (shouldn't be set when all rendering off)</li> <li>Test 2 fails #6 (shouldn't be set when sprite y coords are 240)</li> <li>Test 3 fails #5</li> <li>Test 4 passes</li> <li>Test 5 fails #3</li></l> |
 | VBL NMI Tests | blargg | 0/10 | <l><li>Test 1 fails #7 (vbl period too short w/ bg off)</li> <li>Test 4 fails #5</li> <li>Tests 9 and 10 fail #2 (clock skipped too soon relative to enabling bg)</li> <li>All other tests have complex error messages that wouldn't make sense to type out in this table</li> <li>Note: it seems vblank flags are being set 2-3 frames early (relative to the CPU's clock)</li></l> |
+| XAA Test | Aureus | | |
 
 ## APU Tests
 
 | Test | Author | Status | Details |
 | :--- | :----: | :----: | :------ |
 | APU Envelope Test | blargg | 0/1 | |
-| APU Mixer | blargg | 1/4 | <l><li>Square wave test fails, possibly due to lack of APU sweep emulation</li> <l><li>Triangle wave test passes</li> <li>Other sound channels not supported</li></l> |
+| APU Mixer | blargg | 0/4 | <l><li>Square wave test fails, possibly due to lack of APU sweep emulation</li> <l><li>Regression: triangle wave test fails</li> <li>Other sound channels not supported</li></l> |
 | APU Phase Reset | Rahsennor | | Unsupported region (not NTSC) |
 | APU Reset | blargg | 1/6 | <l> <li>len_ctrs_enabled passes</li> <li>Other tests fail, likely because APU IRQs are disabled</li></l> |
-| APU Sweep Test | blargg | | APU sweep not supported |
+| APU Sweep Test | blargg | Fail | |
+| (Basic) APU Tests | blargg | | |
 | APU Tests | blargg | 0/12 | <l><li>Test 1 fails #4</li> <li>Test 2 fails and displays "$F8 $FF $1E $02"</li> <li>Test 3 fails #5</li> <li>Test 4 fails #2</li> <li>Test 5 fails #3</li> <li>Test 6 fails #3</li> <li>Test 7 fails #2</li> <li>Test 8 shows a gray screen</li> <li>Test 9 fails #4</li> <li>Test 10 fails #3</li> <li>Test 11 fails #2</li> <li>Combined ROM test 1 fails #4</li></l> |
 | APU Tests 2 | x0000 | 4/11 | <l><li>Note: this is supposed to fail after some resets on real hardware, likely because of CPU/PPU alignments</li> <li>Note: there's no readme provided so I'll have to figure out the specifics of these tests (beyond testing the frame counter)</li> <li>Tests 1, 2, 5, 6 pass</li> <li>Tests 3, 4, 7, 8, 9, 10, 11 fail</li></l> |
-| APU Timer Test | blargg | | <l><li>Square wave sounds like it probably should (minus some periods of audio delay) but I can't tell the difference between square_pitch_wave.wav and square_pitch_wave_bad.wav</li></l> |
+| APU Timer Test | blargg | | <l><li>Square wave fails</li></l> |
 | APU Triangle Linear Counter Test | blargg | | 5-step sequence mode not supported |
 | DMC DMA During Read | blargg | 2/5 | <l><li>DMA $2007 write/read-write pass</li> <li>DMA/Double $2007 read fail with unintelligible error codes<li>DMA $4016 read fails</li> <li> |
 | DMC Tests | ??? | 0/4 | All tests show gray screens. This test probably depends on other sound channels |
@@ -124,7 +124,7 @@ None yet
 * translating palette values to pixel values may be doable with integer math, instead of pre-defined values (http://forums.nesdev.com/viewtopic.php?f=2&t=14338)
 
 ## APU
-* In Pac-Man, at some point, tones change from being not constant (i.e. playing notes normally) to constantly playing. This stops every time a big pellet gets eaten (and the sfx change). This probably has something to do with timers being messed up. Maybe tones are played constantly once a timer's value hits 0?
+* Sweep is definitely broken
 
 ## Mapper
 * Cartridges don't save SRAM to file
