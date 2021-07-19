@@ -121,6 +121,10 @@ void Memory::ppuWrite(uword address, ubyte data)
 
 ubyte Memory::cpuReadReg(uword address)
 {
+    if (address == 0x4015)
+    {
+        return nes.apu->read(address);
+    }
     ubyte data = 0;
     if (address < 0x4000) address = 0x2000 + (address - 0x2000) % 0x0008;
     switch (address)
@@ -162,17 +166,9 @@ ubyte Memory::cpuReadReg(uword address)
             else reg_ppu_addr.address += 1;
             return data;
 
-// APU regs
-
 // Another PPU reg
         case 0x4014: // OAM DMA
             return ppu_latch;
-
-// Another APU reg
-        case 0x4015: // APU status
-            nes.apu->getStatus();
-            data = nes.apu->reg_apu_status.reg;
-            return data;
 
 // Input/misc regs
         case 0x4016: // Input port 1
@@ -180,6 +176,7 @@ ubyte Memory::cpuReadReg(uword address)
             // TODO expansion etc.
             return data;
 
+        // TODO DMC conflicts?
         case 0x4017: // Input port 2
             data |= nes.controllers[1]->read();
             // TODO expansion etc.
@@ -196,6 +193,11 @@ ubyte Memory::cpuReadReg(uword address)
 
 void Memory::cpuWriteReg(uword address, ubyte data)
 {
+    if (address >= 0x4000 && address <= 0x4013)
+    {
+        nes.apu->write(address, data);
+        return;
+    }
     if (address < 0x4000) address = 0x2000 + (address - 0x2000) % 0x0008;
     switch (address)
     {
@@ -251,64 +253,6 @@ void Memory::cpuWriteReg(uword address, ubyte data)
             ppu_latch = data;
             break;
 // APU regs
-        case 0x4000: // Pulse 1 control
-            nes.apu->reg_pulse_ctrl[0].reg = data;
-            break;
-        
-        case 0x4001: // Pulse 1 sweep control
-            nes.apu->reg_sweep[0].reg = data;
-            break;
-
-        case 0x4002: // Pulse 1 timer (low 8 bits)
-            nes.apu->pulse_timer[0] &= 0xFF00;
-            nes.apu->pulse_timer[0] |= static_cast<uword>(data);
-            break;
-        
-        case 0x4003: // Pulse 1 length counter load + timer (high 3 bits)
-            nes.apu->pulse_length_ctr_load[0] = data >> 3;
-            nes.apu->pulse_timer[0] &= 0x00FF;
-            nes.apu->pulse_timer[0] |= (static_cast<uword>(data & 0x07) << 8);
-            nes.apu->envelope[0].start = true;
-            nes.apu->pulse[0].len.load(nes.apu->pulse_length_ctr_load[0]);
-            break;
-        
-        case 0x4004: // Pulse 2 control
-            nes.apu->reg_pulse_ctrl[1].reg = data;
-            break;
-        
-        case 0x4005: // Pulse 2 sweep control
-            nes.apu->reg_sweep[1].reg = data;
-            break;
-
-        case 0x4006: // Pulse 2 timer (low 8 bits)
-            nes.apu->pulse_timer[1] &= 0xFF00;
-            nes.apu->pulse_timer[1] |= static_cast<uword>(data);
-            break;
-        
-        case 0x4007: // Pulse 2 length counter load + timer (high 3 bits)
-            nes.apu->pulse_length_ctr_load[1] = data >> 3;
-            nes.apu->pulse_timer[1] &= 0x00FF;
-            nes.apu->pulse_timer[1] |= (static_cast<uword>(data & 0x07) << 8);
-            nes.apu->envelope[1].start = true;
-            nes.apu->pulse[1].len.load(nes.apu->pulse_length_ctr_load[1]);
-            break;
-
-        case 0x4008: // Triangle linear counter
-            nes.apu->reg_lin_ctr.reg = data;
-            break;
-
-        case 0x4009: // Triangle timer (low 8 bits)
-            nes.apu->tri_timer &= 0xFF00;
-            nes.apu->tri_timer |= static_cast<uword>(data);
-            break;
-
-        case 0x4010: // Triangle length counter load + timer (high 3 bits)
-            nes.apu->tri_length_ctr_load = data >> 3;
-            nes.apu->tri_timer &= 0x00FF;
-            nes.apu->tri_timer |= (static_cast<uword>(data & 0x07) << 8);
-            nes.apu->triangle.len.load(nes.apu->tri_length_ctr_load);
-            nes.apu->triangle.lin.reload = true;
-            break;
 
 // Another PPU reg
         case 0x4014: // OAM DMA
@@ -317,13 +261,11 @@ void Memory::cpuWriteReg(uword address, ubyte data)
             ppu_latch = data;
             break;
 
-// Another APU reg
-        case 0x4015: // APU ctrl
-            nes.apu->reg_apu_ctrl.reg = data;
-            if (nes.apu->reg_apu_ctrl.lce_p1 == 0) nes.apu->pulse[0].len.clear();
-            if (nes.apu->reg_apu_ctrl.lce_p2 == 0) nes.apu->pulse[1].len.clear();
-            if (nes.apu->reg_apu_ctrl.lce_tr == 0) nes.apu->triangle.len.clear();
-            //if (nes.apu->reg_apu_ctrl.lce_ns == 0) nes.apu->noise.len.clear();
+// Too lazy to make a competent statement to determine where
+// APU regs are so here we go
+        case 0x4015:
+        case 0x4017:
+            nes.apu->write(address, data);
             break;
 
 // Misc regs
@@ -333,13 +275,6 @@ void Memory::cpuWriteReg(uword address, ubyte data)
             // TODO expansion ports (if I ever get there)
             ppu_latch &= 0xF8;
             ppu_latch |= (data & 0x07);
-            break;
-
-        case 0x4017: // APU frame counter
-            // TODO buffer for 3-4 CPU cycles
-            nes.apu->reg_frame_ctr.reg = data & 0xC0;
-            // TODO interrupts?
-            ppu_latch = nes.apu->reg_frame_ctr.reg;
             break;
 
         default:

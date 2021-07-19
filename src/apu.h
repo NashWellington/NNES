@@ -7,21 +7,110 @@ class NES;
 #include "audio.h"
 #include "mem.h"
 
+// Really this is a timer, but a timer only contains a divider anyway
+struct Timer
+{
+    // Note: not all dividers can reload on command
+    void reload();
+    // Returns true if a clock cycle is output
+    bool clock();
+    int period = 0;
+    int counter = 0;
+};
+
+struct Sequencer
+{
+    void clock();
+    int seq_min = 0;
+    int seq_max = 0;
+    int sequence = 0;
+    bool out = false;
+};
+
 struct LengthCounter
 {
     void load(ubyte length);
     void clear();
-    void clock(bool enable, bool halt);
+    /* Clocks the length counter
+    * enable - $4015 bit 0/1 write (reg_apu_ctrl.lce_p1/lce_p2)
+    * halt   - $4000/$4004 bit 5 (reg_pulse_ctrl)
+    */
+    void clock();
     int count = 0;
+    bool enable = false;
+    bool halt = false;
+    bool silence = true; // Silences channel
 };
 
 struct LinearCounter
 {
-    void load(ubyte length);
-    void clear();
-    void clock(ubyte length, bool control);
+    /* Clocks the linear counter
+    * control - $4008 bit 7
+    * length  - $4008 bits 0-6
+    */
+    void clock();
+    int reload_val = 0;
     int count = 0;
+    bool control = false; // gets buffered into reload every clock cycle
     bool reload = false;
+    bool silence = true;
+};
+
+struct Envelope
+{
+    /* Clocks the envelope
+    * period - $4000/$4004 bits 0-3 OR //TODO noise chan
+    * loop   - $4000/$4004 bit 5 OR //TODO noise chan
+    * cv     - $4000/$4004 bit 4 (constant volume)
+    */
+    void clock();
+    ubyte period = 0; // used as period or constant volume control
+    bool cv = false;
+    bool loop = false;
+    bool start = true;
+    int decay = 15;
+    int divider = 0;
+    uint out = 0;
+};
+
+struct Sweep
+{
+    void clock(Timer& timer);
+    bool ones_comp = false; // Set to true for Pulse 1
+    ubyte shift = 0;
+    bool negate = false;
+    ubyte period = 0;
+    bool enabled = false;
+    bool reload = false;
+    bool mute = false;
+    int divider = 0;
+};
+
+struct Pulse
+{
+    /* Duty cycle index
+    * $4000/$4004 bits 6-7 (reg_pulse_ctrl)
+    */
+    void clock();
+    ubyte duty = 0;
+    Sequencer seq = { .seq_min = 0, .seq_max = 7 };
+    Timer timer = {};
+    LengthCounter len = {};
+    Envelope env = {};
+    Sweep sweep = {};
+    uint out = 0; // The value to be mixed (0-15)
+    bool enable = false; // Enabled/disabled by $4015 write to bit 0/1
+};
+
+struct Triangle
+{
+    void clock();
+    Timer timer = {}; // This gets called twice (b/c tri timer runs at CPU clock speed)
+    Sequencer seq = { .seq_min = -15, .seq_max = 15 };
+    LengthCounter len = {};
+    LinearCounter lin = {};
+    uint out = 0; // the value to be mixed (0-15)
+    bool enable = false; // Enabled/disabled by $4015 write to bit 2
 };
 
 class APU : public Processor
@@ -35,34 +124,8 @@ public:
     // void load(Savestate& savestate) { return; }
 
     void tick();
-
-    /* Envelope data
-    * The envelope index corresponds to the channel the envelope affects
-    * 0, 1 => pulse 1, pulse 2
-    * 2 => noise
-    */
-    struct
-    {
-        bool start = true;
-        int decay = 15;
-        int divider = 0;
-    } envelope[3] = {};
-
-
-    /* Load the length counter of a channel
-    * The index parameter corresponds to a channel
-    * 0, 1 => pulse 1, pulse 2
-    * 2 => triangle
-    * 3 => noise
-    */
-    void loadLengthCounter(int i);
-
-    /* Set the length counter to 0
-    * Same indices as loadLengthCounter
-    * Should only be called for each of the low 4 bits in $4015 write
-    * when they are zeroed out
-    */
-    void clearLengthCounter(int i);
+    ubyte read(uword address);
+    void write(uword address, ubyte data);
 
     /* Fill reg_apu_status with relevant data
     * Should only be called when $4015 is read
@@ -80,185 +143,23 @@ private:
     void clockDMC();
 
     void clockEnvelope(int i);
-    void clockLengthCounter(int i);
 public:
 // APU + channel variables
     uint frame_ctr = 0;
     uint sample_i = 0; // Sample index (goes from 0 to sample_rate/15)
-
-    struct
+    enum
     {
-        int timer = 0;
-        int sequence = 7; // 8-step sequencer value
-        LengthCounter len = {};
-        uint out = 0; // The value to be mixed (0-15)
-    } pulse[2] = {};
+        FOUR_STEP,
+        FIVE_STEP
+    } frame_count_mode = FOUR_STEP;
+    bool irq_inhibit = false;
 
-    struct
-    {
-        int timer = 0;
-        int sequence = 15; // 32-step sequencer value
-        LengthCounter len = {};
-        LinearCounter lin = {};
-        uint out = 0; // the value to be mixed (0-15)
-    } triangle = {};
+    Pulse pulse_1 = { .sweep = { .ones_comp = true }};
+    Pulse pulse_2 = {};
+    Triangle triangle = {};
 
 public:
 // IRQ line
     bool frame_interrupt = false;
 
-// Square/Pulse wave channel registers
-    /* Pulse control registers
-    * $4000 and $4004
-    * 
-    * 7 6 5 4   3 2 1 0
-    * D D L C   N N N N
-    * //TODO
-    * 
-    */
-    union
-    {
-        struct
-        {
-            unsigned volume         : 4; // envelope period or volume
-            unsigned constant_vol   : 1;
-            unsigned loop           : 1; // loop envelope flag or halt length counter
-            unsigned duty           : 2;
-        };
-        ubyte reg;
-    } reg_pulse_ctrl[2] = {{.reg = 0}, {.reg = 0}};
-
-    /* Pulse sweep registers
-    * $4001 and $4005
-    * 
-    * 7 6 5 4   3 2 1 0
-    * E P P P   N S S S
-    * //TODO
-    * 
-    */
-    union
-    {
-        struct
-        {
-            unsigned shift      : 3; // shift count
-            unsigned negative   : 1;
-            unsigned period     : 3;
-            unsigned enabled    : 1;
-        };
-        ubyte reg;
-    } reg_sweep[2] = {{.reg = 0}, {.reg = 0}};
-
-    /* Pulse timer
-    * $4002 and $4006
-    * (also bits 0-2 of $4003 and $4007)
-    */
-    uword pulse_timer[2] = {}; //TODO name change? start vals?
-
-    /* Pulse length counter load
-    * bits 3-7 of $4003 and $4007
-    */
-    ubyte pulse_length_ctr_load[2] = {}; //TODO better name? etc.
-
-// Triangle wave channel registers
-    /* Triangle linear counter
-    * $4008
-    */
-    union
-    {
-        struct
-        {
-            unsigned reload  : 7;
-            unsigned control : 1; // Control + length counter halt
-        };
-        ubyte reg;
-    } reg_lin_ctr {.reg = 0};
-
-    /* Triangle timer (11 bits)
-    * $400A (and bits 0-2 of $400B)
-    */
-    uword tri_timer = 0;
-
-    /* Triangle length counter load
-    * $400B (bits 3-7)
-    */
-    ubyte tri_length_ctr_load = 0;
-
-// Noise channel registers
-    // TODO
-
-// DMC registers
-    // TODO
-
-// Control/Status registers
-    /* APU control register
-    * $4015 write
-    * 
-    * 7 6 5 4   3 2 1 0
-    * - - - D   N T 2 1
-    * 
-    * D - DMC enable
-    * N - noise channel length counter enable
-    * T - triangle ''
-    * 2 - pulse 2 ''
-    * 1 - pulse 1 ''
-    */
-    union
-    {
-        struct
-        {
-            unsigned lce_p1     : 1; // Length Counter Enable Pulse 1
-            unsigned lce_p2     : 1; // '' Pulse 2
-            unsigned lce_tr     : 1; // '' TRiangle
-            unsigned lce_ns     : 1; // '' NoiSe
-            unsigned dmc_enable : 1;
-            unsigned            : 3;
-        };
-        ubyte reg;
-    } reg_apu_ctrl {.reg = 0};
-
-    /* APU status register
-    * $4015 read
-    * 
-    * 7 6 5 4   3 2 1 0
-    * I F - D   N T 2 1
-    * 
-    * 
-    */
-    union
-    {
-        struct
-        {
-            unsigned lc_p1              : 1; // Length Counter Pulse 1
-            unsigned lc_p2              : 1;
-            unsigned lc_tr              : 1;
-            unsigned lc_ns              : 1;
-            unsigned dmc_active         : 1;
-            unsigned                    : 1;
-            unsigned frame_interrupt    : 1;
-            unsigned dmc_interrupt      : 1;
-        };
-        ubyte reg;
-    } reg_apu_status {.reg = 0};
-
-    /* APU frame counter register
-    * $4017
-    * 
-    * 7 6 5 4   3 2 1 0
-    * M I - -   - - - -
-    * 
-    * M - Sequence mode
-    *     0 = 4-step sequencing
-    *     1 = 5-step sequencing
-    * I - IRQ disable flag
-    */
-    union
-    {
-        struct
-        {
-            unsigned                : 6;
-            unsigned irq_disable    : 1;
-            unsigned mode           : 1;
-        };
-        ubyte reg;
-    } reg_frame_ctr {.reg = 0}; // TODO start/reset 
 };

@@ -28,20 +28,20 @@ const uint dmc_out = 0;
 
 // clock these every quarter frame
 // TODO noise envelope
-// TODO triangle linear counter
 #define clockQF() {\
-clockEnvelope(0);\
-clockEnvelope(1);\
-triangle.lin.clock(reg_lin_ctr.reload, reg_lin_ctr.control);\
+pulse_1.env.clock();\
+pulse_2.env.clock();\
+triangle.lin.clock();\
 }
 
 // clock these every half frame
 // TODO noise length ctr
-// TODO sweep units
 #define clockHF() {\
-pulse[0].len.clock(reg_apu_ctrl.lce_p1, reg_pulse_ctrl[0].loop);\
-pulse[1].len.clock(reg_apu_ctrl.lce_p2, reg_pulse_ctrl[1].loop);\
-triangle.len.clock(reg_apu_ctrl.lce_tr, reg_lin_ctr.control);\
+pulse_1.len.clock();\
+pulse_2.len.clock();\
+triangle.len.clock();\
+pulse_1.sweep.clock(pulse_1.timer);\
+pulse_2.sweep.clock(pulse_1.timer);\
 }
 
 void APU::setRegion(Region _region)
@@ -69,8 +69,8 @@ void APU::setRegion(Region _region)
 // https://wiki.nesdev.com/w/index.php/CPU_power_up_state
 void APU::reset()
 {
-    reg_apu_ctrl.reg = 0;
-    // TODO reset triangle phase to 0
+    write(4015, 0);
+    // TODO reset triangle phase to 0 // TODO phase??
     // TODO AND APU DPCM output with 1
     // TODO reset APU Frame Counter if 2A03G
 }
@@ -95,10 +95,10 @@ void APU::tick()
 
         case 14915: // APU cycle 14914.5 -> step 4
             // Do step 4 if 4-step sequence
-            if (reg_frame_ctr.mode == 0)
+            if (frame_count_mode == 0)
             {
                 // Generate IRQ if interrupt inhibit is clear
-                if (!reg_frame_ctr.irq_disable) frame_interrupt = true;
+                if (!irq_inhibit) frame_interrupt = true;
                 clockQF()
                 clockHF() 
                 frame_ctr = 0;
@@ -106,7 +106,7 @@ void APU::tick()
             break;
             
         case 18641: // APU cycle 18640.5 -> step 5
-            assert(reg_frame_ctr.mode == 1);
+            assert(frame_count_mode == 1);
             clockQF()
             clockHF()
             frame_ctr = 0;
@@ -118,9 +118,9 @@ void APU::tick()
     frame_ctr++;
     cycle++;
 
-    clockPulse(0);
-    clockPulse(1);
-    clockTriangle();
+    pulse_1.clock();
+    pulse_2.clock();
+    triangle.clock();
     /*
     clockNoise();
     clockDMC();*/
@@ -140,124 +140,352 @@ void APU::tick()
 
 /* For more info on mixing: https://wiki.nesdev.com/w/index.php/APU_Mixer
 * Note: pulse, triangle, and noise channels output values 0-15
-        DMC channel outputs 0-127
+*       DMC channel outputs 0-127
 */
 void APU::mix()
 {
-    float pulse_sum = static_cast<float>(pulse[0].out + pulse[1].out);
+    float pulse_sum = static_cast<float>(pulse_1.out + pulse_2.out);
     float pulse_out = !pulse_sum ? 0 : 95.88f / ((8128.0f / pulse_sum) + 100.0f);
     float tnd_sum = (static_cast<float>(triangle.out) / 8227.0f) 
-                 + (static_cast<float>(nse_out) / 12241.0f) 
-                 + (static_cast<float>(dmc_out) / 22638.0f);
+                  + (static_cast<float>(nse_out) / 12241.0f) 
+                  + (static_cast<float>(dmc_out) / 22638.0f);
     float tnd_out = !tnd_sum ? 0 : 159.79f / ((1.0f / tnd_sum) + 100.0f);
     float output = pulse_out + tnd_out;
     audio.pushSample(output);
 }
 
-void APU::clockPulse(int i)
+ubyte APU::read(uword address)
 {
-    pulse[i].timer--;
-    if (pulse[i].timer < 0) pulse[i].timer = pulse_timer[i]; // Reload timer
-    if (pulse[i].timer == pulse_timer[i])
+    assert(address == 0x4015);
+    ubyte data = 0;
+    /* APU Status
+    * $4015
+    * 
+    * 7 6 5 4   3 2 1 0
+    * I F - D   N T 2 1
+    * 
+    * N,T,2,1 - length counter > 0
+    * D       - DMC active
+    * F       - frame interrupt
+    * I       - DMC interrupt
+    */
+    data |= (pulse_1.len.count > 0) ? 1 : 0;
+    data |= (pulse_2.len.count > 0) ? 1 : 0;
+    data |= (triangle.len.count > 0) ? 1 : 0;
+    // TODO noise
+    // TODO DMC active
+    // TODO interrupts
+    return data;
+}
+
+void APU::write(uword address, ubyte data)
+{
+    switch (address)
     {
-        uint volume;
-        if (reg_pulse_ctrl[i].constant_vol)
-        {
-            volume = reg_pulse_ctrl[i].volume;
-        }
-        else
-        {
-            volume = envelope[i].decay;
-        }
-        if (pulse_timer[i] < 8) volume = 0;
-        if (pulse[i].len.count == 0) volume = 0;
-        pulse[i].out = volume * pulse_waveforms[reg_pulse_ctrl[i].duty][pulse[i].sequence];
-        pulse[i].sequence--;
-        if (pulse[i].sequence < 0) pulse[i].sequence = 7;
+        /* Pulse 1 control register
+        * $4000
+        * 
+        * 7 6 5 4   3 2 1 0
+        * D D L C   N N N N
+        * 
+        * N - envelope period or volume (if constant volume)
+        * C - constant volume flag
+        * L - loop envelope flag or halt length counter
+        * D - duty cycle lookup table index
+        */
+        case 0x4000:
+            pulse_1.env.period = data & 0x0F;
+            pulse_1.env.cv = data & 0x10;
+            pulse_1.env.loop = data & 0x20;
+            pulse_1.len.halt = data & 0x20;
+            pulse_1.duty = data >> 6;
+            break;
+
+        /* Pulse 1 sweep register
+        * $4001
+        * 
+        * 7 6 5 4   3 2 1 0
+        * E P P P   N S S S
+        * 
+        * S - shift count
+        * N - negate flag
+        * P - the divider's period
+        * E - sweep enabled
+        * 
+        * Side effects: sweep reload flag set
+        */
+        case 0x4001:
+            pulse_1.sweep.shift = data & 0x07;
+            pulse_1.sweep.negate = data & 0x08;
+            pulse_1.sweep.period = (data & 0x70) >> 4;
+            pulse_1.sweep.enabled = data & 0x80;
+            pulse_1.sweep.reload = true;
+            break;
+
+        /* Pulse 1 timer (low 8 bits)
+        * $4002
+        */
+        case 0x4002:
+            pulse_1.timer.period &= 0xFF00;
+            pulse_1.timer.period |= data;
+            break;
+
+        /* Pulse 1 length counter load & timer (high 3 bits) 
+        * $4003
+        * 
+        * Side effects: sequencer is set to its starting value, envelope start flag set
+        */
+        case 0x4003:
+            pulse_1.len.load(data >> 3);
+            pulse_1.timer.period &= 0x00FF;
+            pulse_1.timer.period |= (data & 0x07) << 8;
+            pulse_1.seq.sequence = pulse_1.seq.seq_max;
+            pulse_1.env.start = true;
+            break;
+
+        /* Pulse 2 control register
+        * $4004
+        * 
+        * 7 6 5 4   3 2 1 0
+        * D D L C   N N N N
+        * 
+        * N - envelope period or volume (if constant volume)
+        * C - constant volume flag
+        * L - loop envelope flag or halt length counter
+        * D - duty cycle lookup table index
+        */
+        case 0x4004:
+            pulse_2.env.period = data & 0x0F;
+            pulse_2.env.cv = data & 0x10;
+            pulse_2.env.loop = data & 0x20;
+            pulse_2.len.halt = data & 0x20;
+            pulse_2.duty = data >> 6;
+            break;
+
+        /* Pulse 2 sweep register
+        * $4005
+        * 
+        * 7 6 5 4   3 2 1 0
+        * E P P P   N S S S
+        * 
+        * S - shift count
+        * N - negate flag
+        * P - the divider's period
+        * E - sweep enabled
+        * 
+        * Side effects: sweep reload flag set
+        */
+        case 0x4005:
+            pulse_2.sweep.shift = data & 0x07;
+            pulse_2.sweep.negate = data & 0x08;
+            pulse_2.sweep.period = (data & 0x70) >> 4;
+            pulse_2.sweep.enabled = data & 0x80;
+            pulse_2.sweep.reload = true;
+            break;
+
+        /* Pulse 2 timer (low 8 bits)
+        * $4006
+        */
+        case 0x4006:
+            pulse_2.timer.period &= 0xFF00;
+            pulse_2.timer.period |= data;
+            break;
+
+
+        /* Pulse 2 length counter load & timer (high 3 bits) 
+        * $4007
+        * 
+        * Side effects: sequencer is set to its starting value, envelope start flag set
+        */
+        case 0x4007:
+            pulse_2.len.load(data >> 3);
+            pulse_2.timer.period &= 0x00FF;
+            pulse_2.timer.period |= (data & 0x07) << 8;
+            pulse_2.seq.sequence = pulse_2.seq.seq_max;
+            pulse_2.env.start = true;
+            break;
+        
+        /* Triangle linear counter
+        * $4008
+        * 
+        * 7 6 5 4   3 2 1 0
+        * C R R R   R R R R
+        * 
+        * R - counter reload value
+        * C - control & length counter halt flag
+        */
+        case 0x4008:
+            triangle.lin.reload_val = data & 0x7F;
+            triangle.lin.control = data & 0x80;
+            triangle.len.halt = data & 0x80;
+            break;
+
+        /* Triangle timer (low 8 bits)
+        * $400A
+        */
+        case 0x400A:
+            triangle.timer.period &= 0xFF00;
+            triangle.timer.period |= data;
+            break;
+
+        /* Triangle length counter load + timer (high 3 bits)
+        * $400B
+        * 
+        * Side effects: sets linear counter reload flag
+        */
+        case 0x400B:
+            triangle.len.load(data >> 3);
+            triangle.timer.period &= 0x00FF;
+            triangle.timer.period |= (data & 0x07) << 8;
+            triangle.lin.reload = true;
+            break;
+
+        // TODO noise & DMC
+
+        /* APU control
+        * $4015 (write)
+        * 
+        * 7 6 5 4   3 2 1 0
+        * - - - D   N T 2 1
+        * 
+        * 1 - Pulse 1 enable
+        * 2 - Pulse 2 enable
+        * T - Triangle enable
+        * N - Noise enable
+        * D - DMC enable
+        * 
+        * Side effects: clears DMC interrupt flag
+        */
+        case 0x4015:
+            pulse_1.enable = data & 0x01;
+            pulse_2.enable = data & 0x02;
+            triangle.enable = data & 0x04;
+            // TODO noise channel enable
+            // TODO DMC channel enable/complicated DMC behavior
+            // TODO clear DMC interrupt flag
+            break;
+        
+        /* APU frame counter
+        * $4017
+        * 
+        * 7 6 5 4   3 2 1 0
+        * M I - -   - - - -
+        * 
+        * I = IRQ inhibit flag
+        * M = frame counter Mode
+        */
+        case 0x4017:
+            irq_inhibit = data & 0x40;
+            frame_count_mode = (data & 0x80) ? FIVE_STEP : FOUR_STEP;
+            break;
+
+        default:
+            #ifndef NDEBUG
+            std::cerr << "Warning: unsupported CPU write to " << hex(address) << std::endl;
+            #endif
+            break;
     }
 }
 
-void APU::clockTriangle()
+void Pulse::clock()
 {
-    triangle.timer -= 2; // TODO validate
-    if (triangle.timer < 0) triangle.timer = tri_timer; // Reload timer
-    if (!triangle.lin.count || !triangle.len.count) triangle.out = 0;
-    else if (triangle.timer == tri_timer)
+    // Envelope gets clocked every quarter frame already
+    // Sweep & length ctr get clocked every half frame already
+    if (timer.clock()) 
     {
-        triangle.out = abs(triangle.sequence);
-        triangle.sequence--;
-        if (triangle.sequence < -15) triangle.sequence = 15;
+        seq.clock();
+        seq.out = pulse_waveforms[duty][seq.sequence];
     }
+    out = (!sweep.mute && seq.out && !len.silence) ? env.out : 0;
 }
 
-void APU::clockEnvelope(int i)
+void Triangle::clock()
 {
-    // TODO change from 0 to noise period val when I do noise channel
-    ubyte period = (i == 2) ? 0 : reg_pulse_ctrl[i].volume;
-    if (envelope[i].start) 
+    if (timer.clock() || timer.clock())
     {
-        envelope[i].start = false;
-        envelope[i].decay = 15;
-        envelope[i].divider = period;
+        if (!len.silence && !lin.silence)
+        {
+            seq.clock();
+            seq.out = abs(seq.sequence);
+        }
+    }
+    out = seq.out;
+}
+
+void LengthCounter::load(ubyte length) 
+{ 
+    count = length_table[length];
+    silence = false;
+}
+void LengthCounter::clear() { count = 0; }
+
+void LengthCounter::clock()
+{
+    if (enable && !halt && count > 0) count--;
+    if (enable && count == 0) silence = true;
+    // TODO not sure about this
+    if (!enable) silence = false;
+}
+
+void LinearCounter::clock()
+{
+    if (reload) { count = reload_val; reload = false; silence = false; }
+    else if (count > 0) count--;
+    if (!control) reload = false;
+    // TODO not sure about this
+    if (count == 0) silence = true;
+}
+
+void Envelope::clock()
+{
+    if (start)
+    {
+        start = false;
+        decay = 15;
+        divider = period;
     }
     else // clock divider
     {
-        envelope[i].divider--;
-        if (envelope[i].divider <= 0)
+        divider--;
+        if (divider < 0)
         {
-            envelope[i].divider = period; // TODO V+1??
-            // Clock decay counter
-            if (envelope[i].decay > 0)
-                envelope[i].decay--;
-            // TODO change from false to noise loop flag when I do noise channel
-            else if ((i == 2) ? false : reg_pulse_ctrl[i].loop)
-            {
-                envelope[i].decay = 15;
-            }
+            divider = period;
+            if (decay > 0) decay--;
+            else if (loop) decay = 15;
         }
+    }
+    // bits 0-3 of $4000/$4004 are the volume if cv
+    out = cv ? period : decay;
+}
+
+void Sweep::clock(Timer& timer)
+{
+    if (divider <= 0)
+    {
+        int change = timer.period >> shift;
+        if (negate)
+        {
+            // Pulse 1 -> one's comp, 2 -> 2's comp
+            change = (ones_comp) ? -change - 1 : -change;
+        }
+        int target = timer.period + change;
+        mute = (timer.period < 8) || (target > 0x7FF);
+        if (enabled) timer.period = target;
+    }
+    if (divider <= 0 || reload)
+    {
+        divider = (period) >> 4;
+        reload = false;
     }
 }
 
-void LengthCounter::load(ubyte length)
+void Timer::reload() { counter = period; }
+bool Timer::clock()
 {
-    count = length_table[length];
+    if (counter == 0) { counter = period; return true; }
+    else { counter--; return false; }
 }
 
-void LengthCounter::clear()
-{
-    count = 0;
-}
-
-void LengthCounter::clock(bool enable, bool halt)
-{
-    if (enable && !halt && count > 0)
-        count--;
-}
-
-void LinearCounter::load(ubyte length)
-{
-    count = length;
-}
-
-void LinearCounter::clear()
-{
-    count = 0;
-}
-
-void LinearCounter::clock(ubyte length, bool control)
-{
-    if (reload) { count = length; reload = false; }
-    if (!control) count = 0;
-}
-
-void APU::getStatus()
-{
-    reg_apu_status.reg = 0;
-    reg_apu_status.lc_p1 = (pulse[0].len.count > 0);
-    reg_apu_status.lc_p2 = (pulse[1].len.count > 0);
-    reg_apu_status.lc_tr = (triangle.len.count > 0);
-    // TODO noise length counter
-    // TODO DMC activity
-    reg_apu_status.frame_interrupt = frame_interrupt;
-    // TODO DMC interrupt
-}
+//  Note: out value is handled externally, so I don't have to 
+// create derived classes/overloads or pass around function pointers
+void Sequencer::clock() { sequence = (sequence == seq_min) ? seq_max : sequence-1; }
