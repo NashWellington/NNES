@@ -58,8 +58,8 @@ Note: some tests (notably mapper/input tests by rainwarrior) are missing because
 | APU Phase Reset | Rahsennor | | No CHR-RAM/ROM? (If iNES, it should default to some CHR-RAM). Worth investigating. |
 | APU Reset | blargg | 2/6 | <l><li>len_ctrs_enabled passes</li> <li>irq_flag_cleared passes</li></l> |
 | APU Sweep Test | blargg | 1/2 | Sub passes, Cutoff fails |
-| APU Tests | blargg | 2/11 | <l><li>Test 1 fails #7 (when disabling via $4015, length counters shouldn't allow reloading)</li> <li>Test 2 passes</li> <li>Test 3 fails #4</li> <li>Test 4 fails #3</li> <li>Test 5 fails #4</li> <li>Test 6 fails #4</li> <li>Test 7 fails #3</li> <li>Test 8 fails #2</li> <li>Test 9 fails #4</li> <li>Test 10 passes</li> <li>Test 11 fails #5</li></l> |
-| APU Tests 2 | x0000 | 6/11 | <l><li>Note: test 2 is supposed to fail after some resets on real hardware, likely because of CPU/PPU alignments</li> <li>Note: there's no readme provided so I'll have to figure out the specifics of these tests (beyond testing the frame counter)</li> <li>Tests 1, 3, 4, 7, 8, 11 pass</li> <li>Tests 2, 6, 5, 9, 10 fail</li> <li>Note: there seems to be no documentation for what these tests are supposed to mean. I might remove it in a later update</li></l> |
+| APU Tests | blargg | 3/11 | <l><li>Test 1 passes</li> <li>Test 2 passes</li> <li>Test 3 fails #4</li> <li>Test 4 fails #3</li> <li>Test 5 fails #4</li> <li>Test 6 fails #4</li> <li>Test 7 fails #3</li> <li>Test 8 fails #2</li> <li>Test 9 fails #4</li> <li>Test 10 passes</li> <li>Test 11 fails #5</li></l> |
+| APU Tests 2 | x0000 | 6/11 | <l><li>Note: test 2 is supposed to fail after some resets on real hardware, likely because of CPU/PPU alignments</li> <li>Note: there's no readme provided so I'll have to figure out the specifics of these tests (beyond testing the frame counter)</li> <li>Tests 1, 3, 4, 7, 8, 11 pass</li> <li>Tests 2, 6, 5, 9, 10 fail</li></l> |
 | APU Timer Test | blargg | 1?/5 | <l><li>Square wave passes?</li> <li>Triangle fails</li> <li>Noise wave fails (plays as a square wave. I'm definitely way off)</li> <li>DMC untested</li></l> |
 | APU Triangle Linear Counter Test | blargg | Fail | |
 | DMC DMA During Read | blargg | | Not worth testing until DMC is fully implemented |
@@ -123,7 +123,6 @@ None yet
 * translating palette values to pixel values may be doable with integer math, instead of pre-defined values (http://forums.nesdev.com/viewtopic.php?f=2&t=14338)
 
 ## APU
-* Length counter reloading should be disable-able by write to $4015
 * Audio silent for a second or two after ROM loading
 * For some test ROMs, audio is supposed to play 3 notes (low-high-low) on failure. NNES plays 4 (low-high-low-low). It's unclear what might be causing this.
 

@@ -45,7 +45,7 @@ struct LengthCounter
     void load(ubyte length);
     void clock();
     int count = 0;
-    bool enable = true;
+    bool enabled = true;
     bool halt = false;
     bool silence = true; // Silences channel
 };

@@ -91,10 +91,10 @@ void APU::reset()
     // Reset reg $4015
     write(4015, 0);
     // Enable all length counters
-    pulse_1.len.enable = true;
-    pulse_2.len.enable = true;
-    triangle.len.enable = true;
-    noise.len.enable = true;
+    pulse_1.len.enabled = true;
+    pulse_2.len.enabled = true;
+    triangle.len.enabled = true;
+    noise.len.enabled = true;
     triangle.seq.sequence = 0;
     // TODO AND APU DPCM output with 1
     // TODO reset APU Frame Counter if 2A03G
@@ -260,7 +260,7 @@ void APU::write(uword address, ubyte data)
         * Side effects: sequencer is set to its starting value, envelope start flag set
         */
         case 0x4003:
-            pulse_1.len.load(data >> 3);
+            if (pulse_1.len.enabled) pulse_1.len.load(data >> 3);
             pulse_1.timer.period &= 0x00FF;
             pulse_1.timer.period |= (data & 0x07) << 8;
             pulse_1.seq.sequence = pulse_1.seq.seq_max;
@@ -322,7 +322,7 @@ void APU::write(uword address, ubyte data)
         * Side effects: sequencer is set to its starting value, envelope start flag set
         */
         case 0x4007:
-            pulse_2.len.load(data >> 3);
+            if (pulse_2.len.enabled) pulse_2.len.load(data >> 3);
             pulse_2.timer.period &= 0x00FF;
             pulse_2.timer.period |= (data & 0x07) << 8;
             pulse_2.seq.sequence = pulse_2.seq.seq_max;
@@ -358,7 +358,7 @@ void APU::write(uword address, ubyte data)
         * Side effects: sets linear counter reload flag
         */
         case 0x400B:
-            triangle.len.load(data >> 3);
+            if (triangle.len.enabled) triangle.len.load(data >> 3);
             triangle.timer.period &= 0x00FF;
             triangle.timer.period |= (data & 0x07) << 8;
             triangle.lin.reload = true;
@@ -405,7 +405,7 @@ void APU::write(uword address, ubyte data)
         * Side effects: envelope start flag set
         */
         case 0x400F:
-            noise.len.load(data >> 3);
+            if (noise.len.enabled) noise.len.load(data >> 3);
             noise.env.start = true;
             break;
 
@@ -463,19 +463,19 @@ void APU::write(uword address, ubyte data)
         * 2 - Pulse 2   ''
         * T - Triangle  ''
         * N - Noise     ''
-        * D - DMC       ''
+        * D - DMC     enable/clear
         * 
         * Side effects: clears DMC interrupt flag
         */
         case 0x4015:
-            pulse_1.enable = data & 0x01;
-            if (!pulse_1.enable) pulse_1.len.count = 0;
-            pulse_2.enable = data & 0x02;
-            if (!pulse_2.enable) pulse_2.len.count = 0;
-            triangle.enable = data & 0x04;
-            if (!triangle.enable) triangle.len.count = 0;
-            noise.enable = data & 0x08;
-            if (!noise.enable) noise.len.count = 0;
+            pulse_1.len.enabled = data & 0x01;
+            if (!pulse_1.len.enabled) pulse_1.len.count = 0;
+            pulse_2.len.enabled = data & 0x02;
+            if (!pulse_2.len.enabled) pulse_2.len.count = 0;
+            triangle.len.enabled = data & 0x04;
+            if (!triangle.len.enabled) triangle.len.count = 0;
+            noise.len.enabled = data & 0x08;
+            if (!noise.len.enabled) noise.len.count = 0;
             dmc.enable = data & 0x10;
             if (!dmc.enable) dmc.bytes_remaining = 0;
             // if (dmc.enable) restart (but wait to empty buffer)
@@ -555,17 +555,18 @@ bool DMC::clock()
 }
 
 void LengthCounter::load(ubyte length) 
-{ 
+{
+    assert(enabled);
     count = length_table[length];
     silence = false;
 }
 
 void LengthCounter::clock()
 {
-    if (enable && !halt && count > 0) count--;
-    if (enable && count == 0) silence = true;
+    if (enabled && !halt && count > 0) count--;
+    if (enabled && count == 0) silence = true;
     // TODO not sure about this
-    if (!enable) silence = false;
+    if (!enabled) silence = true;
 }
 
 void LinearCounter::clock()
