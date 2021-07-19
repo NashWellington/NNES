@@ -142,7 +142,8 @@ Header Boot::readHeader(std::ifstream& rom, std::string filename)
     if (header.region != Region::NTSC)
     {
         std::cerr << "Error: unsupported region" << std::endl;
-        throw std::exception();
+        std::cerr << "Forcing region to NTSC" << std::endl;
+        header.region = Region::NTSC;
     }
 
     // TODO Vs. System/Extended Console type
