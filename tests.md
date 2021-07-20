@@ -10,15 +10,20 @@ Note: some tests (notably mapper/input tests by rainwarrior) are missing because
 
 ## CPU Tests
 
+At this point, CPU tests that fail depend on:
+* cycle accurate CPU (including dummy reads/writes, interrupt hijacking)
+* open bus behavior
+* APU/PPU registers working correctly
+
 | Test | Author | Status | Details |
 | :--- | :----: | :----: | :------ |
 | Branch Timing Tests | blargg | Pass | |
 | CPU Dummy Reads | blargg | 0/1 | LDA abs,X fails #3 |
 | CPU Dummy Writes | bisqwit | 0/2 | <l><li>OAM test fails #2 (OAM reads not reliable)</li> <li>PPU test fails #5 (single write to $2006 shouldn't change PPUADDR when vblank is on</li></l> | 
 | CPU Exec Space | bisqwit | 0/2 | <l><li>APU test fails #2 ($4000 error)</li> <li>PPU test fails #6</li> <li>Note: this also tests open bus behavior, which is not fully emulated yet</li></l> |
-| CPU Flag Concurrency | bisqwit | 0/1 | Flags work as expected, but APU IRQ timings are probably off (too fast?) |
+| CPU Flag Concurrency | bisqwit | Pass? | Flags and APU IRQ timing work as intended |
 | CPU Reset | blargg | Pass | |
-| CPU Timing Test v6 | Zepper | Fail | Regression: stack overflow/underflow -> opcode $02 |
+| CPU Timing Test v6 | Zepper | Pass | |
 | Instruction Behavior Misc Tests | blargg | 2/4 | <l><li>Tests 1 and 2 pass</li> <li>Test 3 fails #3 (LDA abs,X) (Note: this tests mid-instruction reads, and will likely not pass until I make the CPU cycle-accurate)</li> <li>Test 4: a long list of opcodes fail #2. Note: this probably won't work until I get all APU regs emulated</li></l> |
 | Instruction Test v5 | blargg | Pass | |
 | Instruction Timing Tests | blargg | Pass | |
@@ -143,8 +148,6 @@ TODO move game-specific bugs to a compatibility.md file or something
 # Regressions
 
 ## CPU
-* CPU timing test
-* Note: I think this probably has something to do with APU IRQs
 
 ## PPU
 
