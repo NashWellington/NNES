@@ -325,7 +325,8 @@ void Memory::load(Savestate& savestate)
 InterruptType Memory::getInterrupt()
 {
     // FIXME adding APU interrupts caused major CPU test result regressions
-    if (current_interrupt == InterruptType::NO_INTERRUPT && nes.apu->irq_line)
+    if (current_interrupt == InterruptType::NO_INTERRUPT 
+        && (nes.apu->frame_interrupt || nes.apu->dmc.interrupt))
         addInterrupt(IRQ);
     return current_interrupt;
 }

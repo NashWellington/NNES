@@ -36,13 +36,6 @@ const std::array<int,16> rate_lookup =
     428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106,  84,  72,  54
 };
 
-// DMC pitch table
-const std::array<uint,16> pitch_table = 
-{
-    0x1AC, 0x17C, 0x154, 0x140, 0x11E, 0x0FE, 0x0E2, 0x0D6, 
-    0x0BE, 0x0A0, 0x08E, 0x080, 0x06A, 0x054, 0x048, 0x036
-};
-
 // TODO let SDL handle resampling???
 
 // clock these every quarter frame
@@ -90,9 +83,9 @@ void APU::reset()
 {
     // Reset reg $4015
     write(0x4015, 0);
+    frame_interrupt = false;
     // APU should act like 4017 was written to 9-12 cycles before start/reset
-    // TODO randomize val?
-    frame_ctr = 9;
+    frame_ctr = 2;
     triangle.seq.sequence = 0;
     // TODO AND APU DPCM output with 1
     // TODO reset APU Frame Counter if 2A03G
@@ -121,7 +114,7 @@ void APU::tick()
             if (frame_count_mode == 0)
             {
                 // Generate IRQ if interrupt inhibit is clear
-                if (!irq_inhibit) irq_line = true;
+                if (!interrupt_inhibit) frame_interrupt = true;
                 clockQF()
                 clockHF() 
                 frame_ctr = 0;
@@ -140,11 +133,12 @@ void APU::tick()
     frame_ctr++;
     cycle++;
 
+    // TODO do they not get clocked at all if not enabled?
     pulse_1.clock();
     pulse_2.clock();
     triangle.clock();
     noise.clock();
-    if (dmc.clock()) irq_line = true;
+    dmc.clock(nes);
 
     if ((cycle*audio.sample_rate / (15*MAX_CYCLE)) >= (sample_i+1)) // Should make 44.1k samples/sec
     {
@@ -190,12 +184,14 @@ ubyte APU::read(uword address)
     * F       - frame interrupt
     * I       - DMC interrupt
     */
-    data |= pulse_1.len.count > 0 ? 0x01 : 0;
-    data |= pulse_2.len.count > 0 ? 0x02 : 0;
-    data |= triangle.len.count > 0 ? 0x04 : 0;
-    data |= noise.len.count > 0 ? 0x08 : 0;
-    data |= dmc.bytes_remaining > 0 ? 0x10 : 0;
-    irq_line = false;
+    if (pulse_1.len.count > 0) data |= 0x01;
+    if (pulse_2.len.count > 0) data |= 0x02;
+    if (triangle.len.count > 0) data |= 0x04;
+    if (noise.len.count > 0) data |= 0x08;
+    if (dmc.bytes_remaining > 0) data |= 0x10;
+    if (frame_interrupt) data |= 0x40;
+    if (dmc.irq_enable) data |= 0x80;
+    frame_interrupt = false;
     // TODO simultaneous interrupt flag set read behavior
     return data;
 }
@@ -422,6 +418,7 @@ void APU::write(uword address, ubyte data)
             dmc.rate = rate_lookup[data & 0x0F];
             dmc.loop = data & 0x40;
             dmc.irq_enable = data & 0x80;
+            if (!dmc.irq_enable) dmc.interrupt = false;
             break;
 
         // TODO occasional improper level change
@@ -474,10 +471,18 @@ void APU::write(uword address, ubyte data)
             if (!triangle.len.enabled) triangle.len.count = 0;
             noise.len.enabled = data & 0x08;
             if (!noise.len.enabled) noise.len.count = 0;
-            dmc.enable = data & 0x10;
-            if (!dmc.enable) dmc.bytes_remaining = 0;
-            // if (dmc.enable) restart (but wait to empty buffer)
-            dmc.irq_enable = false;
+            if (data & 0x10)    // enable DMC
+            {
+                if (dmc.bytes_remaining > 0) dmc.start();
+            }
+            else                // clear DMC
+            {
+                dmc.bytes_remaining = 0;
+                // DMC should silence itself once the buffer empties
+            }
+            // TODO I'm 90% sure irq_enable shouldn't get cleared here
+            // dmc.irq_enable = false;
+            dmc.interrupt = false;
             break;
         
         /* APU frame counter
@@ -493,7 +498,8 @@ void APU::write(uword address, ubyte data)
         *               if mode flag set, quarter+half frame signals generated
         */
         case 0x4017:
-            irq_inhibit = data & 0x40;
+            interrupt_inhibit = data & 0x40;
+            if (interrupt_inhibit) frame_interrupt = false;
             if (data & 0x80)
             {
                 frame_count_mode = FIVE_STEP;
@@ -503,7 +509,6 @@ void APU::write(uword address, ubyte data)
             else
             {
                 frame_count_mode = FOUR_STEP;
-                if (!irq_inhibit) irq_line = true;
             }
             // TODO buffer
             frame_ctr = 0;
@@ -543,13 +548,73 @@ void Triangle::clock()
 
 void Noise::clock()
 {
-    out = (timer.clock() && len.count > 0) ? env.out : 0;
+    out = (!timer.clock() && len.count > 0) ? env.out : 0;
 }
 
-bool DMC::clock()
+void DMC::clock(NES& nes)
 {
-    if (irq_enable) return true;
-    else return false;
+    cycles_left = rate;
+
+    // Read memory
+
+    // TODO weird DMC DMA behavior
+    if (!sample_buf && bytes_remaining > 0)
+    {
+        // TODO DMA takes longer than one cycle
+        sample_buf = nes.mem->cpuRead(curr_addr);
+        if (curr_addr == 0xFFFF) curr_addr = 0x8000;
+        else curr_addr++;
+        bytes_remaining--;
+        if (bytes_remaining == 0)
+        {
+            if (loop) start();
+            else if (irq_enable) interrupt = true;
+        }
+    }
+
+    // Output
+
+    // change output level
+
+    if (cycles_left == 0)
+    {
+        if (!silence)
+        {
+            if (shift_reg & 0x01) // bit set -> add 2
+            {
+                out = out > 125 ? out : out + 2; // prevent overflow
+            }
+            else
+            {
+                out = out < 2 ? out : out - 2; // prevent underflow
+            }
+        }
+
+        // clock shift reg
+        shift_reg >>= 1;
+        bits_remaining--;
+
+        // new output cycle
+        if (bits_remaining == 0)
+        {
+            bits_remaining = 8;
+            if (!sample_buf) silence = true;
+            else
+            {
+                shift_reg = sample_buf.value();
+                sample_buf = {};
+                silence = false;
+            }
+        }
+    }
+    else cycles_left--;
+}
+
+// TODO wait until buffer is empty
+void DMC::start()
+{
+    curr_addr = sample_addr;
+    bytes_remaining = sample_len;
 }
 
 void LengthCounter::load(ubyte length) 
@@ -629,7 +694,9 @@ bool Divider::clock()
 
 bool LFSR::clock()
 {
-    uword feedback = (shift_reg & 1) ^ (mode ? (shift_reg & 0x40) >> 5 : (shift_reg & 0x02) >> 1);
+    uword feedback;
+    if (shift_reg == 0) feedback = 1;
+    else feedback = (shift_reg & 1) ^ (mode ? (shift_reg & 0x40) >> 5 : (shift_reg & 0x02) >> 1);
     shift_reg >>= 1;
     shift_reg |= feedback << 14;
     return shift_reg & 1;

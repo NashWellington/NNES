@@ -54,15 +54,15 @@ Note: some tests (notably mapper/input tests by rainwarrior) are missing because
 | Test | Author | Status | Details |
 | :--- | :----: | :----: | :------ |
 | APU Envelope Test | blargg | 0/1 | Plays a constant tone instead of increasing volume |
-| APU Mixer | blargg | 0/5 | Try this again once noise/DMC are finished (I believe the test depends on them) |
+| APU Mixer | blargg | 0/4 | |
 | APU Phase Reset | Rahsennor | | No CHR-RAM/ROM? (If iNES, it should default to some CHR-RAM). Worth investigating. |
 | APU Reset | blargg | 3/6 | <l><li>len_ctrs_enabled passes</li> <li>irq_flag_cleared passes</li> <li>4015_cleared passes</li></l> |
-| APU Sweep Test | blargg | Pass | Cutoff sounds different because there's no noise channel |
-| APU Tests | blargg | 4/11 | <l><li>Test 1 passes</li> <li>Test 2 passes</li> <li>Test 3 fails #4</li> <li>Test 4 fails #3</li> <li>Test 5 fails #4</li> <li>Test 6 fails #4</li> <li>Test 7 fails #3</li> <li>Test 8 fails #3</li> <li>Test 9 fails #4</li> <li>Test 10 passes</li> <li>Test 11 fails #5</li></l> |
+| APU Sweep Test | blargg | 1/2 | Noises at the beginning and end are swapped for Cutoff |
+| APU Tests | blargg | 4/11 | <l><li>Tests 1-4 pass</li> <li>Test 5 fails #2 (first length clocked too soon)</li> <li>Test 6 fails #2 (first length clocked too soon)</li> <li>Test 7 fails #2 (first flag set too soon)</li> <li>Test 8 fails #2 (IRQ triggered too soon after writing $00 to $4017)</li> <li>Test 9 fails #3 (fourth step too soon)</li> <li>Test 10 passes</li> <li>Test 11 fails #4</li></l> |
 | APU Tests 2 | x0000 | 6/11 | <l><li>Note: test 2 is supposed to fail after some resets on real hardware, likely because of CPU/PPU alignments</li> <li>Note: there's no readme provided so I'll have to figure out the specifics of these tests (beyond testing the frame counter)</li> <li>Tests 1, 3, 4, 7, 8, 11 pass</li> <li>Tests 2, 6, 5, 9, 10 fail</li></l> |
-| APU Timer Test | blargg | 1?/5 | <l><li>Square wave passes?</li> <li>Triangle fails</li> <li>Noise wave fails (plays as a square wave. I'm definitely way off)</li> <li>DMC untested</li></l> |
+| APU Timer Test | blargg | 2/4 | <l><li>Square, DMC pass</li> <li>Triangle fails</li> <li>Noise wave fails (maybe clocking too fast?)</li> <li>Triangle fails (need to adjust frequency/linear counter?)</li></l> |
 | APU Triangle Linear Counter Test | blargg | Pass | |
-| DMC DMA During Read | blargg | | Not worth testing until DMC is fully implemented |
+| DMC DMA During Read | blargg | | Not worth testing until I implement DMC DMA behavior |
 | DMC Tests | ??? | | DMC not fully supported |
 | DPCM Letterbox | tepples | | DPCM unsupported |
 | PAL APU Tests | blargg | | PAL unsupported |
@@ -120,10 +120,10 @@ None yet
 * Pac-Man's top left background tile is set to 0 when it shouldn't be
 * PPU should output a solid color based on the value at PPU $3F00 (palette RAM index 0)
 * translating palette values to pixel values may be doable with integer math, instead of pre-defined values (http://forums.nesdev.com/viewtopic.php?f=2&t=14338)
+* crash on "else frame[pixel_i] = bg_px;" after a few resets
 
 ## APU
-* Audio silent for a second or two after ROM loading
-* For some test ROMs, audio is supposed to play 3 notes (low-high-low) on failure. NNES plays 4 (low-high-low-low). It's unclear what might be causing this.
+* Donkey Kong: square channels mute after a few seconds
 
 ## Mapper
 * Cartridges don't save SRAM to file

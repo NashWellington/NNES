@@ -411,7 +411,7 @@ void PPU::addPixels()
         bg_pipeline.pop();
 
         if (spr_px) frame[pixel_i] = spr_px.value();
-        else frame[pixel_i] = bg_px;
+        else frame[pixel_i] = bg_px; // FIXME unknown crash after a few resets
         pixel_i++;
     }
 }

@@ -26,6 +26,8 @@ struct Divider : public Timer
 // Linear Feedback Shift Register (used by noise channel)
 struct LFSR : public Timer
 {
+    // Return true if bit 0 of shift_reg is set
+    // If true, blocks envelope data
     bool clock();
     uword shift_reg = 0; // TODO init at 0??? (or some other complicated behavior)
     bool mode = false;
@@ -117,22 +119,26 @@ struct Noise
 
 struct DMC
 {
-    // If true, triggers an IRQ
-    bool clock();
+    void clock(NES& nes);
+    void start(); // start or restart
     bool irq_enable = false;
+    bool interrupt = false;
     bool loop = false;
-    int rate = 0;
+    int rate = 428; // Default NTSC val //TODO PAL
+    int cycles_left = 428; // Number of cycles output level next changes
     ubyte out = 0; // 0-127
+    bool silence = true;
 
-    uword sample_addr = 0;
-    uword curr_addr = 0;
-    uword bytes_remaining = 0;
-    uword sample_len = 0;
+    // Memory reader
+    uword sample_addr = 0x8000; // Minimum address to read from
+    uword curr_addr = 0x8000;
+    int bytes_remaining = 0;
+    int sample_len = 0;
 
-    ubyte sample_buf = 0;
+    // Output
+    std::optional<ubyte> sample_buf = {}; // returns false if empty
+    ubyte shift_reg = 0;
     ubyte bits_remaining = 0;
-
-    bool enable = false;
 };
 
 class APU : public Processor
@@ -155,23 +161,25 @@ public:
 private:
     void mix(); // Mix all channel outputs and push that to audio queue
 // APU + channel variables
-    uint frame_ctr = 12;
+    // "After reset or power-up, APU acts as if $4017 were written with $00
+    // from 9 to 12 cycles before first instruction begins"
+    // - reset_timing (test 9 of 11 in apu_test) by blargg
+    // Note: setting this to 2-4 seems to work
+    uint frame_ctr = 4;
     uint sample_i = 0; // Sample index (goes from 0 to sample_rate/15)
     enum
     {
         FOUR_STEP,
         FIVE_STEP
     } frame_count_mode = FOUR_STEP;
-    bool irq_inhibit = false;
+    bool interrupt_inhibit = false;
 
+public:
     Pulse pulse_1 = { .sweep = { .ones_comp = true }};
     Pulse pulse_2 = {};
     Triangle triangle = {};
     Noise noise = {};
     DMC dmc = {};
 
-public:
-// IRQ line
-    bool irq_line = false;
-
+    bool frame_interrupt = false;
 };
