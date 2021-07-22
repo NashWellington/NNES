@@ -107,9 +107,8 @@ private:
         void load(ubyte val)
         {
             assert(bits%8 == 0);
-            if (bits == sizeof(T)*8) shift(8);
+            if (bits > 0) shift(8);
             reg |= val;
-            if (bits == 0) reg <<= ((sizeof(T)-1)*8);
             bits += 8;
         }
         void shift(uint num_bits)
@@ -125,7 +124,7 @@ private:
         }
         ubyte peekByte()
         {
-            return reg >> (sizeof(T) * 8);
+            return reg >> ((sizeof(T)-1) * 8);
         }
     };
 

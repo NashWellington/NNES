@@ -202,20 +202,24 @@ void PPU::sendFrame()
 // http://wiki.nesdev.com/w/index.php/PPU_scrolling#Tile_and_attribute_fetching
 ubyte PPU::getNTByte()
 {
+    uword address = 0x2000 | (vram_addr.addr & 0x0FFF);
+    assert(address >= 0x2000 && address < 0x3000);
     return nes.mem->ppuRead(0x2000 | (vram_addr.addr & 0x0FFF));
 }
 
 ubyte PPU::getAttribute()
 {
-    ubyte attribute = nes.mem->ppuRead(0x23C0 | (vram_addr.addr & 0x0C00) 
-        | ((vram_addr.addr >> 4) & 0x0038) | ((vram_addr.addr >> 2) & 0x0007));
+    uword attr_addr = 0x23C0 | (vram_addr.addr & 0x0C00) 
+        | ((vram_addr.addr >> 4) & 0x0038) | ((vram_addr.addr >> 2) & 0x0007);
+    ubyte attribute = nes.mem->ppuRead(attr_addr);
     
-    if((vram_addr.coarse_y/2) % 2 == 0) attribute &= 0x00FF; // Top quads
-    else { attribute &= 0xFF00; attribute >>= 4; }  // bottom quads
+    if((vram_addr.coarse_y/2) % 2 == 0) attribute &= 0x0F; // Top quads
+    else { attribute &= 0xF0; attribute >>= 4; }  // bottom quads
 
-    if ((vram_addr.coarse_x/2) % 2 == 0) attribute &= 0x0F; // Left quads
-    else { attribute &= 0xF0; attribute >>= 4; } // right quads
+    if ((vram_addr.coarse_x/2) % 2 == 0) attribute &= 0x03; // Left quads
+    else { attribute &= 0x0C; attribute >>= 2; } // right quads
 
+    assert(attribute < 4);
     return attribute;
 }
 
@@ -243,14 +247,21 @@ bool PPU::checkRange(ubyte y)
 // Some of the steps are rearranged so they work on a cycle-accurate basis
 void PPU::evalSprites()
 {
+    assert(sec_oam_addr <= 8);
+    if (cycle == 65) 
+    {
+        oam_addr = 0;
+        spr_eval_seq = 1;
+        sec_oam_addr = 0;
+    }
     // Read from primary OAM on odd cycles
     if (cycle % 2 == 1)
     {
         assert(spr_eval_seq != 2);
-        if (spr_eval_seq == 1)
-        {
+        // if (spr_eval_seq == 1)
+        // {
             oam_data = primary_oam[oam_addr/4].data[oam_addr%4];
-        }
+        // }
     }
 
     // Write to secondary OAM on even cycles
@@ -293,20 +304,35 @@ void PPU::evalSprites()
         if (spr_eval_seq == 2)
         {
             // 2.  Increment n
-            if (oam_addr%4 == 0) oam_addr += checkRange(oam_data) ? 1 : 4;
-            else oam_addr++;
-            if (oam_addr%4 == 0) sec_oam_addr++;
+            if ((oam_addr%4 == 0) && !checkRange(oam_data))
+            {
+                // 2.a If n has overflowed back go 0, goto 4
+                if (oam_addr <= 252) spr_eval_seq = 4;
+                oam_addr += 4;
+            }
+            else 
+            {
+                // 2.a If n has overflowed back go 0, goto 4
+                if (oam_addr == 255) spr_eval_seq = 4;
+                oam_addr++;
+            }
 
-            // 2.a If n has overflowed back go 0, goto 4
-            if (oam_addr/4 == 0) spr_eval_seq = 4;
+            if (oam_addr%4 == 0) 
+            {
+                sec_oam_addr++;
+            }
 
-            // 2.b If less than 8 sprites have been found, go to 1
-            else if (sec_oam_addr < 8) spr_eval_seq = 1;
+            if (spr_eval_seq != 4)
+            {
 
-            // 2.c If exactly 8 sprites have been found, disable writes to secondary OAM
-            // This is already done by keeping track of sec_oam_addr
-            spr_eval_seq = 3;
-        }
+                // 2.b If less than 8 sprites have been found, go to 1
+                if (sec_oam_addr < 8) spr_eval_seq = 1;
+
+                // 2.c If exactly 8 sprites have been found, disable writes to secondary OAM
+                // This is already done by keeping track of sec_oam_addr
+                else spr_eval_seq = 3;
+            }
+        }  
     }
 }
 
@@ -471,6 +497,10 @@ Pixel PPU::getColor(ubyte palette, ubyte pal_i)
     assert(region == Region::NTSC);
     assert(palette < 8 && pal_i < 4);
     uint system_palette_i = nes.mem->ppuRead(0x3F00 + 4*palette + pal_i);
+    #ifndef NDEBUG
+    if (system_palette_i >= 64)
+        std::cerr << "Warning: out of bounds palette index: " << system_palette_i << std::endl;
+    #endif
     system_palette_i %= 0x40;
     if (reg_mask.greyscale) system_palette_i &= 0x30;
     // TODO color emphasis
@@ -503,7 +533,7 @@ void PPU::renderPixel()
     uint bg_px = 0;
     if (bgEnabled())
     {
-        uint bg_bit = (cycle-1) + fine_x_scroll;
+        uint bg_bit = ((cycle-1) % 8) + fine_x_scroll;
         bg_px = (bg_pt_high.peekBit(bg_bit) << 1) | bg_pt_low.peekBit(bg_bit);
     }
 
@@ -514,14 +544,14 @@ void PPU::renderPixel()
     {
         for (spr_i = 0; spr_i < 8; spr_i++)
         {
-            ubyte x = secondary_oam[spr_i].x;
+            ubyte x = spr_x_pos[spr_i];
             if ((cycle-2) >= x && (cycle-2) < x+8)
             {
                 uint spr_bit;
-                if (secondary_oam[spr_i].attributes & 0x40) // Flip horizontally
+                if (spr_at[spr_i] & 0x40) // Flip horizontally
                     spr_bit = 7 - ((cycle-2) - x);
                 else spr_bit = (cycle-2) - x;
-                spr_px = (spr_pt_high[spr_i].peekBit(spr_bit) << 1) | spr_pt_high[spr_i].peekBit(spr_bit);
+                spr_px = (spr_pt_high[spr_i].peekBit(spr_bit) << 1) | spr_pt_low[spr_i].peekBit(spr_bit);
             }
             if (spr_px != 0) break;
         }
@@ -529,22 +559,22 @@ void PPU::renderPixel()
 
     // Multiplexer
     // Sprite pixel gets drawn if non-zero && foreground priority
-    if (spr_px > 0 && !(secondary_oam[spr_i].attributes & 0x20))
+    if (spr_px > 0 && !(spr_at[spr_i] & 0x20))
     {
-        pushPixel(getColor((secondary_oam[spr_i].attributes & 0x03) + 4, spr_px));
+        pushPixel(getColor((spr_at[spr_i] & 0x03) + 4, spr_px));
     }
     else
     {
         pushPixel(getColor(bg_at.peekByte(), bg_px));
     }
 
-    // Shift bg regs every 8 cycles
-    if (cycle % 8 == 0)
-    {
-        bg_pt_low.shift(8);
-        bg_pt_high.shift(8);
-        bg_at.shift(8);
-    }
+    // // Shift bg regs every 8 cycles
+    // if (cycle % 8 == 0)
+    // {
+    //     bg_pt_low.shift(8);
+    //     bg_pt_high.shift(8);
+    //     bg_at.shift(8);
+    // }
 }
 
 void PPU::processScanline()
@@ -564,7 +594,7 @@ void PPU::processScanline()
     }
 
     // Sprites
-    if (scanline != -1 && cycle >= 1 && cycle <= 256)
+    if (scanline != -1 && cycle >= 1 && cycle <= 320)
     {
         if (cycle <= 64 && (cycle%2 == 0))
         {
@@ -601,17 +631,16 @@ void PPU::processScanline()
     if (cycle == 257)
     {
         vram_addr.coarse_x = tmp_vram_addr.coarse_x;
+        vram_addr.nametable = tmp_vram_addr.nametable;
     }
 }
 
 void PPU::tick()
 {
+    if (scanline >= 0 && scanline < post_render_start && cycle >= 1 && cycle <= 256)
+        renderPixel();
     if (scanline < post_render_start) 
         processScanline();
-    if (scanline >= 0 && scanline < post_render_start && cycle >= 1 && cycle <= 256)
-    {
-        renderPixel();
-    }
     else if (scanline == vblank_start && cycle == 1)
     {
         reg_status.vblank = true;
@@ -635,4 +664,10 @@ void PPU::incrCycle()
         else scanline++;
     }
     else cycle++;
+
+    // TODO delet
+    if (scanline == 128)
+    {
+        std::cerr << scanline << std::endl;
+    }
 }
