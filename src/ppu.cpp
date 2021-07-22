@@ -240,7 +240,7 @@ bool PPU::bgEnabled()
 
 bool PPU::checkRange(ubyte y)
 {
-    return scanline+1 >= y && scanline+1 < y + (reg_ctrl.spr_size ? 16 : 8);
+    return scanline >= y && scanline < y + (reg_ctrl.spr_size ? 16 : 8);
 }
 
 // http://wiki.nesdev.com/w/index.php/PPU_sprite_evaluation#Details
@@ -343,7 +343,7 @@ void PPU::fetchSprites()
         case 1:
             ppu_data = nes.mem->ppuRead(vram_addr.addr);
             oam_data = secondary_oam[spr_i].y;
-            tmp_spr_y = (scanline+1) - oam_data;
+            tmp_spr_y = scanline - oam_data;
             break;
 
         // Read sprite tile number

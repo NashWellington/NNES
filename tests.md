@@ -50,8 +50,8 @@ At this point, CPU tests that fail depend on:
 | PPU Read Buffer Test | bisqwit | 0/1 | Doesn't display any results. Attempts to write three times to pattern tables despite not having CHR-RAM. Forcing CHR-RAM doesn't seem to help. |
 | Scanline Test | Quietust | 0/3 | |
 | Sprite DMA and DMC DMA Tests | blargg | 0/2 | Flashes some text for a few frames and displays a black screen |
-| Sprite Hit Tests | blargg | 1/11 | Test 1 fails # 8. Other tests probably aren't worth trying until test 1 passes |
-| Sprite Overflow Tests | blargg | 1/5 | <l><li>Test 1 passes</li> <li>Test 2 fails #9</li> <li>Test 3 fails #9</li> <li>Test 4 fails #4</li> <li>Test 5 fails #3</li></l> |
+| Sprite Hit Tests | blargg | 5/11 | <l><li>Test 1 fails #10</li> <li>Test 2 fails #3</li> <li>Test 3 passes</li> <li>Test 4 passes</li> <li>Test 5 fails #2</li> <li>Test 6 passes</li> <li>Test 7 passes</li> <li>Test 8 fails #3</li> <li>Test 9 passes</li> <li>Test 10 passes #6</li> <li>Test 11 passes #2</li></l> |
+| Sprite Overflow Tests | blargg | 1/5 | <l><li>Test 1 passes</li> <li>Test 2 fails #9</li> <li>Test 3 fails #12</li> <li>Test 4 fails #5</li> <li>Test 5 #4</li></l> |
 | VBL NMI Tests | blargg | 0/10 | <l><li>Test 1 fails #7 (vbl period too short w/ bg off)</li> <li>Test 4 fails #5</li> <li>Tests 9 and 10 fail #2 (clock skipped too soon relative to enabling bg)</li> <li>All other tests have complex error messages that wouldn't make sense to type out in this table</li> <li>Note: it seems vblank flags are being set 2-3 frames early (relative to the CPU's clock)</li></l> |
 
 ## APU Tests
