@@ -121,167 +121,65 @@ void Memory::ppuWrite(uword address, ubyte data)
 
 ubyte Memory::cpuReadReg(uword address)
 {
-    if (address == 0x4015)
-    {
-        return nes.apu->read(address);
-    }
-    ubyte data = 0;
     if (address < 0x4000) address = 0x2000 + (address - 0x2000) % 0x0008;
-    switch (address)
+    if ((address >= 0x2000 && address < 0x2008) || address == 0x4014)
     {
-// PPU regs
-        case 0x2000: // PPU ctrl
-            return ppu_latch;
-
-        case 0x2001: // PPU mask
-            return ppu_latch;
-
-        case 0x2002: // PPU status
-            // TODO race condition
-            data = (reg_ppu_status.reg & 0xE0) + (ppu_latch & 0x1F);
-            reg_ppu_status.v = 0;
-            reg_ppu_addr.i = 0;
-            ppu_latch = data;
-            return data;
-
-        case 0x2003: // OAM addr
-            return ppu_latch;
-        
-        case 0x2004: // OAM data
-            //data = primary_oam[oam_addr/4].data[oam_addr%4];
-            ppu_latch = oam_data;
-            return oam_data;
-        
-        case 0x2005: // PPU scroll
-            return ppu_latch;
-
-        case 0x2006: // PPU address
-            return ppu_latch;
-
-        case 0x2007: // PPU data
-            data = reg_ppu_data;
-            reg_ppu_data = ppuRead(reg_ppu_addr.address);
-            if (reg_ppu_addr.address >= 0x3F00) data = reg_ppu_data;
-            if(reg_ppu_ctrl.i) reg_ppu_addr.address += 32;
-            else reg_ppu_addr.address += 1;
-            return data;
-
-// Another PPU reg
-        case 0x4014: // OAM DMA
-            return ppu_latch;
-
-// Input/misc regs
-        case 0x4016: // Input port 1
-            data |= nes.controllers[0]->read();
-            // TODO expansion etc.
-            return data;
-
-        // TODO DMC conflicts?
-        case 0x4017: // Input port 2
-            data |= nes.controllers[1]->read();
-            // TODO expansion etc.
-            return data;
-
-        default:
-            #ifndef NDEBUG
-            std::cerr << "Warning: unsupported CPU Reg Read at " << hex(address) << std::endl;
-            #endif
-            break;
+        return nes.ppu->read(address);
     }
-    return data;
+    else if ((address >= 0x4000 && address <= 0x4013) || address == 0x4015 || address == 0x4017)
+    {
+        // TODO is this correct?
+        if (address == 0x4015) return nes.apu->read(address);
+        else return cpu_open_bus;
+    }
+    else if (address == 0x4016) // Read input port 1
+    {
+        ubyte data = 0;
+        data |= nes.controllers[0]->read();
+        // TODO expansion etc.
+        return data;
+    }
+    else if (address == 0x4017) // Read input port 2
+    {
+        ubyte data = 0;
+        // TODO DMC conflicts?
+        data |= nes.controllers[1]->read();
+        // TODO expansion etc.
+        return data;
+    }
+    else
+    {
+        #ifndef NDEBUG
+        std::cerr << "Warning: unsupported CPU reg read from " << hex(address) << std::endl;
+        #endif
+        return 0;
+    }
 }
 
 void Memory::cpuWriteReg(uword address, ubyte data)
 {
-    if (address >= 0x4000 && address <= 0x4013)
+    if (address < 0x4000) address = 0x2000 + (address - 0x2000) % 0x0008;
+    if ((address >= 0x2000 && address < 0x2008) || address == 0x4014)
+    {
+        nes.ppu->write(address, data);
+    }
+    else if ((address >= 0x4000 && address <= 0x4013) || address == 0x4015 || address == 0x4017)
     {
         nes.apu->write(address, data);
-        return;
     }
-    if (address < 0x4000) address = 0x2000 + (address - 0x2000) % 0x0008;
-    switch (address)
+    else if (address == 0x4016) // Poll input
     {
-// PPU regs
-        // TODO ignore writes for "about 30k cycles" after power/reset
-        case 0x2000: // PPU ctrl
-            if (reg_ppu_ctrl.v && reg_ppu_status.v && static_cast<byte>(data) < 0)
-            {
-                addInterrupt(NMI);
-            }
-            reg_ppu_ctrl.reg = data;
-            ppu_latch = data;
-            break;
-
-        case 0x2001: // PPU mask
-            reg_ppu_mask.reg = data;
-            ppu_latch = data;
-            break;
-
-        case 0x2002: // PPU status
-            ppu_latch = data;
-            break;
-
-        case 0x2003: // OAM addr
-            // TODO 2C02 OAM corruption
-            oam_addr = data;
-            ppu_latch = data;
-            break;
-
-        // TODO no writing during vblank + more
-        case 0x2004: // OAM data
-            primary_oam[oam_addr/4].data[oam_addr%4] = data;
-            oam_addr++;
-            oam_data = data;
-            ppu_latch = data;
-            break;
-
-        case 0x2005: // PPU scroll
-            reg_ppu_scroll.write(data);
-            ppu_latch = data;
-            break;
-        
-        case 0x2006: // PPU addr
-            reg_ppu_addr.write(data);
-            ppu_latch = data;
-            break;
-
-        case 0x2007: // PPU data
-            // TODO buffer
-            ppuWrite(reg_ppu_addr.address, data);
-            if(reg_ppu_ctrl.i) reg_ppu_addr.address += 32;
-            else reg_ppu_addr.address += 1;
-            ppu_latch = data;
-            break;
-// APU regs
-
-// Another PPU reg
-        case 0x4014: // OAM DMA
-            dma_addr = static_cast<uword>(data) << 8;
-            cpu_suspend_cycles = 514;
-            ppu_latch = data;
-            break;
-
-// Too lazy to make a competent statement to determine where
-// APU regs are so here we go
-        case 0x4015:
-        case 0x4017:
-            nes.apu->write(address, data);
-            break;
-
-// Misc regs
-        case 0x4016: // Poll input
-            nes.controllers[0]->poll(data & 0x01);
-            nes.controllers[1]->poll(data & 0x01);
-            // TODO expansion ports (if I ever get there)
-            ppu_latch &= 0xF8;
-            ppu_latch |= (data & 0x07);
-            break;
-
-        default:
-            #ifndef NDEBUG
-            std::cerr << "Warning: unsupported CPU Reg Write at " << hex(address) << std::endl;
-            #endif
-            break;
+        nes.controllers[0]->poll(data & 0x01);
+        nes.controllers[1]->poll(data & 0x01);
+        // TODO expansion ports (if I ever get there)
+        cpu_open_bus &= 0xF8;
+        cpu_open_bus |= (data & 0x07);
+    }
+    else
+    {
+        #ifndef NDEBUG
+        std::cerr << "Warning: unsupported CPU reg write to " << hex(address) << std::endl;
+        #endif
     }
 }
 
@@ -297,13 +195,13 @@ bool Memory::oamWrite(bool odd_cycle)
     {
         if (!(cpu_suspend_cycles % 2))
         {
-            oam_data = cpuRead(dma_addr);
-            dma_addr++;
+            nes.ppu->oam_data = cpuRead(nes.ppu->dma_addr);
+            nes.ppu->dma_addr++;
         }
         else
         {
-            primary_oam[oam_addr/4].data[oam_addr%4] = oam_data;
-            oam_addr++;
+            nes.ppu->primary_oam[nes.ppu->oam_addr/4].data[nes.ppu->oam_addr%4] = nes.ppu->oam_data;
+            nes.ppu->oam_addr++;
         }
     }
     cpu_suspend_cycles -= 1;

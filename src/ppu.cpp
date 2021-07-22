@@ -1,35 +1,16 @@
 #include "ppu.h"
 
+const std::array<ubyte,192> ntsc_palette =
+{
+     84,  84,  84,    0,  30, 116,    8,  16, 144,   48,   0, 136,   68,   0, 100,   92,   0,  48,   84,   4,   0,   60,  24,   0,   32,  42,   0,    8,  58,   0,    0,  64,   0,    0,  60,   0,    0,  50,  60,    0,   0,   0,
+    152, 150, 152,    8,  76, 196,   48,  50, 236,   92,  30, 228,  136,  20, 176,  160,  20, 100,  152,  34,  32,  120,  60,   0,   84,  90,   0,   40, 114,   0,    8, 124,   0,    0, 118,  40,    0, 102, 120,    0,   0,   0,
+    236, 238, 236,   76, 154, 236,  120, 124, 236,  176,  98, 236,  228,  84, 236,  236,  88, 180,  236, 106, 100,  212, 136,  32,  160, 170,   0,  116, 196,   0,   76, 208,  32,   56, 204, 108,   56, 180, 204,   60,  60,  60,
+    236, 238, 236,  168, 204, 236,  188, 188, 236,  212, 178, 236,  236, 174, 236,  236, 174, 212,  236, 180, 176,  228, 196, 144,  204, 210, 120,  180, 222, 120,  168, 226, 144,  152, 226, 180,  160, 214, 228,  160, 162, 160
+};
+
 PPU::PPU(NES& _nes, Video& _video) : nes(_nes), video(_video)
 {
-    loadSystemPalette();
-
-    spr_x_pos.fill(0x00FF);
-    spr_at_byte.fill(0xFF);
-    spr_pt_byte_low.fill(0xFF);
-    spr_pt_byte_high.fill(0xFF);
-    show_spr.fill(false);
-}
-
-void PPU::loadSystemPalette()
-{
-    std::ifstream file("./palettes/ntsc.pal", std::ios::binary); // TODO put name in config file
-    if (!file.is_open())
-    {
-        std::cerr << "Error opening palette file" << std::endl;
-        throw std::exception();
-    }
-    ubyte buffer = 0;
-    for (Pixel& pixel : system_palette)
-    {
-        file.read(reinterpret_cast<char*>(&buffer), sizeof(buffer));
-        pixel.r = buffer;
-        file.read(reinterpret_cast<char*>(&buffer), sizeof(buffer));
-        pixel.g = buffer;
-        file.read(reinterpret_cast<char*>(&buffer), sizeof(buffer));
-        pixel.b = buffer;
-    }
-    file.close();
+    setRegion(Region::NTSC);
 }
 
 void PPU::setRegion(Region _region)
@@ -41,16 +22,25 @@ void PPU::setRegion(Region _region)
             name = "Ricoh 2C02";
             time_scale = 4;
             revision = REV_2C02;
+            post_render_start = 240;
+            vblank_start = 241;
+            render_end = 260;
             break;
         case Region::PAL:
             name = "Ricoh 2C07";
             time_scale = 5;
             revision = REV_2C07;
+            post_render_start = 239;
+            vblank_start = 241;
+            render_end = 311;
             break;
         case Region::Dendy:
             name = "UMC UA6538";
             time_scale = 5;
             revision = UMC;
+            post_render_start = 239;
+            vblank_start = 289;
+            render_end = 311;
             break;
         default:
             std::cerr << "Error: unsupported region" << std::endl;
@@ -59,568 +49,590 @@ void PPU::setRegion(Region _region)
     }
 }
 
-// https://wiki.nesdev.com/w/index.php/PPU_power_up_state
+// http://wiki.nesdev.com/w/index.php/PPU_power_up_state
 void PPU::reset()
 {
-    nes.mem->reg_ppu_ctrl.reg = 0;
-    nes.mem->reg_ppu_mask.reg = 0;
-    nes.mem->reg_ppu_scroll.x = 0;
-    nes.mem->reg_ppu_scroll.y = 0;
-    nes.mem->reg_ppu_scroll.i = 0; // latch clear (I think)
-    nes.mem->reg_ppu_addr.i = 0;   // latch clear (I think)
-    nes.mem->reg_ppu_data = 0;
-
-    scanline = -1;
-    sc_cycle = 0;
+    reg_ctrl.reg = 0;
+    reg_mask.reg = 0;
+    write_toggle = false; // $2005/6 latch clear
+    tmp_vram_addr.addr = 0;
+    vram_addr.addr = 0;
+    fine_x_scroll = 0;
+    ppu_data = 0;
     odd_frame = false;
+    cycle = 0;
+    scanline = -1;
+    reset_signal = true;
 }
 
-/*TODO
-void PPU::save(Savestate& savestate)
+ubyte PPU::read(uword address)
 {
-
+    assert((address >= 0x2000 && address <= 0x2007) || address == 0x4014);
+    ubyte data = 0;
+    switch (address)
+    {
+        case 0x2000: // PPU control
+            return ppu_io_open_bus;
+        case 0x2001: // PPU mask
+            return ppu_io_open_bus;
+        case 0x2002: // PPU status
+            // TODO race condition?
+            write_toggle = 0;
+            data |= (reg_status.reg & 0xE0) | (ppu_io_open_bus & 0x1F);
+            reg_status.vblank = false;
+            ppu_io_open_bus = data;
+            return data;
+        case 0x2003: // OAM address
+            return ppu_io_open_bus;
+        case 0x2004: // OAM data
+            if (reg_status.vblank)
+            {
+                return primary_oam[oam_addr/4].data[oam_addr%4];
+            }
+            else
+            {
+                return oam_data;
+            }
+        case 0x2005: // PPU scroll
+            return ppu_io_open_bus;
+        case 0x2006: // PPU address
+            return ppu_io_open_bus;
+        case 0x2007: // PPU data
+            data = ppu_data;
+            ppu_data = nes.mem->ppuRead(ppu_addr);
+            if (ppu_addr >= 0x3F00) data = ppu_data;
+            ppu_addr += reg_ctrl.incr ? 32 : 1;
+            return data;
+        case 0x4014: // OAM DMA
+            return ppu_io_open_bus;
+        default:
+            return 0;
+    }
 }
-void PPU::load(Savestate& savestate)
+
+// Writes to any PPU port load ppu_io_open_bus 
+void PPU::write(uword address, ubyte data)
 {
-
+    assert((address >= 0x2000 && address <= 0x2007) || address == 0x4014);
+    switch (address)
+    {
+        case 0x2000: // PPU control
+            if (!reset_signal)
+            {
+                // Changing NMI flag from 0 to 1 during vblank generates an NMI
+                if (reg_status.vblank && !reg_ctrl.vblank_nmi && (data & 0x80))
+                    nes.mem->addInterrupt(NMI);
+                reg_ctrl.reg = data;
+                ppu_io_open_bus = data;
+                tmp_vram_addr.nametable = reg_ctrl.nn;
+            }
+            break;
+        case 0x2001: // PPU mask
+            if (!reset_signal)
+            {
+                reg_mask.reg = data;
+                ppu_io_open_bus = data;
+            }
+            break;
+        case 0x2002: // PPU status
+            ppu_io_open_bus = data;
+            break;
+        case 0x2003: // OAM address
+            // TODO 2C02 OAM corruption
+            oam_addr = data;
+            ppu_io_open_bus = data;
+            break;
+        case 0x2004: // OAM data
+            // TODO no writing during vblank? or is that only a suggestion
+            // TODO probably more
+            primary_oam[oam_addr/4].data[oam_addr%4] = data;
+            oam_addr++;
+            oam_data = data;
+            ppu_io_open_bus = data;
+            break;
+        case 0x2005: // PPU scroll
+            if (!reset_signal)
+            {
+                if (!write_toggle) // X scroll
+                {
+                    tmp_vram_addr.coarse_x = data >> 3;
+                    fine_x_scroll = data & 0x07;
+                }
+                else
+                {
+                    tmp_vram_addr.coarse_y = data >> 3;
+                    tmp_vram_addr.fine_y = data & 0x07;
+                }
+                write_toggle = !write_toggle;
+                ppu_io_open_bus = data;
+            }
+            break;
+        case 0x2006: // PPU address
+            if (!reset_signal)
+            {
+                ppu_addr &= 0x00FF << (write_toggle ? 0 : 8);
+                ppu_addr |= data << (write_toggle ? 8 : 0);
+                write_toggle = !write_toggle;
+                ppu_io_open_bus = data;
+            }
+            break;
+        case 0x2007: // PPU data
+            // TODO buffer
+            nes.mem->ppuWrite(ppu_addr, data);
+            ppu_addr += reg_ctrl.incr ? 32 : 1;
+            ppu_io_open_bus = data;
+            break;
+        case 0x4014: // OAM DMA
+            dma_addr = data << 8;
+            ppu_io_open_bus = data;
+            // Be careful of this if implementing multithreading in the scheduler
+            nes.mem->cpu_suspend_cycles = 514;
+            break;
+        default:
+            // Should never be here b/c of assertion
+            break;
+    }
 }
-*/
+
+void PPU::sendFrame()
+{
+    video.frame_tex.update(256, 240, reinterpret_cast<void*>(&ppu_frame));
+}
+
+// http://wiki.nesdev.com/w/index.php/PPU_scrolling#Tile_and_attribute_fetching
+ubyte PPU::getNTByte()
+{
+    return nes.mem->ppuRead(0x2000 | (vram_addr.addr & 0x0FFF));
+}
+
+ubyte PPU::getAttribute()
+{
+    ubyte attribute = nes.mem->ppuRead(0x23C0 | (vram_addr.addr & 0x0C00) 
+        | ((vram_addr.addr >> 4) & 0x0038) | ((vram_addr.addr >> 2) & 0x0007));
+    
+    if((vram_addr.coarse_y/2) % 2 == 0) attribute &= 0x00FF; // Top quads
+    else { attribute &= 0xFF00; attribute >>= 4; }  // bottom quads
+
+    if ((vram_addr.coarse_x/2) % 2 == 0) attribute &= 0x0F; // Left quads
+    else { attribute &= 0xF0; attribute >>= 4; } // right quads
+
+    return attribute;
+}
+
+ubyte PPU::getPTByte(uint table, uint tile, uint bit_plane, uint fine_y)
+{
+    return nes.mem->ppuRead((table << 12) | (tile << 4) | (bit_plane << 3) | fine_y);
+}
+
+bool PPU::sprEnabled()
+{
+    return !reg_status.vblank && reg_mask.show_sprites && (reg_mask.left_sprites || (cycle-1 >= 8));
+}
+
+bool PPU::bgEnabled()
+{
+    return !reg_status.vblank && reg_mask.show_background && (reg_mask.left_background || (cycle-1 >= 8));
+}
+
+bool PPU::checkRange(ubyte y)
+{
+    return scanline+1 >= y && scanline+1 <= y + (reg_ctrl.spr_size ? 16 : 8);
+}
+
+// http://wiki.nesdev.com/w/index.php/PPU_sprite_evaluation#Details
+// Some of the steps are rearranged so they work on a cycle-accurate basis
+void PPU::evalSprites()
+{
+    // Read from primary OAM on odd cycles
+    if (cycle % 2 == 1)
+    {
+        assert(spr_eval_seq != 2);
+        if (spr_eval_seq == 1)
+        {
+            oam_data = primary_oam[oam_addr/4].data[oam_addr%4];
+        }
+    }
+
+    // Write to secondary OAM on even cycles
+    else
+    {
+        if (spr_eval_seq == 1)
+        {
+            if (sec_oam_addr < 8)
+            {
+                // 1.  Read a sprite's y-coord to secondary OAM
+                if ((oam_addr % 4) == 0)
+                {
+                    secondary_oam[sec_oam_addr].y = oam_data;
+                }
+                // 1.a Read the rest of sprite data to secondary OAM
+                else
+                {
+                    // TODO is this all done in one step?
+                    secondary_oam[sec_oam_addr].data[oam_addr%4] = oam_data;
+                }
+            } 
+            //else read val from secondary OAM
+            spr_eval_seq = 2;
+        }
+        else if (spr_eval_seq == 3)
+        {
+            if (checkRange(oam_data))
+            {
+                reg_status.overflow = true;
+                // TODO read next 3 entries
+                oam_addr++;
+            }
+            else 
+            {
+                oam_addr += 5;
+                if (oam_addr/4 == 0) spr_eval_seq = 4;
+            }
+        }
+
+        if (spr_eval_seq == 2)
+        {
+            // 2.  Increment n
+            if (oam_addr%4 == 0) oam_addr += checkRange(oam_data) ? 1 : 4;
+            else oam_addr++;
+            if (oam_addr%4 == 0) sec_oam_addr++;
+
+            // 2.a If n has overflowed back go 0, goto 4
+            if (oam_addr/4 == 0) spr_eval_seq = 4;
+
+            // 2.b If less than 8 sprites have been found, go to 1
+            else if (sec_oam_addr < 8) spr_eval_seq = 1;
+
+            // 2.c If exactly 8 sprites have been found, disable writes to secondary OAM
+            // This is already done by keeping track of sec_oam_addr
+            spr_eval_seq = 3;
+        }
+    }
+}
+
+void PPU::fetchSprites()
+{
+    uint spr_i = (cycle-257)/8;
+    switch (cycle % 8)
+    {
+        // Read garbage NT byte
+        // Read y-coord from secondary OAM (unnecessary?)
+        case 1:
+            ppu_data = nes.mem->ppuRead(vram_addr.addr);
+            oam_data = secondary_oam[spr_i].y;
+            tmp_spr_y = oam_data;
+            break;
+
+        // Read sprite tile number
+        case 2:
+            oam_data = secondary_oam[spr_i].tile_i;
+            tmp_spr_tile_i = oam_data;
+            break;
+
+        // Read garbage NT byte
+        // Read sprite attribute
+        case 3:
+            ppu_data = nes.mem->ppuRead(vram_addr.addr);
+            oam_data = secondary_oam[spr_i].attributes;
+            spr_at[spr_i] = oam_data;
+            // Flip vertically
+            if (oam_data & 0x80) tmp_spr_y = (reg_ctrl.spr_size ? 15 : 7) - tmp_spr_y;
+            break;
+
+        // Read sprite x-pos
+        case 4:
+            oam_data = secondary_oam[spr_i].x;
+            spr_x_pos[spr_i] = oam_data;
+            break;
+
+        // Read sprite pattern table byte (low)
+        // Read sprite x-pos
+        case 5:
+            ppu_data = getPTByte(reg_ctrl.spr_size ? 0 : reg_ctrl.spr_table, tmp_spr_tile_i, 0, scanline - tmp_spr_y);
+            oam_data = secondary_oam[spr_i].x;
+            spr_x_pos[spr_i] = oam_data;
+            break;
+
+        // Read sprite x-pos
+        case 6:
+            spr_pt_low[spr_i].load(ppu_data);
+            oam_data = secondary_oam[spr_i].x;
+            spr_x_pos[spr_i] = oam_data;
+            break;
+
+        // Read sprite pattern table byte (high)
+        // Read sprite x-pos
+        // TODO check if sprites are divided like this if 8x16
+        case 7:
+            ppu_data = getPTByte(reg_ctrl.spr_size ? 1 : reg_ctrl.spr_table, tmp_spr_tile_i, 1, scanline - tmp_spr_y);
+            oam_data = secondary_oam[spr_i].x;
+            spr_x_pos[spr_i] = oam_data;
+            break;
+
+        // Read sprite x-pos
+        case 0:
+            spr_pt_high[spr_i].load(ppu_data);
+            oam_data = secondary_oam[spr_i].x;
+            spr_x_pos[spr_i] = oam_data;
+            break;
+    }
+}
+
+void PPU::fetchTiles()
+{
+    switch (cycle % 8)
+    {
+        // NT fetch
+        case 1:
+            ppu_data = getNTByte();
+            break;
+        case 2:
+            bg_nt_latch = ppu_data;
+            break;
+        // AT fetch
+        case 3:
+            ppu_data = getAttribute();
+            break;
+        case 4:
+            bg_at_latch = ppu_data;
+            break;
+        // PT fetch low
+        case 5:
+            ppu_data = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 0, vram_addr.fine_y);
+            break;
+        case 6:
+            bg_pt_low_latch = ppu_data;
+            break;
+        // PT fetch high
+        case 7:
+            ppu_data = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 1, vram_addr.fine_y);
+            break;
+        case 0:
+            bg_at.load(bg_at_latch);
+            bg_pt_low.load(bg_pt_low_latch);
+            bg_pt_high.load(ppu_data);
+            if (vram_addr.coarse_x == 31) 
+            {
+                vram_addr.coarse_x = 0;
+                vram_addr.nametable ^= 1;
+            }
+            else vram_addr.coarse_x++;
+            break;
+    }
+}
+
+void PPU::dummyFetchTiles()
+{
+    switch (cycle % 8)
+    {
+        // NT fetch
+        case 1:
+            ppu_data = getNTByte();
+            bg_nt_latch = ppu_data;
+            break;
+        // AT fetch
+        case 3:
+            ppu_data = getAttribute();
+            break;
+        // PT fetch low
+        case 5:
+            ppu_data = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 0, vram_addr.fine_y);
+            break;
+        // PT fetch high
+        case 7:
+            ppu_data = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 1, vram_addr.fine_y);
+            break;
+        case 0:
+            if (vram_addr.fine_y < 7) // incr fine y
+            {
+                vram_addr.fine_y++;
+            }
+            else // overflow fine y to coarse y
+            {
+                vram_addr.fine_y = 0;
+                if (vram_addr.coarse_y == 29)
+                {
+                    vram_addr.coarse_y = 0;
+                    vram_addr.nametable ^= 2;
+                }
+                else if (vram_addr.coarse_y == 31)
+                {
+                    vram_addr.coarse_y = 0;
+                }
+                else vram_addr.coarse_y++;
+            }
+            break;
+    }
+}
+
+// TODO color emphasis, integer math
+Pixel PPU::getColor(ubyte palette, ubyte pal_i)
+{
+    assert(region == Region::NTSC);
+    assert(palette < 8 && pal_i < 4);
+    uint system_palette_i = nes.mem->ppuRead(0x3F00 + 4*palette + pal_i);
+    system_palette_i %= 0x40;
+    if (reg_mask.greyscale) system_palette_i &= 0x30;
+    // TODO color emphasis
+    system_palette_i *= 3;
+
+    Pixel color;
+    switch (region)
+    {
+        case Region::NTSC:
+            color = {ntsc_palette[system_palette_i],
+                     ntsc_palette[system_palette_i + 1],
+                     ntsc_palette[system_palette_i + 2]};
+            break;
+        default:
+            return {0,0,0};
+    }
+    return color;
+}
+
+void PPU::pushPixel(Pixel p)
+{
+    assert(scanline != -1);
+    assert(static_cast<uint>(scanline * 256 + cycle-1) < ppu_frame.size());
+    ppu_frame[scanline * 256 + cycle-1] = p;
+}
+
+void PPU::renderPixel()
+{
+    // Background pixel
+    uint bg_px = 0;
+    if (bgEnabled())
+    {
+        uint bg_bit = (cycle-1) + fine_x_scroll;
+        bg_px = (bg_pt_high.peekBit(bg_bit) << 1) | bg_pt_low.peekBit(bg_bit);
+    }
+
+    // Sprite pixel
+    uint spr_px = 0;
+    uint spr_i = 0;
+    if (sprEnabled() && cycle >= 2 && scanline >= 1)
+    {
+        for (spr_i = 0; spr_i < 8; spr_i++)
+        {
+            ubyte x = secondary_oam[spr_i].x;
+            if ((cycle-2) >= x && (cycle-2) < x+8)
+            {
+                uint spr_bit;
+                if (secondary_oam[spr_i].attributes & 0x40) // Flip horizontally
+                    spr_bit = 7 - ((cycle-2) - x);
+                else spr_bit = (cycle-2) - x;
+                spr_px = (spr_pt_high[spr_i].peekBit(spr_bit) << 1) | spr_pt_high[spr_i].peekBit(spr_bit);
+            }
+            if (spr_px != 0) break;
+        }
+    }
+
+    // Multiplexer
+    // Sprite pixel gets drawn if non-zero && foreground priority
+    if (spr_px > 0 && !(secondary_oam[spr_i].attributes & 0x20))
+    {
+        pushPixel(getColor((secondary_oam[spr_i].attributes & 0x03) + 4, spr_px));
+    }
+    else
+    {
+        pushPixel(getColor(bg_at.peekByte(), bg_px));
+    }
+
+    // Shift bg regs every 8 cycles
+    if (cycle % 8 == 0)
+    {
+        bg_pt_low.shift(8);
+        bg_pt_high.shift(8);
+        bg_at.shift(8);
+    }
+}
+
+void PPU::processScanline()
+{
+    if (scanline == -1 && cycle == 1)
+    {
+        reg_status.vblank = false;
+        reg_status.sprite_zero = false;
+        reg_status.overflow = false;
+        if (odd_frame) reset_signal = false;
+    }
+
+    if (scanline == -1 && cycle >= 280 && cycle <= 304)
+    {
+        // vert (v) = vert (t)
+        vram_addr.addr = tmp_vram_addr.addr;
+    }
+
+    // Sprites
+    if (scanline != -1 && cycle >= 1 && cycle <= 256)
+    {
+        if (cycle <= 64 && (cycle%2 == 0))
+        {
+            // Secondary OAM clear
+            secondary_oam[(cycle-2)/8].data[((cycle-2)/2)%4] = 0xFF;
+        }
+        else if (cycle >= 65 && cycle <= 256)
+        {
+            evalSprites();
+        }
+        else if (cycle >= 257 && cycle <= 320)
+        {
+            fetchSprites();
+        }
+    }
+
+    // Background
+    if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 340))
+    {
+        if ((cycle >= 1 && cycle <= 248) || (cycle >= 321 && cycle <= 336))
+        {
+            fetchTiles();
+        }
+        else if (cycle >= 249 && cycle <= 256)
+        {
+            dummyFetchTiles();
+        }
+        else if (cycle == 338 || cycle == 340)
+        {
+            getNTByte();
+        }
+    }
+
+    if (cycle == 257)
+    {
+        vram_addr.coarse_x = tmp_vram_addr.coarse_x;
+    }
+}
 
 void PPU::tick()
 {
-    // TODO OAM ADDR set during sprite eval
-    // TODO check if background/sprites should be loaded
-    // TODO sprite checking/resolution/whatever
-
-    if ((scanline >= 0 && scanline < POST_RENDER_START) || (scanline == -1)) // pre-render + visible
+    if (scanline < post_render_start) 
+        processScanline();
+    if (scanline >= 0 && scanline < post_render_start && cycle >= 1 && cycle <= 256)
     {
-        if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) // Get table bytes
-        {
-            // Background tile evaluation
-            switch (cycle%8)
-            {
-                case 2: // NT byte
-                {
-                    uword nt_addr_base = 0x2000 
-                        + (static_cast<uword>(nes.mem->reg_ppu_ctrl.nn) * 0x0400);
-                    bg_nt_byte = nes.mem->ppuRead(nt_addr_base + 32 * reg_nt_row + reg_nt_col);
-                    if (scanline != -1 && scanline < 239 && cycle <= 256)
-                        pushSpritePixels(); // TODO don't do this when pre-render or scanline 239
-                    break;
-                }
-                case 4: // AT byte
-                {
-                    uword nt_addr_base = 0x2000 
-                        + (static_cast<uword>(nes.mem->reg_ppu_ctrl.nn) * 0x0400);
-                    uword at_col = reg_nt_col / 4;
-                    uword at_row = reg_nt_row / 4;
-                    bg_at_byte = nes.mem->ppuRead(nt_addr_base + 0x3C0 + at_row * 8 + at_col);
-
-                    // TODO figure out if I need to do this now or later
-                    // get palette info from attribute depending on quadrant
-                    uint offset = 0;
-                    if ((reg_nt_col/2) % 2 == 1) offset += 2;       // right quadrants -> 1100 0000 or 0000 1100
-                    if ((reg_nt_row/2) % 2 == 1) offset += 4;       // bottom quadrants -> 1100 000 or 0011 0000
-                    bg_at_byte = ((bg_at_byte & (0x03 << offset)) >> offset);
-                    break;
-                }
-                case 6: // Low PT byte
-                {
-                    uword pt_addr = nes.mem->reg_ppu_ctrl.b * 0x1000 + (static_cast<uword>(bg_nt_byte) << 4);
-                    uword y_offset = scanline;
-                    if (cycle >= 256) y_offset++;
-                    y_offset %= 8;
-                    bg_pt_byte_low = nes.mem->ppuRead(pt_addr + y_offset);
-                    break;
-                }
-                case 0: // High PT byte + inc hori
-                {
-                    uword pt_addr = nes.mem->reg_ppu_ctrl.b * 0x1000 + (static_cast<uword>(bg_nt_byte) << 4);
-                    uword y_offset = scanline;
-                    if (cycle >= 256) y_offset++;
-                    y_offset %= 8;
-                    bg_pt_byte_high = nes.mem->ppuRead(pt_addr + y_offset + 8);
-                    if ((scanline != -1 && cycle <= 240) 
-                        || (cycle >= 321 && scanline != 239)) 
-                    {
-                        pushBackgroundPixels();
-                        reg_nt_col++;
-                        if (cycle == 240)
-                        {
-                            assert(reg_nt_col == 32);
-                            reg_nt_col = 0;
-                            if (scanline % 8 == 7)
-                                reg_nt_row++;
-                        }
-                    }
-                    break;
-                }
-                default:
-                    break;
-            }
-            // Sprite clear
-            if (cycle == 1 && scanline != -1)
-            {
-                for (uint i = 0; i < 8; i++)
-                {
-                    for (uint j = 0; j < 4; j++)
-                    {
-                        // Clear secondary OAM
-                        nes.mem->secondary_oam[i].data[j] = 0xFF;
-                    }
-                }
-
-                nes.mem->oam_data = 0xFF;
-            }
-            else if (cycle >= 2 && cycle <= 64 && scanline != -1)
-            {
-                // TODO not sure if more than one of these is necessary
-                nes.mem->oam_data = 0xFF;
-            }
-            // Sprite evaluation
-            // Note: for now, this does it all in one go
-            // TODO: make this cycle-accurate
-            // TODO: emulate sprite overflow bug
-            else if (cycle == 65 && scanline != -1) // cycles 65 to 256
-            {
-                uint sec_oam_i = 0; // Secondary OAM index
-                ubyte y_range = nes.mem->reg_ppu_ctrl.h ? 16 : 8;
-                for (uint n = 0; n < 64; n++) // Primary oam index
-                {
-                    if (sec_oam_i < 8)
-                    {
-                        ubyte y = nes.mem->primary_oam[n].y;
-                        nes.mem->secondary_oam[sec_oam_i].y = y;
-                        if (y <= scanline && static_cast<int>(y) > scanline - y_range)
-                        {
-                            nes.mem->secondary_oam[sec_oam_i].x = nes.mem->primary_oam[n].x;
-                            nes.mem->secondary_oam[sec_oam_i].tile_i = nes.mem->primary_oam[n].tile_i;
-                            nes.mem->secondary_oam[sec_oam_i].attributes = nes.mem->primary_oam[n].attributes;
-                            sec_oam_i++;
-                        }
-                    }
-                    else
-                    {
-                        for (uint m = 0; m < 4; m++) // m increment is a hardware bug
-                        {
-                            ubyte y = nes.mem->primary_oam[n].data[m];
-                            if (y >= scanline && y < scanline + y_range) // TODO is this wrong too?
-                            {
-                                nes.mem->reg_ppu_status.o = true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        else if ((cycle >= 257) && (cycle <= 320))
-        {
-            // Load secondary OAM data into latches, shift regs, etc.
-            // TODO make this cycle-accurate
-            if (scanline != -1 && scanline < 239 && cycle == 257)
-            {
-                show_spr.fill(false); // Sprites are not shown by default
-                ubyte y_range = nes.mem->reg_ppu_ctrl.h ? 16 : 8;
-                for (uint i = 0; i < 8; i++)
-                {
-                    ubyte y = nes.mem->secondary_oam[i].y;
-                    if (y <= scanline && static_cast<int>(y) > scanline - y_range)
-                    {
-                        show_spr[i] = true;
-                        ubyte pt_y = scanline - y; // y coord within the pattern table tile
-                        ubyte attributes = nes.mem->secondary_oam[i].attributes;
-                        if (attributes & 0x80) 
-                            pt_y = y_range - pt_y - 1; // Flip vertically
-
-                        uword pt_addr = static_cast<uword>(nes.mem->secondary_oam[i].tile_i);
-                        uword pt_i;
-                        if (y_range == 8) 
-                        {
-                            pt_addr *= 16;
-                            pt_i = nes.mem->reg_ppu_ctrl.s * 0x1000;
-                            pt_addr += pt_i;
-                            pt_addr += pt_y;
-                        }
-                        else
-                        {
-                            pt_i = (pt_addr & 0x01) * 0x1000;
-                            pt_addr &= 0xFFFE;
-                            pt_addr *= 16;
-                            pt_addr += pt_y % 8;
-                            if (pt_y >= 8) pt_addr += 16;
-                        }
-
-                        ubyte pt_low = nes.mem->ppuRead(pt_addr);
-                        ubyte pt_high = nes.mem->ppuRead(pt_addr + 8);
-
-                        if (attributes & 0x40) // Flip horizontally
-                        {
-                            pt_low = reverseByte(pt_low);
-                            pt_high = reverseByte(pt_high);
-                        }
-
-                        spr_x_pos[i] = static_cast<int>(nes.mem->secondary_oam[i].x);
-                        spr_at_byte[i] = attributes;
-                        spr_pt_byte_low[i] = pt_low;
-                        spr_pt_byte_high[i] = pt_high;
-                    }
-                }
-            }
-            nes.mem->cpuWrite(0x2003, 0);
-        }
-        else if ((cycle == 338) || (cycle == 340)) // Unused NT fetches
-        {
-            // This probably won't have an effect on anything
-        }
-        if (scanline == -1)
-        {
-            if (cycle == 1) // clear vblank, sprite 0 hit, and sprite overflow
-            {
-                nes.mem->reg_ppu_status.o = 0;
-                nes.mem->reg_ppu_status.s = 0;
-                nes.mem->reg_ppu_status.v = 0;
-                pixel_i = 0;
-            }
-            else if (cycle >= 280 && cycle <= 304) // Clear vblank???
-            {
-
-            }
-            else if (cycle == 339) // skip last cycle of odd frame
-            {
-                if (odd_frame) cycle++;
-                odd_frame = !odd_frame;
-            }
-        }
-        // TODO where should I add pixels?
-        else if (cycle % 8 == 4 && cycle <= 256)
-        {
-            addPixels();
-        }
+        renderPixel();
     }
-    else // post-render
+    else if (scanline == vblank_start && cycle == 1)
     {
-        // set vblank and render image
-        if ((scanline == 241) && (cycle == 1))
-        {
-            assert(reg_nt_row == 30);
-            assert(reg_nt_col == 0);
-            reg_nt_row = 0;
-            nes.mem->reg_ppu_status.v = 1;
-            if (nes.mem->reg_ppu_ctrl.v) nes.mem->addInterrupt(NMI);
-            sendFrame();
-        }
+        reg_status.vblank = true;
+        if (reg_ctrl.vblank_nmi) nes.mem->addInterrupt(NMI);
     }
-    cycle++;
-    if (cycle >= CYCLES_PER_SCANLINE)
+    // Skip 1 cycle every other frame
+    if (scanline == -1 && cycle == 340) incrCycle();
+    incrCycle();
+}
+
+void PPU::incrCycle()
+{
+    if (cycle == 340)
     {
-        scanline++;
-        cycle -= CYCLES_PER_SCANLINE;
-    }
-    if (scanline >= SCANLINES_PER_FRAME - 1)
-    {
-        scanline -= SCANLINES_PER_FRAME;
-    }
-    #ifdef DEBUGGER
-    debug_state.pixel = cycle;
-    debug_state.scanline = scanline;
-    #endif
-}
-
-// TODO fine x scrolling
-void PPU::pushBackgroundPixels()
-{
-    uint  bg_pal_i = bg_at_byte; // Palette RAM index (i.e. which palette is selected)
-    uint  bg_color_i = 0;        // Color index (i.e. which one of four colors is selected)
-    bool show_bg = (nes.mem->reg_ppu_mask.left_background || (pixel_i % 256) >= 8) && nes.mem->reg_ppu_mask.show_background;
-
-    std::array<Pixel,4> palette = {};
-    getPalette(palette, bg_pal_i);
-    for (uint i = 0; i < 8; i++)
-    {
-        if (show_bg)
+        cycle = 0;
+        if (scanline == render_end)
         {
-            bg_color_i = (bg_pt_byte_low & (0x80 >> i)) >> (7-i);
-            bg_color_i += ((bg_pt_byte_high & (0x80 >> i)) >> (7-i)) << 1;
+            scanline = -1;
+            odd_frame = !odd_frame;
         }
-        else bg_color_i = 0;
-
-        bg_pipeline.push(palette[bg_color_i]);
+        else scanline++;
     }
-}
-
-// FIXME find a way to not draw some pixels
-// FIXME fix transparency
-void PPU::pushSpritePixels()
-{
-    std::array<Pixel,4> palette = {};
-    for (uint i = 0; i < 8; i++)
-    {
-        uint spr_pal_i = 0;
-        uint spr_color_i = 0;
-
-        for (int j = 7; j >= 0; j--) // Iterates in reverse because lower index sprites have higher priority
-        {
-            if (show_spr[j])
-            {
-                if (spr_x_pos[j] > 0)
-                    spr_x_pos[j]--;
-                else if (spr_x_pos[j] > -8) 
-                {
-                    uint px = 0;
-                    px = (spr_pt_byte_low[j] & 0x80) >> 7;
-                    px += (spr_pt_byte_high[j] & 0x80) >> 6;
-                    spr_pt_byte_low[j] <<= 1;
-                    spr_pt_byte_high[j] <<= 1;
-                    // TODO are bg-priority sprites considered?
-                    if (px > 0 && (spr_at_byte[j] & 0x20) == 0)
-                    {
-                        spr_color_i = px;
-                        spr_pal_i = (spr_at_byte[j] & 0x03) | 4;
-                    }
-                }
-                else spr_x_pos[j] = 0x00FF;
-            }
-        }
-        if (spr_color_i != 0)
-        {
-            assert(spr_pal_i < 8);
-            assert(spr_color_i < 4);
-            getPalette(palette, spr_pal_i);
-            spr_pipeline.push(palette[spr_color_i]);
-        }
-        else
-        {
-            spr_pipeline.push({});
-        }
-    }
-}
-
-void PPU::addPixels()
-{
-    for (uint i = 0; i < 8; i++)
-    {
-        std::optional<Pixel> spr_px;
-        if (!spr_pipeline.empty()) 
-        {
-            spr_px = spr_pipeline.front();
-            spr_pipeline.pop();
-        }
-        else spr_px = {};
-
-        Pixel bg_px = bg_pipeline.front();
-        bg_pipeline.pop();
-
-        if (spr_px) frame[pixel_i] = spr_px.value();
-        else frame[pixel_i] = bg_px; // FIXME unknown crash after a few resets
-        pixel_i++;
-    }
-}
-
-#ifdef DEBUGGER
-void PPU::addDebug()
-{
-    displayPatternTable(0, display.palette_selected);
-    displayPatternTable(1, display.palette_selected);
-    for (uint i = 0; i < 4; i++) displayNametable(i);
-    for (uint i = 0; i < 8; i++) displayPalette(i);
-    displaySprites();
-}
-
-Tile PPU::getPTTile(uword address, std::array<Pixel,4>& palette)
-{
-    Tile tile = {};
-    // Iterate thru 8 (x2) bytes per tile
-    for (uint y = 0; y < 8; y++)
-    {
-        // TODO pattern table index
-        ubyte pattern_lsb = nes.mem->ppuRead(address + y);
-        ubyte pattern_msb = nes.mem->ppuRead(address + y + 8);
-
-        // Iterate thru bits in each byte
-        for (uint x = 0; x < 8; x++)
-        {
-            ubyte pattern = (pattern_lsb & 0x01) + ((pattern_msb & 0x01) << 1);
-            tile[y][7-x] = palette[pattern];
-            pattern_lsb >>= 1;
-            pattern_msb >>= 1;
-        }
-    }
-    return tile;
-}
-
-void PPU::getPatternTable(uint pt_i, std::array<Pixel,4>& palette)
-{
-    uword address = 0;
-    for (uword row = 0; row < 16; row++)
-    {
-        for (uword col = 0; col < 16; col++)
-        {
-            address = pt_i * 0x1000 + 16 * col + 256 * row;
-            pattern_table.addTile(getPTTile(address, palette), row, col);
-        }
-    }
-}
-
-void PPU::getNTTile(uint nt_col, uint nt_row, uint nt_i, uint pt_i)
-{
-    std::array<Pixel, 4> palette = {};
-    ubyte attribute = 0;
-    int offset = 0;
-    ubyte palette_index = 0;
-
-    // get a byte from the attribute table used to find the palette index
-    attribute = nes.mem->ppuRead(0x2000 + 0x0400 * nt_i + 0x03C0 + nt_col/4 + 8 * (nt_row/4));
-
-    // get palette info from attribute depending on quadrant
-    if (((nt_col / 2) % 2) == 1) offset += 2; // right quadrants -> 1100 0000 or 0000 1100
-    if (((nt_row / 2) % 2) == 1) offset += 4; // bottom quadrants -> 1100 000 or 0011 0000
-    palette_index = ((attribute & (0x03 << offset)) >> offset);
-
-    getPalette(palette, palette_index);
-
-    // get tile coords from nametable(i,j)
-    ubyte pt_coords = nes.mem->ppuRead(0x2000 + 0x0400 * nt_i + nt_col + 32 * nt_row);
-    uword pt_address = pt_i * 0x1000 + (static_cast<uword>(pt_coords) << 4) /*TODO + fine y offset*/;
-
-    nametable.addTile(getPTTile(pt_address, palette), nt_row, nt_col);
-}
-
-void PPU::getNametable(uint nt_i, uint pt_i)
-{
-    for (uint nt_row = 0; nt_row < 30; nt_row++)
-    {
-        for (uint nt_col = 0; nt_col < 32; nt_col++)
-        {
-            getNTTile(nt_col, nt_row, nt_i, pt_i);
-        }
-    }
-}
-
-void PPU::getBigSprite(uint spr_i)
-{
-    ubyte spr_index = nes.mem->primary_oam[spr_i].data[1];
-    uword pt_addr = static_cast<uword>(spr_index & 0x01) << 12;
-    pt_addr += static_cast<uword>(spr_index & 0xFE);
-    ubyte attributes = nes.mem->primary_oam[spr_i].data[2];
-    uint pal_i = (attributes & 0x03) | 4;
-    std::array<Pixel,4> palette = {};
-    getPalette(palette, pal_i);
-    bool flip_hori = attributes & 0x40;
-    bool flip_vert = attributes & 0x80;
-    Tile pt_tiles[2] = {getPTTile(pt_addr, palette), getPTTile(pt_addr+1, palette)};
-    uint spr_x = 0;
-    uint spr_y = 0;
-    for (uint y = 0; y < 16; y++)
-    {
-        spr_y = flip_vert ? 16-y : y;
-        for (uint x = 0; x < 8; x++)
-        {
-            if (flip_hori) spr_x = 8-x;
-            else spr_x = x;
-            big_sprites[(spr_i/8) * 8 + spr_y][(spr_i%8) * 8 + spr_x] = pt_tiles[y/8][y%8][x];
-        }
-    }
-}
-
-void PPU::getSmallSprite(uint spr_i)
-{
-    uword pt_addr = static_cast<uword>(nes.mem->reg_ppu_ctrl.s) << 12; // Palette index (0 or 1)
-    pt_addr += static_cast<uword>(nes.mem->primary_oam[spr_i].data[1]);
-    ubyte attributes = nes.mem->primary_oam[spr_i].data[2];
-    uint pal_i = (attributes & 0x03) | 4;
-    std::array<Pixel,4> palette = {};
-    getPalette(palette, pal_i);
-    bool flip_hori = static_cast<bool>((attributes & 0x40) >> 6);
-    bool flip_vert = static_cast<bool>((attributes & 0x80) >> 7);
-    Tile pt_tile = getPTTile(pt_addr, palette);
-    uint spr_x = 0;
-    uint spr_y = 0;
-    for (uint y = 0; y < 8; y++)
-    {
-        spr_y = flip_vert ? 16-y : y;
-        for (uint x = 0; x < 8; x++)
-        {
-            if (flip_hori) spr_x = 8-x;
-            else spr_x = x;
-            small_sprites[(spr_i/8) * 8 + spr_y][(spr_i%8) * 8 + spr_x] = pt_tile[y][x];
-        }
-    }
-}
-
-void PPU::displayPalette(uint pal_i)
-{
-    getPalette(curr_palette, pal_i);
-    display.pal_tex[pal_i].update(4, 1, reinterpret_cast<void*>(&curr_palette));
-}
-
-void PPU::displayPatternTable(uint pt_i, uint palette_index)
-{
-    assert(pt_i < 2);
-    std::array<Pixel,4> palette;
-    getPalette(palette, palette_index);
-    getPatternTable(pt_i, palette);
-    display.pt_tex[pt_i].update(128, 128, reinterpret_cast<void*>(&pattern_table));
-}
-
-void PPU::displayNametable(uint nt_i)
-{
-    getNametable(nt_i, nes.mem->reg_ppu_ctrl.b);
-    display.nt_tex[nt_i].update(256, 240, reinterpret_cast<void*>(&nametable));
-}
-
-void PPU::displaySprites()
-{
-    if (!nes.mem->reg_ppu_ctrl.h) // 8x8 sprites
-    {
-        for (uint i = 0; i < 64; i++)
-        {
-            getSmallSprite(i);
-        }
-        display.spr_tex.update(64, 64, reinterpret_cast<void*>(&small_sprites));
-    }
-    else // 8x16 sprites
-    {
-        for (uint i = 0; i < 64; i++)
-        {
-            getBigSprite(i);
-        }
-        display.spr_tex.update(64, 128, reinterpret_cast<void*>(&big_sprites));
-    }
-}
-#endif
-
-// TODO handle ppu mask color modifier
-void PPU::getPalette(std::array<Pixel,4>& palette, uint palette_index)
-{
-    assert(palette_index < 8);
-    palette[0] = getColor(nes.mem->ppuRead(0x3F00));
-    palette[1] = getColor(nes.mem->ppuRead(0x3F00 + 4 * palette_index + 1));
-    palette[2] = getColor(nes.mem->ppuRead(0x3F00 + 4 * palette_index + 2));
-    palette[3] = getColor(nes.mem->ppuRead(0x3F00 + 4 * palette_index + 3));
-}
-
-// TODO grayscale + color emphasis PPUMASK flags
-Pixel PPU::getColor(ubyte color_byte)
-{
-    return system_palette[color_byte % 0x40];
-}
-
-inline void PPU::sendFrame()
-{
-    video.frame_tex.update(256, 240, reinterpret_cast<void*>(&frame));
-}
-
-inline bool PPU::isRenderingEnabled()
-{
-    return bgEnabled() || sprEnabled();
-}
-
-inline bool PPU::bgEnabled()
-{
-    return nes.mem->reg_ppu_mask.show_background && (nes.mem->reg_ppu_mask.left_background || cycle >= 8);
-}
-
-inline bool PPU::sprEnabled()
-{
-    return nes.mem->reg_ppu_mask.show_sprites && (nes.mem->reg_ppu_mask.left_sprites || cycle >= 8);
+    else cycle++;
 }

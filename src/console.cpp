@@ -39,6 +39,7 @@ void NES::insertROM(std::ifstream& rom, std::string filename)
 void NES::run(Scheduler::Length length)
 {
     scheduler->run(length);
+    ppu->sendFrame();
 }
 
 void NES::processInputs()

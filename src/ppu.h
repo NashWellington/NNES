@@ -11,143 +11,329 @@ class Video;
 #include "savestate.h"
 #include "util.h"
 
-// TODO implement PAL/Dendy vals
-
-// TODO move to globals?
-// NOTE: these are just NTSC vals
-const int SCANLINES_PER_FRAME = 262;
-const int POST_RENDER_START = 240;      // scanlines 240-260
-const int CYCLES_PER_SCANLINE = 341;    
-const int PIXELS_PER_SCANLINE = 256;
-const int FRAME_WIDTH = 256;
-const int FRAME_HEIGHT = 240;
-
-typedef std::array<std::array<Pixel,8>,8> Tile;
-
-template <size_t H, size_t W>
-struct Table
-{
-    std::array<std::array<Pixel,W>,H> tiles = {};
-    void addTile(Tile tile, uint row, uint col)
-    {
-        for (uint y = 0; y < 8; y++)
-        {
-            for (uint x = 0; x < 8; x++)
-            {
-                tiles[8*row + y][8*col + x] = tile[y][x];
-            }
-        }
-    }
-};
-
 class PPU : public Processor
 {
 public:
     PPU(NES& _nes, Video& _video);
-
     void setRegion(Region _region);
-
     void reset();
     // void save(Savestate& savestate) { return; }
     // void load(Savestate& savestate) { return; }
 
-    // Send frame to display
-    inline void sendFrame();
+    void sendFrame();
 
     /* Advance the PPU 1 cycle
     */
     void tick();
 
-    /* Initialize palette
-    */
-    void loadSystemPalette();
-
-    // void save(Savestate& savestate);
-    // void load(Savestate& savestate);
-
-    NES& nes;
-    Video& video;
+    ubyte read(uword address);
+    void write(uword address, ubyte data);
 
     enum Revision
     {
         REV_2C02, REV_2C03, REV_2C04,
         REV_2C05, REV_2C07, UMC 
-    } revision;
+    } revision = REV_2C02;
+
 private:
-    std::array<Pixel, 64> system_palette = {};
+    /* Returns one Pixel
+    * palette - one of eight palettes to be used
+    * pal_i   - the index within that palette (one of four)
+    */
+    inline Pixel getColor(ubyte palette, ubyte pal_i);
+    inline ubyte getNTByte();
+    inline ubyte getAttribute();
+    inline ubyte getPTByte(uint table, uint tile, uint bit_plane, uint fine_y);
+    inline void evalSprites();
+    inline void fetchSprites();
+    inline void fetchTiles();
+    inline void dummyFetchTiles(); // Unused tile fetch
+    inline bool sprEnabled();
+    inline bool  bgEnabled();
+    inline bool checkRange(ubyte y);
+    inline void incrCycle();
+    inline void pushPixel(Pixel p);
+    inline void renderPixel();
+    inline void processScanline();
+
+    NES& nes;
+    Video& video;
 
     // The current cycle (resets at the start of a new scanline)
-    int sc_cycle = 0;
+    int cycle = 0;
 
     // The current scanline
     int scanline = -1;
 
-    // Keeps track of NT tile index while rendering
-    uword reg_nt_row = 0;
-    uword reg_nt_col = 0;
-
-    // Background pixel latches, shift registers, etc.
-    ubyte bg_nt_byte = 0;      // Nametable byte
-    ubyte bg_at_byte = 0;      // Attribute table byte
-    ubyte bg_pt_byte_low = 0;  // Background pattern table bytes
-    ubyte bg_pt_byte_high = 8;
-    std::queue<Pixel> bg_pipeline = {}; // Holds the palette index and the palette ram index
-
-    // Sprite pixel latches, shift registers, etc.
-    std::array<int,8> spr_x_pos = {};
-    std::array<ubyte,8> spr_at_byte = {};       // Attribute bytes
-    std::array<ubyte,8> spr_pt_byte_low = {};
-    std::array<ubyte,8> spr_pt_byte_high = {};  
-    std::array<bool,8> show_spr = {};           // Toggles to false if sprite data not loaded from secondary oam
-    std::queue<std::optional<Pixel>> spr_pipeline = {};
-
-    uint32_t pixel_i = 0;                   // Index in the frame array
-    std::array<Pixel,61440> frame = {};          // TODO change to variables for PAL support
-
     bool odd_frame = false;
 
-    // Push 8 pixels to a pipeline (queue)
-    void pushBackgroundPixels();
-    void pushSpritePixels();
+    int post_render_start = 240;
+    int vblank_start = 241;
+    int render_end = 260; // last scanline
 
-    // Add a horizontal line of 8 pixels from the pipeline to the frame
-    void addPixels();
+    ubyte ppu_io_open_bus = 0;
+    ubyte ppu_vram_open_bus = 0;
 
-    void getPalette(std::array<Pixel,4>& palette, uint palette_index);
-    Pixel getColor(ubyte color_byte);
+    // Prevents CPU writes from start/reset until the end of vblank
+    bool reset_signal = true;
 
-    /*
-    void processScanline();
-    void evalSprites();
-    void processSprites();
+    std::array<Pixel,61440> ppu_frame = {};
+
+// Background data
+    // Scrolling
+    union VramAddr
+    {
+        struct
+        {
+            unsigned coarse_x  : 5;
+            unsigned coarse_y  : 5;
+            unsigned nametable : 2;
+            unsigned fine_y    : 3;
+            unsigned           : 1;
+        };
+        uword addr = 0;
+    };
+    VramAddr vram_addr = {};
+    VramAddr tmp_vram_addr = {};
+    ubyte fine_x_scroll = 0;
+    bool write_toggle = 0; // First/second write toggle for $2005/$2006
+
+    // TODO byte reversal to make this easier?
+    template<typename T>
+    struct ShiftReg // TODO Left-shift, right?
+    {
+        T reg = 0;
+        uint bits = 0;
+        void load(ubyte val)
+        {
+            assert(bits%8 == 0);
+            if (bits == sizeof(T)*8) shift(8);
+            reg |= val;
+            if (bits == 0) reg <<= ((sizeof(T)-1)*8);
+            bits += 8;
+        }
+        void shift(uint num_bits)
+        {
+            assert(bits > 0);
+            reg <<= num_bits;
+            bits -= num_bits;
+        }
+        ubyte peekBit(uint bit)
+        {
+            uint bit_i = sizeof(T)*8 - (bit+1);
+            return (reg & (1 << bit_i)) >> bit_i; 
+        }
+        ubyte peekByte()
+        {
+            return reg >> (sizeof(T) * 8);
+        }
+    };
+
+    ShiftReg<uword> bg_pt_low = {};
+    ShiftReg<uword> bg_pt_high = {};
+    ShiftReg<uword> bg_at = {};
+
+    ubyte bg_nt_latch = 0;
+    ubyte bg_at_latch = 0;
+    ubyte bg_pt_low_latch = 0;
+    ubyte bg_pt_high_latch = 0;
+
+// Sprite data
+
+    // Determines which part of the 4-step process evalSprites() executes
+    int spr_eval_seq = 1;
+
+    // Primary OAM
+
+    // Secondary OAM
+
+    // Pattern table data for 8 sprites
+    // unused sprites loaded w/ transparent set of vals
+    // shift regs
+    std::array<ShiftReg<ubyte>,8> spr_pt_low = {};
+    std::array<ShiftReg<ubyte>,8> spr_pt_high = {};
+
+    // Attribute bytes for 8 sprites
+    std::array<ubyte,8> spr_at = {};
+
+    // X-position counters for 8 sprites
+    // In an actual NES these would count down every cycle, but that's not necessary here
+    std::array<ubyte,8> spr_x_pos = {};
+
+    // Sprite eval counters
+    ubyte spr_eval_m = 0;
+    ubyte sec_oam_addr = 0; // Index in secondary OAM
+
+    // Temporary values for holding sprite data while doing fetches
+    ubyte tmp_spr_y = 0;
+    ubyte tmp_spr_tile_i = 0;
+
+// Register data
+// For more info: https://wiki.nesdev.com/w/index.php/PPU_registers
+    /* PPU control register
+    * $2000
+    * Contains PPU operation control flags
+    * 
+    * 7 6 5 4   3 2 1 0
+    * V P H B   S I N N
+    *               Y X
+    * 
+    * NN - base nametable address
+    *      0 = $2000, 1 = $2400, 2 = $2800, 3 = $2C00
+    *      Note: just use this as the nametable index
+    * YX - most significant bits of scrolling coords
+    *      X=1: add 256 to X scroll pos
+    *      Y=1: add 240 to Y scroll pos
+    *  I - VRAM address increment per CPU read/write of PPUDATA
+    *      0: add 1, going across; 1: add 32, going down
+    *  S - Sprite pattern table address for 8x8 sprites
+    *      0: $0000; 1: $1000; ignored in 8x16 mode
+    *  B - Background pattern table address
+    *      0 = $0000, 1 = $1000,
+    *  H - Sprite size
+    *      0: 8x8 px; 1: 8x16px
+    *  P - PPU master/slave select
+    *      0: read backdrop from EXT pins; 1: output color on EXT pins
+    *      NOTE: P should never be set; it could potentially break a normal NES
+    *  V - Generate an NMI at the start of vblank
+    *      0: off, 1: on
+    * 
+    * On boot & reset: 0
     */
+    union
+    {
+        struct
+        {
+            unsigned nn         : 2;
+            unsigned incr       : 1;
+            unsigned spr_table  : 1;
+            unsigned bg_table   : 1;
+            unsigned spr_size   : 1;
+            unsigned p          : 1;
+            unsigned vblank_nmi : 1;
+        };
+        ubyte reg = 0;
+    } reg_ctrl = {};
+        
 
-    inline bool isRenderingEnabled();
-    inline bool bgEnabled();
-    inline bool sprEnabled();
+    /* PPU mask register
+    * $2001
+    * controls rendering of sprites and backgrounds
+    * controls color effects
+    * 
+    * 7 6 5 4   3 2 1 0
+    * B G R s   b M m G
+    * 
+    * G - Greyscale
+    *     0 = normal color, 1 = greyscale
+    * m - 1 = show background in leftmost 8 px of screen, 0 = hide
+    * M - 1 = show sprites in leftmost 8 px of screen, 0 = hide
+    * b - 1 = show background, 0 = hide
+    * s - 1 = show sprites, 0 = hide
+    * R - Emphasize red (green on PAL/Dendy)
+    * G - Emphasize green (red on PAL/Dendy)
+    * B - Emphasize blue
+    * 
+    * On boot & reset: 0
+    */                          
+    union
+    {
+        struct
+        {
+            unsigned greyscale          : 1;
+            unsigned left_background    : 1;
+            unsigned left_sprites       : 1;
+            unsigned show_background    : 1;
+            unsigned show_sprites       : 1;
+            unsigned emphasize_red      : 1;
+            unsigned emphasize_green    : 1;
+            unsigned emphasize_blue     : 1;
+        };
+        ubyte reg = 0;
+    } reg_mask = {};
 
-#ifdef DEBUGGER
-private: // Debugging tools
-    std::array<Pixel,4> curr_palette = {}; // Holds the pixels for the next palette to be displayed
-    Table<240,256> nametable = {};
-    Table<128,128> pattern_table = {};
-    std::array<std::array<Pixel,64>,64> small_sprites = {};
-    std::array<std::array<Pixel,64>,128> big_sprites = {};
+    /* PPU status register
+    * $2002
+    *
+    * 7 6 5 4   3 2 1 0
+    * V S O
+    * 
+    * O - sprite overflow
+    * S - sprite 0 hit
+    * V - vblank start
+    *     0 = not in vblank, 1 = in vblank
+    * 
+    * On boot:  +0+x xxxx
+    * On reset: U??x xxxx
+    * (key: ? = unknown, x = irrelevant, + = often set, U = unchanged)
+    */
+    union
+    {
+        struct
+        {
+            unsigned             : 5; // unused
+            unsigned overflow    : 1;
+            unsigned sprite_zero : 1;
+            unsigned vblank      : 1;
+        };
+        ubyte reg = 0xA0;
+    } reg_status = {};
 
-    Tile getPTTile(uword address, std::array<Pixel,4>& palette);
-    void getPatternTable(uint pt_i, std::array<Pixel,4>& palette);
+    /* PPU scrolling position register
+    * $2005
+    * On boot & reset: 0
+    */
+    // sets tmp_vram_addr and fine_x_scroll
 
-    void getNTTile(uint i, uint j, uint nt_i, uint pt_i);
-    void getNametable(uint nt_i, uint pt_i);
+    /* PPU address register
+    * $2006
+    * On boot:  0
+    * On reset: unchanged
+    */
+    uword ppu_addr = 0;
 
-    void getSmallSprite(uint spr_i); // 8x8 sprite
-    void getBigSprite(uint spr_i); // 8x16 sprite
+    /* PPU data port
+    * $2007
+    * On boot & reset: 0
+    * Used as the internal read buffer, updated & returned at CPU read
+    */
+    ubyte ppu_data = 0;
+
+// PPU Object Attribute Memory
+    struct Sprite
+    {
+        std::array<ubyte,4> data = {};
+        ubyte& y            = data[0]; // top pixels
+        ubyte& tile_i       = data[1]; // pattern table tile index
+        ubyte& attributes   = data[2];
+        ubyte& x            = data[3]; // left pixels
+    };
+
 public:
-    // TODO name this better
-    void addDebug(); // Adds all palettes, tables, sprites, etc. to display
-    void displayPalette(uint pal_i);
-    void displayPatternTable(uint pt_i, uint palette_index);
-    void displayNametable(uint nt_i);
-    void displaySprites();
-#endif
+
+    // Holds 8 4-byte sprites for the next scanline
+    std::array<Sprite,8> secondary_oam = {};
+    std::array<Sprite,64> primary_oam = {}; // Contains 64 4-byte sprites
+
+    /* OAM address
+    * $2003
+    * On boot:  0
+    * On reset: unchanged
+    */
+    ubyte oam_addr = 0;
+
+    /* OAM Data
+    * $2004
+    * This is the value returned if register $2004 is read.
+    * Details on what the value should be on a given cycle are detailed here:
+    * http://wiki.nesdev.com/w/index.php/PPU_sprite_evaluation
+    * On boot & reset: ?
+    */
+    ubyte oam_data = 0;
+
+    /* Address in CPU memory for DMA transfer to OAM
+    * High byte controlled by register $4014
+    * On boot & reset: unspecified
+    */
+    uword dma_addr = 0;
 };
