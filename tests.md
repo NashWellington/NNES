@@ -123,6 +123,7 @@ None yet
 
 ## PPU
 * Pac-Man's top left background tile is set to 0 when it shouldn't be
+* It's because all sprites are zeroed out by default, so it puts sprite tile 0 at index 0,0
 * PPU should output a solid color based on the value at PPU $3F00 (palette RAM index 0)
 * translating palette values to pixel values may be doable with integer math, instead of pre-defined values (http://forums.nesdev.com/viewtopic.php?f=2&t=14338)
 
@@ -138,11 +139,6 @@ None yet
 * Keyboard input seems to only take 1 key press at a time
 
 ## Misc
-TODO move game-specific bugs to a compatibility.md file or something
-* Dr. Mario halts after playing for 5-10 minutes or so. It's possible that all games do this (maybe an issue with frame/cycle count integer overflow?) but it hasn't been tested.
-* Note: I haven't checked this since the major interface change, so it's possible this is no longer true.
-* Program leaks memory at exit (only viewable with address sanitizer)
-* Note: this might be SDL's fault
 * Open bus behavior unemulated: http://wiki.nesdev.com/w/index.php/Open_bus_behavior
 
 # Regressions
@@ -150,7 +146,6 @@ TODO move game-specific bugs to a compatibility.md file or something
 ## CPU
 
 ## PPU
-* Some sprites (notably parts of Pacman, depending on which way he's facing) look weird
 * OAM read test failure
 
 ## APU
