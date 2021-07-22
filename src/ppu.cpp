@@ -307,7 +307,7 @@ void PPU::evalSprites()
             if ((oam_addr%4 == 0) && !checkRange(oam_data))
             {
                 // 2.a If n has overflowed back go 0, goto 4
-                if (oam_addr <= 252) spr_eval_seq = 4;
+                if (oam_addr >= 252) spr_eval_seq = 4;
                 oam_addr += 4;
             }
             else 
@@ -315,11 +315,7 @@ void PPU::evalSprites()
                 // 2.a If n has overflowed back go 0, goto 4
                 if (oam_addr == 255) spr_eval_seq = 4;
                 oam_addr++;
-            }
-
-            if (oam_addr%4 == 0) 
-            {
-                sec_oam_addr++;
+                if (oam_addr%4 == 0) sec_oam_addr++;
             }
 
             if (spr_eval_seq != 4)
@@ -664,10 +660,4 @@ void PPU::incrCycle()
         else scanline++;
     }
     else cycle++;
-
-    // TODO delet
-    if (scanline == 128)
-    {
-        std::cerr << scanline << std::endl;
-    }
 }
