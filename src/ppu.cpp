@@ -240,7 +240,7 @@ bool PPU::bgEnabled()
 
 bool PPU::checkRange(ubyte y)
 {
-    return scanline+1 >= y && scanline+1 <= y + (reg_ctrl.spr_size ? 16 : 8);
+    return scanline+1 >= y && scanline+1 < y + (reg_ctrl.spr_size ? 16 : 8);
 }
 
 // http://wiki.nesdev.com/w/index.php/PPU_sprite_evaluation#Details
@@ -290,7 +290,8 @@ void PPU::evalSprites()
         {
             if (checkRange(oam_data))
             {
-                reg_status.overflow = true;
+                if ((sprEnabled() || bgEnabled()) && oam_data < 240)
+                    reg_status.overflow = true;
                 // TODO read next 3 entries
                 oam_addr++;
             }
@@ -370,7 +371,7 @@ void PPU::fetchSprites()
         // Read sprite pattern table byte (low)
         // Read sprite x-pos
         case 5:
-            ppu_data = getPTByte(reg_ctrl.spr_size ? 0 : reg_ctrl.spr_table, tmp_spr_tile_i, 0, scanline - tmp_spr_y);
+            ppu_data = getPTByte(reg_ctrl.spr_size ? 0 : reg_ctrl.spr_table, tmp_spr_tile_i, 0, (scanline+1) - tmp_spr_y);
             oam_data = secondary_oam[spr_i].x;
             spr_x_pos[spr_i] = oam_data;
             break;
@@ -386,7 +387,7 @@ void PPU::fetchSprites()
         // Read sprite x-pos
         // TODO check if sprites are divided like this if 8x16
         case 7:
-            ppu_data = getPTByte(reg_ctrl.spr_size ? 1 : reg_ctrl.spr_table, tmp_spr_tile_i, 1, scanline - tmp_spr_y);
+            ppu_data = getPTByte(reg_ctrl.spr_size ? 1 : reg_ctrl.spr_table, tmp_spr_tile_i, 1, (scanline+1) - tmp_spr_y);
             oam_data = secondary_oam[spr_i].x;
             spr_x_pos[spr_i] = oam_data;
             break;
@@ -553,6 +554,12 @@ void PPU::renderPixel()
         }
     }
 
+    // Sprite 0 hit
+    if (spr_px > 0 && bgEnabled() && sprEnabled())
+    {
+        reg_status.sprite_zero = true;
+    }
+
     // Multiplexer
     // Sprite pixel gets drawn if non-zero && foreground priority
     if (spr_px > 0 && !(spr_at[spr_i] & 0x20))
@@ -561,7 +568,7 @@ void PPU::renderPixel()
     }
     else
     {
-        pushPixel(getColor(bg_at.peekByte(), bg_px));
+        pushPixel(getColor((bg_at.peekByte() & 0x03), bg_px));
     }
 
     // // Shift bg regs every 8 cycles

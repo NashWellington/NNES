@@ -30,6 +30,7 @@ At this point, CPU tests that fail depend on:
 | Interrupt Test v2 | blargg | 0/5 | <l><li>Test 1 fails #4</li> <li>Tests 2-5 fail with no error code</li> <li>Note: tests 2-4 are likely failing beccause interrupt hijacking isn't emulated</li></l> |
 | nestest | kevtris | Pass | |
 | RAM Retention Test | rainwarrior | | ROM unavailable; this might be the same as the one included in blargg's CPU Reset test folder |
+| XAA Test | Aureus | | |
 
 ## PPU Tests
 
@@ -40,7 +41,7 @@ At this point, CPU tests that fail depend on:
 | Full Palette Test | blargg | 0/3 | <l><li>full_palette and full_palette_smooth show four different shades of blue (i.e. not correct but a step in the right direction)</li> <li>flowing_palette crashes because it has PRG-RAM size set to $C4,000 (I need to check boot.cpp for this)</li></l> |
 | Misc PPU Tests | blargg | 1/4 | <l><li>palette_ram passes</li> <li>power_up_palette is ignored because palette values are undefined on startup</li> <li>sprite_ram fails #4</li> <li>vbl_clear_time fails #3 (vbl flag cleared too late)</li> <li>vram_access fails #6</li></l> |
 | NMI Sync Test | blargg | 0/1 | |
-| NTSC Torture Test | rainwarrior | 0/1 | No color display |
+| NTSC Torture Test | rainwarrior | 0/1 | D-pad scrolls but select doesn't seem to do anything |
 | OAM Read Test | blargg | Pass | |
 | OAM Stress Test | blargg | 0/1 | |
 | OAM Test 3 | lidnariq | 0/1 | Looks to be somewhat working. I'll check this test out more later. |
@@ -49,10 +50,9 @@ At this point, CPU tests that fail depend on:
 | PPU Read Buffer Test | bisqwit | 0/1 | Doesn't display any results. Attempts to write three times to pattern tables despite not having CHR-RAM. Forcing CHR-RAM doesn't seem to help. |
 | Scanline Test | Quietust | 0/3 | |
 | Sprite DMA and DMC DMA Tests | blargg | 0/2 | Flashes some text for a few frames and displays a black screen |
-| Sprite Hit Tests | blargg | 1/11 | <l><li>Tests 1-4 fail #2</li> <li>Test 5 fails #4</li> <li>Tests 6-10 fail #3</li> <li>Test 11 passes somehow</li></l> |
-| Sprite Overflow Tests | blargg | 1/5 | <l><li>Test 1 fails #6 (shouldn't be set when all rendering off)</li> <li>Test 2 fails #6 (shouldn't be set when sprite y coords are 240)</li> <li>Test 3 fails #5</li> <li>Test 4 passes</li> <li>Test 5 fails #3</li></l> |
+| Sprite Hit Tests | blargg | 1/11 | Test 1 fails # 8. Other tests probably aren't worth trying until test 1 passes |
+| Sprite Overflow Tests | blargg | 1/5 | <l><li>Test 1 passes</li> <li>Test 2 fails #9</li> <li>Test 3 fails #9</li> <li>Test 4 fails #4</li> <li>Test 5 fails #3</li></l> |
 | VBL NMI Tests | blargg | 0/10 | <l><li>Test 1 fails #7 (vbl period too short w/ bg off)</li> <li>Test 4 fails #5</li> <li>Tests 9 and 10 fail #2 (clock skipped too soon relative to enabling bg)</li> <li>All other tests have complex error messages that wouldn't make sense to type out in this table</li> <li>Note: it seems vblank flags are being set 2-3 frames early (relative to the CPU's clock)</li></l> |
-| XAA Test | Aureus | | |
 
 ## APU Tests
 
@@ -125,10 +125,10 @@ None yet
 * Pac-Man's top left background tile is set to 0 when it shouldn't be
 * PPU should output a solid color based on the value at PPU $3F00 (palette RAM index 0)
 * translating palette values to pixel values may be doable with integer math, instead of pre-defined values (http://forums.nesdev.com/viewtopic.php?f=2&t=14338)
-* crash on "else frame[pixel_i] = bg_px;" after a few resets
 
 ## APU
 * Donkey Kong: square channels mute after a few seconds
+* Note: this may be tied to the PPU
 
 ## Mapper
 * Cartridges don't save SRAM to file
@@ -150,6 +150,8 @@ TODO move game-specific bugs to a compatibility.md file or something
 ## CPU
 
 ## PPU
+* Some sprites (notably parts of Pacman, depending on which way he's facing) look weird
+* OAM read test failure
 
 ## APU
 
