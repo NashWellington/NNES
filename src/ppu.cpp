@@ -343,7 +343,7 @@ void PPU::fetchSprites()
         case 1:
             ppu_data = nes.mem->ppuRead(vram_addr.addr);
             oam_data = secondary_oam[spr_i].y;
-            tmp_spr_y = oam_data;
+            tmp_spr_y = (scanline+1) - oam_data;
             break;
 
         // Read sprite tile number
@@ -371,7 +371,7 @@ void PPU::fetchSprites()
         // Read sprite pattern table byte (low)
         // Read sprite x-pos
         case 5:
-            ppu_data = getPTByte(reg_ctrl.spr_size ? 0 : reg_ctrl.spr_table, tmp_spr_tile_i, 0, (scanline+1) - tmp_spr_y);
+            ppu_data = getPTByte(reg_ctrl.spr_size ? 0 : reg_ctrl.spr_table, tmp_spr_tile_i, 0, tmp_spr_y);
             oam_data = secondary_oam[spr_i].x;
             spr_x_pos[spr_i] = oam_data;
             break;
@@ -387,7 +387,7 @@ void PPU::fetchSprites()
         // Read sprite x-pos
         // TODO check if sprites are divided like this if 8x16
         case 7:
-            ppu_data = getPTByte(reg_ctrl.spr_size ? 1 : reg_ctrl.spr_table, tmp_spr_tile_i, 1, (scanline+1) - tmp_spr_y);
+            ppu_data = getPTByte(reg_ctrl.spr_size ? 1 : reg_ctrl.spr_table, tmp_spr_tile_i, 1, tmp_spr_y);
             oam_data = secondary_oam[spr_i].x;
             spr_x_pos[spr_i] = oam_data;
             break;

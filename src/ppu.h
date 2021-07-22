@@ -164,7 +164,7 @@ private:
     ubyte sec_oam_addr = 0; // Index in secondary OAM
 
     // Temporary values for holding sprite data while doing fetches
-    ubyte tmp_spr_y = 0;
+    ubyte tmp_spr_y = 0; // y-coord within pattern tile
     ubyte tmp_spr_tile_i = 0;
 
 // Register data
