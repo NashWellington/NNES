@@ -142,6 +142,11 @@ private:
     // Determines which part of the 4-step process evalSprites() executes
     int spr_eval_seq = 1;
 
+    // Sprite zero is present on the next scanline
+    bool spr_zero_next = false;
+    // Sprite zero is present on the current scanline
+    bool spr_zero_curr = false;
+
     // Primary OAM
 
     // Secondary OAM

@@ -313,6 +313,9 @@ void PPU::evalSprites()
             }
             else 
             {
+                // Sprite zero will be present on the next scanline
+                if (oam_addr == 0) spr_zero_next = true;
+
                 // 2.a If n has overflowed back go 0, goto 4
                 if (oam_addr == 255) spr_eval_seq = 4;
                 oam_addr++;
@@ -568,7 +571,7 @@ void PPU::renderPixel()
     }
 
     // Sprite 0 hit
-    if (spr_px > 0 && bgEnabled() && sprEnabled())
+    if (spr_i == 0 && spr_zero_curr && spr_px > 0 && bg_px > 0 && bgEnabled() && sprEnabled())
     {
         reg_status.sprite_zero = true;
     }
@@ -678,6 +681,8 @@ void PPU::incrCycle()
             odd_frame = !odd_frame;
         }
         else scanline++;
+        spr_zero_curr = spr_zero_next;
+        spr_zero_next = false;
     }
     else cycle++;
 }
