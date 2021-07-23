@@ -1,4 +1,4 @@
-#include "apu.h"
+#include "apu.hpp"
 
 // Channel constants (mostly lookup tables)
 /* The number of APU cycles in four PPU frames

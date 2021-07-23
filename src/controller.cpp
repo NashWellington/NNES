@@ -1,4 +1,4 @@
-#include "peripheral.h"
+#include "peripheral.hpp"
 
 void NESStandardController::poll(bool parallel)
 {

@@ -4,11 +4,11 @@
 class NES;
 
 // Include
-#include "globals.h"
-#include "processor.h"
-#include "mem.h"
-#include "isa.h"
-#include "savestate.h"
+#include "globals.hpp"
+#include "processor.hpp"
+#include "mem.hpp"
+#include "isa.hpp"
+#include "savestate.hpp"
 
 class CPU : public Processor
 {

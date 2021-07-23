@@ -1,12 +1,12 @@
 #pragma once
 
 // Include statements
-#include "globals.h"
+#include "globals.hpp"
 
 // Foreward declaration
 ubyte nextByte();
 
-#include "cpu.h"
+#include "cpu.hpp"
 
 // +1 if page cross & read instruction: absolute X&Y, indirect Y (not x?)
 // +1 if page cross (always): relative

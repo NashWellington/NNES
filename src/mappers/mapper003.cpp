@@ -1,4 +1,4 @@
-#include "mapper.h"
+#include "mapper.hpp"
 
 // TODO submappers
 // TODO emulate bus conflicts to fix Cybernoid

@@ -1,4 +1,4 @@
-#include "scheduler.h"
+#include "scheduler.hpp"
 
 Process::Process(std::shared_ptr<Processor> _processor) : processor(_processor)
 {

@@ -2,10 +2,10 @@
 
 class NES;
 
-#include "globals.h"
-#include "processor.h"
-#include "audio.h"
-#include "mem.h"
+#include "globals.hpp"
+#include "processor.hpp"
+#include "audio.hpp"
+#include "mem.hpp"
 
 // TODO move these inside APU somewhere
 // Really this is a timer, but a timer only contains a divider anyway

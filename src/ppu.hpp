@@ -4,12 +4,12 @@
 class NES;
 class Video;
 
-#include "globals.h"
-#include "processor.h"
-#include "mem.h"
-#include "video.h"
-#include "savestate.h"
-#include "util.h"
+#include "globals.hpp"
+#include "processor.hpp"
+#include "mem.hpp"
+#include "video.hpp"
+#include "savestate.hpp"
+#include "util.hpp"
 
 class PPU : public Processor
 {

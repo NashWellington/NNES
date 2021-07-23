@@ -1,4 +1,4 @@
-#include "mapper.h"
+#include "mapper.hpp"
 
 // TODO registers, audio, and a lot more. This mapper is nowhere near finished.
 // TODO submappers

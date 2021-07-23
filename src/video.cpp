@@ -1,4 +1,4 @@
-#include "video.h"
+#include "video.hpp"
 
 // TODO move these to their own files
 const char* frame_vert_source = 

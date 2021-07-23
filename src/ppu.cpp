@@ -1,4 +1,4 @@
-#include "ppu.h"
+#include "ppu.hpp"
 
 const std::array<ubyte,192> ntsc_palette =
 {

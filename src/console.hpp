@@ -1,6 +1,6 @@
 #pragma once
 
-#include "globals.h"
+#include "globals.hpp"
 
 class Processor;
 class CPU;
@@ -8,13 +8,13 @@ class APU;
 class PPU;
 class Memory;
 
-#include "scheduler.h"
-#include "cpu.h"
-#include "ppu.h"
-#include "apu.h"
-#include "mem.h"
-#include "peripheral.h"
-#include "cart.h"
+#include "scheduler.hpp"
+#include "cpu.hpp"
+#include "ppu.hpp"
+#include "apu.hpp"
+#include "mem.hpp"
+#include "peripheral.hpp"
+#include "cart.hpp"
 
 class Console
 {

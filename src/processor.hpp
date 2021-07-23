@@ -1,7 +1,7 @@
 #pragma once
 
-#include "globals.h"
-#include "savestate.h"
+#include "globals.hpp"
+#include "savestate.hpp"
 
 // TODO experimental abstract class for processors to interact with the scheduler
 

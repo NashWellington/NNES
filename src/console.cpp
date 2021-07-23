@@ -1,4 +1,4 @@
-#include "console.h"
+#include "console.hpp"
 
 NES::NES(Audio& audio, Video& video)
 {

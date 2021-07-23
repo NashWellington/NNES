@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../globals.h"
-#include "../savestate.h"
+#include "../globals.hpp"
+#include "../savestate.hpp"
 
 #include <algorithm> // Needed to .fill(0) PRG-RAM after resets
 

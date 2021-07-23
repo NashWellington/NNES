@@ -1,9 +1,9 @@
-#include "globals.h"
-#include "console.h"
-#include "audio.h"
-#include "video.h"
-#include "input.h"
-#include "savestate.h"
+#include "globals.hpp"
+#include "console.hpp"
+#include "audio.hpp"
+#include "video.hpp"
+#include "input.hpp"
+#include "savestate.hpp"
 
 #ifndef NDEBUG
 #define ERROR_LOG_FILENAME "./log/error.log"

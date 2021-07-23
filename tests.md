@@ -122,8 +122,6 @@ None yet
 ## CPU
 
 ## PPU
-* Pac-Man's top left background tile is set to 0 when it shouldn't be
-* It's because all sprites are zeroed out by default, so it puts sprite tile 0 at index 0,0
 * PPU should output a solid color based on the value at PPU $3F00 (palette RAM index 0)
 * translating palette values to pixel values may be doable with integer math, instead of pre-defined values (http://forums.nesdev.com/viewtopic.php?f=2&t=14338)
 

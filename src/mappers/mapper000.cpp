@@ -1,4 +1,4 @@
-#include "mapper.h"
+#include "mapper.hpp"
 
 Mapper000::Mapper000(Header& header, std::ifstream& rom)
 {

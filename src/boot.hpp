@@ -3,8 +3,8 @@
 // Forward declaration
 //class Mapper;
 
-#include "globals.h"
-#include "mappers/mapper.h"
+#include "globals.hpp"
+#include "mappers/mapper.hpp"
 
 namespace Boot
 {

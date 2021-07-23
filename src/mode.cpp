@@ -1,4 +1,4 @@
-#include "mode.h"
+#include "mode.hpp"
 
 // TODO dummy reads for indexed instructions
 

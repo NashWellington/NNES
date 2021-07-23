@@ -1,7 +1,7 @@
 #pragma once
 
-#include "globals.h"
-//#include "cpu.h"
+#include "globals.hpp"
+//#include "cpu.hpp"
 #include <map>
 #include <functional>
 

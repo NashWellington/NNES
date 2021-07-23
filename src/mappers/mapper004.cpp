@@ -1,7 +1,7 @@
-#include "mapper.h"
+#include "mapper.hpp"
 
 // Needed for generating IRQs
-#include "../mem.h"
+#include "../mem.hpp"
 
 // TODO submappers
 

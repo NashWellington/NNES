@@ -1,4 +1,4 @@
-#include "mapper.h"
+#include "mapper.hpp"
 
 // TODO support for SZROM
 // TODO support submapper 5

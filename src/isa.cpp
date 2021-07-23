@@ -1,4 +1,4 @@
-#include "isa.h"
+#include "isa.hpp"
 
 const ubyte MAGIC_CONST = 0xFF;
 

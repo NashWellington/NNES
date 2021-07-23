@@ -10,9 +10,9 @@ compiler = g++
 
 optimizations = -march=native
 # Comment out if debugging
-optimizations += -O3 -flto
+# optimizations += -O3 -flto
 
-flags = -std=c++17
+flags = -std=c++17 -g -fsanitize=address
 flags += $(optimizations)
 flags += -Wall -Werror -Wextra
 flags += -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align
@@ -24,7 +24,7 @@ flags += -I/usr/include/SDL2 -I/usr/include/freetype2
 
 libs = -lGLEW -lGL -lGLU -lSDL2 -lfreetype -lpthread
 
-target = NNES
+target = NNES-g
 
 $(target) : $(objects)
 		$(compiler) $(flags) $(objects) -o ../build/$(target) $(libs)

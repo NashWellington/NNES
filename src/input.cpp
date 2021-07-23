@@ -1,4 +1,4 @@
-#include "input.h"
+#include "input.hpp"
 
 #define CONTROL_CONFIG "./cfg/controls.cfg"
 

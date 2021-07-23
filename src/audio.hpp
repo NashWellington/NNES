@@ -1,6 +1,6 @@
 #pragma once
 
-#include "globals.h"
+#include "globals.hpp"
 
 // TODO if I ever make multiple frontends, put an ifdef around this
 #include <SDL.h>

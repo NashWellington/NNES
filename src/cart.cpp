@@ -1,4 +1,4 @@
-#include "cart.h"
+#include "cart.hpp"
 
 Cartridge::Cartridge(Header& header, std::ifstream& rom)
 {

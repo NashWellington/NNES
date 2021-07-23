@@ -1,7 +1,7 @@
 #pragma once
 
-#include "globals.h"
-#include "processor.h"
+#include "globals.hpp"
+#include "processor.hpp"
 #include <thread>
 #include <algorithm>
 

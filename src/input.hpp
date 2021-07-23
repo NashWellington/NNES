@@ -1,10 +1,10 @@
 #pragma once
 
-#include "globals.h"
-#include "console.h"
-#include "audio.h"
-#include "video.h"
-#include "peripheral.h"
+#include "globals.hpp"
+#include "console.hpp"
+#include "audio.hpp"
+#include "video.hpp"
+#include "peripheral.hpp"
 
 #include <map>
 #include <algorithm>

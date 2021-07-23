@@ -1,8 +1,8 @@
 #pragma once
 
-#include "globals.h"
-#include "savestate.h"
-#include "util.h"
+#include "globals.hpp"
+#include "savestate.hpp"
+#include "util.hpp"
 
 #ifdef DEBUGGER
 #include "libs/imgui/imgui.h"

@@ -3,9 +3,9 @@
 // Forward declaration
 class CPU;
 
-#include "globals.h"
-#include "mode.h"
-#include "cpu.h"
+#include "globals.hpp"
+#include "mode.hpp"
+#include "cpu.hpp"
 
 namespace ISA
 {

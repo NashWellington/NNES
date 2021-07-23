@@ -2,7 +2,7 @@
 
 // TODO make this agnostic to memory/NES specifics
 
-#include "globals.h"
+#include "globals.hpp"
 #include <queue>
 #include <algorithm>
 

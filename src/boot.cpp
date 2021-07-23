@@ -1,4 +1,4 @@
-#include "boot.h"
+#include "boot.hpp"
 
 // TODO move this to globals/util? Return file extension?
 std::string Boot::getName(std::string filename)

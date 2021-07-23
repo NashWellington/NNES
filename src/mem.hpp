@@ -3,9 +3,9 @@
 // Forward declaration
 class NES;
 
-#include "globals.h"
-#include "console.h"
-#include "savestate.h"
+#include "globals.hpp"
+#include "console.hpp"
+#include "savestate.hpp"
 
 /* 64 KiB CPU memory map
 * $0000 - Zero Page

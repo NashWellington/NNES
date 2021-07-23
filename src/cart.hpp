@@ -1,9 +1,9 @@
 #pragma once
 
-#include "globals.h"
-#include "peripheral.h"
-#include "boot.h"
-#include "mappers/mapper.h"
+#include "globals.hpp"
+#include "peripheral.hpp"
+#include "boot.hpp"
+#include "mappers/mapper.hpp"
 
 class Cartridge : public Peripheral
 {
