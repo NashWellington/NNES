@@ -1,4 +1,4 @@
-#include "mapper.h"
+#include "mapper.hpp"
 
 // TODO support for SZROM
 // TODO support submapper 5
@@ -11,10 +11,10 @@ Mapper001::Mapper001(Header& header, std::ifstream& rom)
 
     assert(!header.trainer);
     assert(header.prg_rom_size >= 0x8000 && header.prg_rom_size <= 0x80000);
-    assert(header.prg_ram_size <= 0x8000);
+    assert(header.prg_ram_size <= 0x8000 && header.prg_nv_ram_size <= 0x8000);
     assert((header.chr_rom_size > 0) != (header.chr_ram_size > 0));
 
-    if (header.prg_ram_size == 0 && header.type == HeaderType::INES)
+    if (header.prg_nv_ram_size == 0 && header.prg_ram_size == 0 && header.type == HeaderType::INES)
     {
         header.prg_ram_size = 0x8000;
     }
@@ -23,11 +23,18 @@ Mapper001::Mapper001(Header& header, std::ifstream& rom)
     if (header.prg_ram_size > 0)
     {
         banks = header.prg_ram_size / 0x2000;
-        prg_ram.resize(banks);
         // TODO change default depending on MMC1A,B,C
         prg_ram_enabled = true;
     }
-    else prg_ram.clear();
+    if (header.prg_nv_ram_size > 0)
+    {
+        assert(prg_ram.size() <= 1);
+        assert(header.battery);
+        nv_ram_i = banks;
+        banks += header.prg_nv_ram_size / 0x2000;
+        prg_ram_enabled = true;
+    }
+    prg_ram.resize(banks);
 
     banks = header.prg_rom_size / 0x4000;
     prg_rom.resize(banks);
@@ -58,26 +65,25 @@ Mapper001::Mapper001(Header& header, std::ifstream& rom)
 
 std::optional<ubyte> Mapper001::cpuRead(uword address)
 {
-    if (address < 0x6000) return {};
-    else if (address < 0x8000) // PRG-RAM
+    if (address < 0x4020) return {};
+    else if (address >= 0x4020 && address < 0x6000) // unused
     {
-        if (!prg_ram_enabled || prg_ram.size() == 0) return {};
-        else
+        #ifndef NDEBUG
+        std::cerr << "Warning: CPU read from unmapped memory address: " << hex(address) << std::endl; 
+        #endif
+        return 0;
+    }
+    else if (address >= 0x6000 && address < 0x8000) // PRG-RAM
+    {
+        if (!prg_ram.size()) // No PRG-RAM
         {
-            switch (prg_ram.size())
-            {
-                case 1: // No bank switching
-                    return prg_ram[0][address - 0x6000];
-                case 2: // 16 KiB PRG-RAM
-                    return prg_ram[chr_bank[0].s][address-0x6000];
-                case 4: // 32 KiB PRG-RAM
-                    return prg_ram[chr_bank[0].ss][address-0x6000];
-                default:
-                    std::cerr << "Error: Unsupported PRG-RAM size: " << (prg_ram.size() * 0x6000) << std::endl;
-                    throw std::exception();
-            }
-            return {};
+            #ifndef NDEBUG
+            std::cerr << "Warning: CPU read from unmapped memory address: " << hex(address) << std::endl; 
+            #endif
+            return 0; // TODO open bus?
         }
+        else if (!prg_ram_enabled) return 0;
+        else return prg_ram[prg_ram_bank % prg_ram.size()][address-0x6000];
     }
     else //PRG-ROM
     {
@@ -105,26 +111,40 @@ std::optional<ubyte> Mapper001::cpuRead(uword address)
         address -= 0x8000;
         if (address < 0x4000) // Low bank
         {
-            return prg_rom[low_bank][address];
+            return prg_rom[low_bank % prg_rom.size()][address];
         }
         else // high bank
         {
-            return prg_rom[high_bank][address - 0x4000];
+            return prg_rom[high_bank % prg_rom.size()][address - 0x4000];
         }
     }
 }
 
 bool Mapper001::cpuWrite(uword address, ubyte data)
 {
-    if (address < 0x6000) return false;
-    else if (address < 0x8000)
+    if (address < 0x4020) return false;
+    else if (address >= 0x4020 && address < 0x6000)
     {
-        if (!prg_ram_enabled) return false;
-        else return true;
+        #ifndef NDEBUG
+        std::cerr << "Warning: CPU write to unmapped memory address: " << hex(address) << std::endl; 
+        #endif
+        return true;
+    }
+    else if (address >= 0x6000 && address < 0x8000)
+    {
+        if (!prg_ram.size()) // No PRG-RAM
+        {
+            #ifndef NDEBUG
+            std::cerr << "Warning: CPU read from unmapped memory address: " << hex(address) << std::endl; 
+            #endif
+            return 0; // TODO open bus?
+        }
+        else if (!prg_ram_enabled) return true;
+        else { prg_ram[prg_ram_bank % prg_ram.size()][address-0x6000] = data; return true; }
     }
     else 
     {
-        if (static_cast<byte>(data) < 0) // check if byte 7 is set
+        if (data & 0x80) // check if byte 7 is set
         {
             reg_shift = 0x10;
             prg_rom_bank_mode = 3;
@@ -166,48 +186,56 @@ bool Mapper001::cpuWrite(uword address, ubyte data)
                 }
                 else if (address < 0xC000) // CHR bank 0
                 {
-                    chr_bank[0].reg = reg_shift;
+                    chr_bank[0] = reg_shift;
 
                     // Disable/Enable PRG-RAM if SNROM
                     if (prg_rom.size() <= 8 && chr_mem.size() == 2 && prg_ram.size() == 1)
                     {
-                        prg_ram_enabled = !chr_bank[0].e;
+                        prg_ram_enabled = !(chr_bank[0] & 0x10);
                     }
 
                     // Set PRG-RAM bank if SOROM/SUROM/SXROM
                     if (prg_ram.size() == 2) 
-                        prg_ram_bank = chr_bank[0].s;
+                        prg_ram_bank = (chr_bank[0] & 0x40) >> 2;
                     else if (prg_ram.size() == 4) 
-                        prg_ram_bank = chr_bank[0].ss;
+                        prg_ram_bank = (chr_bank[0] & 0xC0) >> 2;
+                    
+                    // Set PRG-RAM bank if SZROM
+                    if (prg_ram.size() == 2 && nv_ram_i == 1)
+                        prg_ram_bank = (chr_bank[0] & 0x10) >> 4;
 
                     // Set PRG-ROM bank if 512K PRG-ROM
-                    if (prg_rom.size() == 16) 
-                        prg_rom_bank = (prg_rom_bank & 0x0F) | ((chr_bank[0]).p << 4);
+                    if (prg_rom.size() == 32) 
+                        prg_rom_bank = (prg_rom_bank & 0x0F) | (chr_bank[0] & 0x10);
                 }
                 else if (address < 0xE000) // CHR bank 1
                 {
-                    chr_bank[1].reg = reg_shift;
+                    chr_bank[1] = reg_shift;
 
                     // Disable/Enable PRG-RAM if SNROM and not 8KiB mode
                     if (prg_rom.size() <= 8 && chr_mem.size() == 2 && prg_ram.size() == 1 && chr_bank_mode == 1)
                     {
-                        prg_ram_enabled = !chr_bank[1].e;
+                        prg_ram_enabled = !(chr_bank[1] & 0x10);
                     }
 
                     // Set PRG-RAM bank if SOROM/SUROM/SXROM and not 8KiB mode
                     if (prg_ram.size() == 2 && chr_bank_mode == 1) 
-                        prg_ram_bank = chr_bank[1].s;
-                    else if (prg_ram.size() == 4) 
-                        prg_ram_bank = chr_bank[1].ss;
+                        prg_ram_bank = (chr_bank[1] & 0x80) >> 2;
+                    else if (prg_ram.size() == 4 && chr_bank_mode == 1) 
+                        prg_ram_bank = (chr_bank[1] & 0xC0) >> 2;
+
+                    // Set PRG-RAM bank if SZROM
+                    if (prg_ram.size() == 2 && nv_ram_i == 1 && chr_bank_mode == 1)
+                        prg_ram_bank = (chr_bank[0] & 0x10) >> 4;
 
                     // Set PRG-ROM bank if 512K PRG-ROM and not 8KiB mode
-                    if (prg_rom.size() == 16 && chr_bank_mode == 1) 
-                        prg_rom_bank = (prg_rom_bank & 0x0F) | ((chr_bank[1]).p << 4);
+                    if (prg_rom.size() == 32 && chr_bank_mode == 1) 
+                        prg_rom_bank = (prg_rom_bank & 0x0F) | (chr_bank[1] & 0x10);
                 }
                 else // PRG bank
                 {
-                    prg_rom_bank |= (reg_shift & 0x0F);
-                    prg_ram_enabled = static_cast<bool>((reg_shift & 0x10) >> 4);
+                    prg_rom_bank = (prg_rom_bank & 0x10) | (reg_shift & 0x0F);
+                    prg_ram_enabled = !(reg_shift & 0x10);
                 }
             reg_shift = 0x10;
             }
@@ -225,13 +253,13 @@ std::optional<ubyte> Mapper001::ppuRead(uword address)
         ubyte high_bank = 0;
         if (chr_bank_mode == 0)
         {
-            low_bank = (chr_bank[0].chr_bank & 0x1E) % chr_mem.size();
+            low_bank = (chr_bank[0] & 0x1E) % chr_mem.size();
             high_bank = low_bank + 1;
         }
         else
         {
-            low_bank = chr_bank[0].chr_bank % chr_mem.size();
-            high_bank = chr_bank[1].chr_bank % chr_mem.size();
+            low_bank = chr_bank[0] % chr_mem.size();
+            high_bank = chr_bank[1] % chr_mem.size();
         }
 
         if (address < 0x1000)
@@ -256,22 +284,22 @@ bool Mapper001::ppuWrite(uword address, ubyte data)
             ubyte high_bank = 0;
             if (chr_bank_mode == 0)
             {
-                low_bank = (chr_bank[0].chr_bank & 0x1E) % chr_mem.size();
+                low_bank = chr_bank[0] & 0x1E;
                 high_bank = low_bank + 1;
             }
             else
             {
-                low_bank = chr_bank[0].chr_bank % chr_mem.size();
-                high_bank = chr_bank[1].chr_bank % chr_mem.size();
+                low_bank = chr_bank[0];
+                high_bank = chr_bank[1];
             }
 
             if (address < 0x1000)
             {
-                chr_mem[low_bank][address] = data;
+                chr_mem[low_bank % chr_mem.size()][address] = data;
             }
             else
             {
-                chr_mem[high_bank][address - 0x1000] = data;
+                chr_mem[high_bank % chr_mem.size()][address - 0x1000] = data;
             }
         }
         else

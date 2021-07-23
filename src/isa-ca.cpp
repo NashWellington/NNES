@@ -1,4 +1,4 @@
-#include "isa-ca.h"
+#include "isa-ca.hpp"
 
 // TODO delete this once I copy all the instructions to instructions
 const std::array<std::function<void(byte)>,256> instructions = 

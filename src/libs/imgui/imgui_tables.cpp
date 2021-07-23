@@ -240,6 +240,7 @@ Index of this file:
 #pragma GCC diagnostic ignored "-Wsign-conversion"
 #pragma GCC diagnostic ignored "-Wdouble-promotion"
 #pragma GCC diagnostic ignored "-Wuseless-cast"
+#pragma GCC diagnostic ignored "-Wnull-dereference"
 #endif
 
 //-----------------------------------------------------------------------------

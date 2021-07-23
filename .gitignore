@@ -1,7 +1,6 @@
 .vscode/*
 build/log/*
-build/NNES
-build/NNES-debug
+build/NNES*
 roms/games/*
 roms/tests/ppu_tests/240p_test_suite/*
 sandbox/*

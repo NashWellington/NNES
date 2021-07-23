@@ -1,11 +1,10 @@
-#include "mapper.h"
+#include "mapper.hpp"
 
 // TODO submappers
-// TODO bus conflicts
+// TODO bus conflicts/open bus behavior
 
 Mapper007::Mapper007(Header& header, std::ifstream& rom)
 {
-    assert(header.mirroring == MirrorType::HORIZONTAL); // == mapper-controlled
     assert(!header.trainer);
     assert(header.prg_ram_size == 0);
     assert(header.prg_rom_size >= 0x4'000 && header.prg_rom_size <= 0x80'000);
@@ -25,7 +24,10 @@ Mapper007::Mapper007(Header& header, std::ifstream& rom)
         uint banks = header.prg_rom_size / 0x8000;
         prg_rom.resize(banks);
         for (uint i = 0; i < banks; i++)
+        {
+            prg_rom[i].resize(0x8000);
             rom.read(reinterpret_cast<char*>(prg_rom[i].data()), 0x8000);
+        }
     }
 
     uint size = header.chr_rom_size;
@@ -40,7 +42,14 @@ Mapper007::Mapper007(Header& header, std::ifstream& rom)
 
 std::optional<ubyte> Mapper007::cpuRead(uword address)
 {
-    if (address < 0x8000) return {};
+    if (address < 0x4020) return {};
+    else if (address >= 0x4020 && address < 0x8000)
+    {
+        #ifndef NDEBUG
+        std::cerr << "Warning: CPU read from unmapped address " << hex(address) << std::endl;
+        #endif
+        return 0;
+    }
     else 
     {
         return prg_rom[prg_bank][(address-0x8000) % (prg_rom[prg_bank].size())];
@@ -49,7 +58,14 @@ std::optional<ubyte> Mapper007::cpuRead(uword address)
 
 bool Mapper007::cpuWrite(uword address, ubyte data)
 {
-    if (address < 0x8000) return false;
+    if (address < 0x4020) return false;
+    else if (address >= 0x4020 && address < 0x8000)
+    {
+        #ifndef NDEBUG
+        std::cerr << "Warning: CPU write to unmapped address " << hex(address) << std::endl;
+        #endif
+        return true;
+    }
     else
     {
         // Bank selection
@@ -70,5 +86,11 @@ bool Mapper007::ppuWrite(uword address, ubyte data)
 {
     if (address >= 0x2000) return false;
     else if (chr_ram) { chr_mem[address % chr_mem.size()] = data; return true; }
-    else return true;
+    else 
+    {
+        #ifndef NDEBUG
+        std::cerr << "Warning: attempted write to CHR-ROM at " << hex(address) << std::endl;
+        #endif
+        return true;
+    }
 }

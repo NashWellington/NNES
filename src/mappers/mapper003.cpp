@@ -1,4 +1,4 @@
-#include "mapper.h"
+#include "mapper.hpp"
 
 // TODO submappers
 // TODO emulate bus conflicts to fix Cybernoid
@@ -12,6 +12,7 @@ Mapper003::Mapper003(Header& header, std::ifstream& rom)
     assert(header.prg_rom_size == 0x4000 || header.prg_rom_size == 0x8000);
     assert((header.chr_rom_size >= 0x2000 && header.chr_rom_size <= 0x200'000)
             != (header.chr_ram_size >= 0x2000 && header.chr_ram_size <= 0x200'000));
+    assert(header.prg_ram_size == 0);
 
     uint banks = header.prg_rom_size / 0x4000;
     prg_rom.resize(banks);
@@ -38,7 +39,14 @@ Mapper003::Mapper003(Header& header, std::ifstream& rom)
 
 std::optional<ubyte> Mapper003::cpuRead(uword address)
 {
-    if (address < 0x8000) return {};
+    if (address < 0x4020) return {};
+    else if (address >= 0x4020 && address < 0x8000)
+    {
+        #ifndef NDEBUG
+        std::cerr << "Warning: CPU read from unmapped address " << hex(address) << std::endl;
+        #endif
+        return 0;
+    }
     else
     {
         uint i = 0; // bank index
@@ -54,7 +62,14 @@ std::optional<ubyte> Mapper003::cpuRead(uword address)
 
 bool Mapper003::cpuWrite(uword address, ubyte data)
 {
-    if (address < 0x8000) return false;
+    if (address < 0x4020) return false;
+    else if (address >= 0x4020 && address < 0x8000) 
+    {
+        #ifndef NDEBUG
+        std::cerr << "Warning: CPU write to unmapped address " << hex(address) << std::endl;
+        #endif
+        return true;
+    }
     else
     {
         chr_bank = data % chr_mem.size();
