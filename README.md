@@ -1,12 +1,11 @@
 # NNES
-NNES is a NES emulator and debugger built in C++.
+NNES is a NES emulator built in Modern C++
 
 ## Roadmap
 This is a rough order of features I am planning to implement or change. Features I am currently working on are *italicized*:
-* *Audio*
-* *Mapper 5 support (used for Castlevania III and some other games)*
-* PPU rewrite (to make cycle-accurate and improve performance)
+* *Improved accuracy across the board*
 * CPU rewrite (to make cycle-accurate)
+* Mapper 5 support (used for Castlevania III and some other games)
 * Multithreading between CPU, PPU, and APU (if feasible)
 * Automated testing
 * Other QoL features (savestates, cheats, more debug features, etc.)

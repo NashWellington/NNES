@@ -19,7 +19,7 @@ At this point, CPU tests that fail depend on:
 | :--- | :----: | :----: | :------ |
 | Branch Timing Tests | blargg | Pass | |
 | CPU Dummy Reads | blargg | 0/1 | LDA abs,X fails #3 |
-| CPU Dummy Writes | bisqwit | 0/2 | <l><li>OAM test fails #2 (OAM reads not reliable)</li> <li>PPU test fails #5 (single write to $2006 shouldn't change PPUADDR when vblank is on</li></l> | 
+| CPU Dummy Writes | bisqwit | 0/2 | <l><li>OAM test fails #2 (OAM reads not reliable)</li> <li>PPU test fails #2 (non-palette ppu memory reads should have 1-byte buffer)</li></l> | 
 | CPU Exec Space | bisqwit | 0/2 | <l><li>APU test fails #2 ($4000 error)</li> <li>PPU test fails #6</li> <li>Note: this also tests open bus behavior, which is not fully emulated yet</li></l> |
 | CPU Flag Concurrency | bisqwit | Pass? | Flags and APU IRQ timing work as intended |
 | CPU Reset | blargg | Pass | |
@@ -36,21 +36,21 @@ At this point, CPU tests that fail depend on:
 
 | Test | Author | Status | Details |
 | :--- | :----: | :----: | :------ |
-| 240p Test Suite | tepples | 0/? | <l>Mapper 2 is supported, but this is probably not worth testing until I make an attempt at color emphasis and a few other things</l> |
+| 240p Test Suite | tepples | 0/? | Mapper 2 is supported, but this is probably not worth testing until I make an attempt at color emphasis and a few other things |
 | Color Test | rainwarrior | 0/1 | Emphasis/chroma/luma not implemented yet |
 | Full Palette Test | blargg | 0/3 | <l><li>full_palette and full_palette_smooth show four different shades of blue (i.e. not correct but a step in the right direction)</li> <li>flowing_palette crashes because it has PRG-RAM size set to $C4,000 (I need to check boot.cpp for this)</li></l> |
 | Misc PPU Tests | blargg | 1/4 | <l><li>palette_ram passes</li> <li>power_up_palette is ignored because palette values are undefined on startup</li> <li>sprite_ram fails #4</li> <li>vbl_clear_time fails #3 (vbl flag cleared too late)</li> <li>vram_access fails #6</li></l> |
-| NMI Sync Test | blargg | 0/1 | |
-| NTSC Torture Test | rainwarrior | 0/1 | D-pad scrolls but select doesn't seem to do anything |
-| OAM Read Test | blargg | Pass | |
+| NMI Sync Test | blargg | ? | Not sure what a passing result is supposed to look like |
+| NTSC Torture Test | rainwarrior | ? | D-pad scrolls but select doesn't seem to do anything |
+| OAM Read Test | blargg | 0/1 | |
 | OAM Stress Test | blargg | 0/1 | |
 | OAM Test 3 | lidnariq | 0/1 | Looks to be somewhat working. I'll check this test out more later. |
 | Palette Test | rainwarrior | 0/1 | Same as color test |
-| PPU Open Bus Test | blargg | 0/1 | Fails #4 (Note: I probably won't be fixing this for a while. It seems to test obscure VRAM decay behavior) |
+| PPU Open Bus Test | blargg | 0/1 | Fails #3 (Note: I probably won't be fixing this for a while. It seems to test obscure VRAM decay behavior) |
 | PPU Read Buffer Test | bisqwit | 0/1 | Doesn't display any results. Attempts to write three times to pattern tables despite not having CHR-RAM. Forcing CHR-RAM doesn't seem to help. |
 | Scanline Test | Quietust | 0/3 | |
 | Sprite DMA and DMC DMA Tests | blargg | 0/2 | Flashes some text for a few frames and displays a black screen |
-| Sprite Hit Tests | blargg | 5/11 | <l><li>Test 1 fails #10</li> <li>Test 2 fails #3</li> <li>Test 3 passes</li> <li>Test 4 passes</li> <li>Test 5 fails #2</li> <li>Test 6 passes</li> <li>Test 7 passes</li> <li>Test 8 fails #3</li> <li>Test 9 passes</li> <li>Test 10 passes #6</li> <li>Test 11 passes #2</li></l> |
+| Sprite Hit Tests | blargg | 5/11 | <l><li>Test 1 fails #10</li> <li>Test 2 fails #3</li> <li>Test 3 passes</li> <li>Test 4 passes</li> <li>Test 5 fails #2</li> <li>Test 6 passes</li> <li>Test 7 passes</li> <li>Test 8 fails #2</li> <li>Test 9 passes</li> <li>Test 10 fails #6</li> <li>Test 11 fails #2</li></l> |
 | Sprite Overflow Tests | blargg | 1/5 | <l><li>Test 1 passes</li> <li>Test 2 fails #9</li> <li>Test 3 fails #12</li> <li>Test 4 fails #5</li> <li>Test 5 #4</li></l> |
 | VBL NMI Tests | blargg | 0/10 | <l><li>Test 1 fails #7 (vbl period too short w/ bg off)</li> <li>Test 4 fails #5</li> <li>Tests 9 and 10 fail #2 (clock skipped too soon relative to enabling bg)</li> <li>All other tests have complex error messages that wouldn't make sense to type out in this table</li> <li>Note: it seems vblank flags are being set 2-3 frames early (relative to the CPU's clock)</li></l> |
 
@@ -124,6 +124,7 @@ None yet
 ## PPU
 * PPU should output a solid color based on the value at PPU $3F00 (palette RAM index 0)
 * translating palette values to pixel values may be doable with integer math, instead of pre-defined values (http://forums.nesdev.com/viewtopic.php?f=2&t=14338)
+* Non-palette PPU memory reads should have one-byte buffer
 
 ## APU
 * Donkey Kong: square channels mute after a few seconds
@@ -144,7 +145,6 @@ None yet
 ## CPU
 
 ## PPU
-* OAM read test failure
 
 ## APU
 
