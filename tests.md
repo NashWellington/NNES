@@ -122,6 +122,7 @@ None yet
 ## CPU
 
 ## PPU
+* MAJOR: There seems to be either an issue with coarse horizontal scrolling or vertical nametable mirroring (probably the second)
 * PPU should output a solid color based on the value at PPU $3F00 (palette RAM index 0)
 * translating palette values to pixel values may be doable with integer math, instead of pre-defined values (http://forums.nesdev.com/viewtopic.php?f=2&t=14338)
 * Non-palette PPU memory reads should have one-byte buffer

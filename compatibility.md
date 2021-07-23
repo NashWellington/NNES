@@ -38,6 +38,9 @@ Games listed here with no entries underneath them have no known compatibility is
 ## DuckTales
 * Horizontal scrolling is broken
 
+## Excitebike
+* Horizontal scrolling weirdness
+
 ## Final Fantasy
 * Regression: exits on assertion ((battery) == (prg_nv_ram > 0))
 * Prior: crashes on opcode $22
@@ -64,6 +67,9 @@ Games listed here with no entries underneath them have no known compatibility is
 ## Paperboy
 * Controller input doesn't seem to work
 * Most of the background isn't rendered
+
+## R.C. Pro-AM
+* Artifacts and weird scrolling at the bottom split screen
 
 ## Super Mario Bros.
 * Black boxes around clods (wrong palette index 0 color?)
