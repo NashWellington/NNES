@@ -16,7 +16,7 @@ This is a rough order of features I am planning to implement or change. Features
 ## Testing and Compatibility
 Test roms are located in the roms/tests/ directory. All test results should be added to [tests.md](tests.md). Testing is not yet automated.
 
-ROM compatibility hasn't been tested extensively yet. In the near future, I will add a file detailing compatibility for each ROM.
+Game compatibility notes can be found in [compatibility.md](compatibility.md).
 
 ## Compiling
 NNES requires a C++17 compiler, as well as the following dependencies:

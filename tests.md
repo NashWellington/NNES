@@ -127,8 +127,6 @@ None yet
 * Non-palette PPU memory reads should have one-byte buffer
 
 ## APU
-* Donkey Kong: square channels mute after a few seconds
-* Note: this may be tied to the PPU
 
 ## Mapper
 * Cartridges don't save SRAM to file
@@ -155,6 +153,3 @@ None yet
 * allpads test
 
 ## Misc
-* Final Fantasy fails on assertion ((battery) == (prg_nv_ram > 0))
-* Prior: crashes on opcode $22
-* Note: figure out difference between battery-backed and nv
