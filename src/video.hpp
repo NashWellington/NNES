@@ -103,6 +103,7 @@ public:
 #endif
     Texture frame_tex;
 
+    bool paused = false;
 private:
 // OGL variables
     float clear_color[4] = {0.0f, 0.0f, 0.0f, 1.0f};

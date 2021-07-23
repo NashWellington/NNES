@@ -633,11 +633,11 @@ void Video::displayFrame()
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
 
-//    if (run_flags.paused)
-//    {
-//        roboto_black.renderText(text_shader, {"PAUSED"}, static_cast<float>(window_w), static_cast<float>(window_h), static_cast<float>(window_w), static_cast<float>(window_h), static_cast<float>(window_h)/1000.0f, false);
-//        frame_shader.use();
-//    }
+   if (paused)
+   {
+       roboto_black.renderText(text_shader, {"PAUSED"}, static_cast<float>(window_w), static_cast<float>(window_h), static_cast<float>(window_w), static_cast<float>(window_h), static_cast<float>(window_h)/1000.0f, false);
+       frame_shader.use();
+   }
 
     // Draw ImGui elements
 #ifdef DEBUGGER

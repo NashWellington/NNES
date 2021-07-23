@@ -30,6 +30,10 @@ public:
     std::vector<std::shared_ptr<Controller>> controllers;
     //Scheduler scheduler;
     std::unique_ptr<Config> config;
+    
+    bool paused = false;
+    uint frame = 0;
+    uint64_t cycle = 0;
 };
 
 class NES : public Console
@@ -51,8 +55,5 @@ public:
     std::unique_ptr<Expansion> expansion;
     std::unique_ptr<Scheduler> scheduler;
 
-    // TODO testing
-    uint frame = 0;
-    uint64_t cycle = 0;
     uint64_t cycles_per_two_frames = 178683;
 };

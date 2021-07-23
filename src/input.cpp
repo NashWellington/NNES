@@ -29,7 +29,7 @@ Input::~Input()
     for (uint i = 0; i < joypads.size(); i++)
     {
         if (joypads[i])
-            SDL_GameControllerClose(joypads[i]); // FIXME
+            SDL_GameControllerClose(joypads[i]);
     }
 }
 
@@ -95,7 +95,8 @@ void Input::quit()
 
 void Input::pause()
 {
-
+    console.paused = !console.paused;
+    video.paused = !video.paused;
 }
 
 void Input::mute()
