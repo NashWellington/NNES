@@ -544,9 +544,10 @@ void PPU::renderPixel()
 {
     // Background pixel
     uint bg_px = 0;
+    uint bg_bit = 0;
     if (bgEnabled())
     {
-        uint bg_bit = ((cycle-1) % 8) + fine_x_scroll;
+        bg_bit = ((cycle-1) % 8) + fine_x_scroll;
         bg_px = (bg_pt_high.peekBit(bg_bit) << 1) | bg_pt_low.peekBit(bg_bit);
     }
 
@@ -584,16 +585,8 @@ void PPU::renderPixel()
     }
     else
     {
-        pushPixel(getColor((bg_at.peekByte() & 0x03), bg_px));
+        pushPixel(getColor((bg_at.peekByte(bg_bit/8) & 0x03), bg_px));
     }
-
-    // // Shift bg regs every 8 cycles
-    // if (cycle % 8 == 0)
-    // {
-    //     bg_pt_low.shift(8);
-    //     bg_pt_high.shift(8);
-    //     bg_at.shift(8);
-    // }
 }
 
 void PPU::processScanline()

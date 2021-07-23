@@ -122,9 +122,9 @@ private:
             uint bit_i = sizeof(T)*8 - (bit+1);
             return (reg & (1 << bit_i)) >> bit_i; 
         }
-        ubyte peekByte()
+        ubyte peekByte(uint byte_i)
         {
-            return reg >> ((sizeof(T)-1) * 8);
+            return reg >> ((sizeof(T)-1-byte_i) * 8);
         }
     };
 

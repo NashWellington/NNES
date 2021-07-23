@@ -4,7 +4,8 @@ Games listed here with no entries underneath them have no known compatibility is
 
 ## The Addams Family
 * Heavy visual corruption on the "______ Presents" screen
-* The bottom half of the ingame background screen is a menu screen
+* Noise channel sfx sounds wrong
+* Invisible sprites?
 
 ## Barbie
 * Crashes before title screen: opcode 0x02, address 0x093E
@@ -12,10 +13,16 @@ Games listed here with no entries underneath them have no known compatibility is
 ## Battletoads
 * Wrong palettes in some places at the title screen
 
+## Bionic Commando
+* Crash on opcode 32 at PC $8012
+
 ## Castlevania
 * Some sprites look weird
 * Horizontal scrolling is clearly broken
 * Part of the "C" in "Castlevania" on the title screen is shifted 1 pixel left
+
+## Contra
+* Glitchy horizontal scrolling
 
 ## Donkey Kong
 * Pulse sound channels mute when they're not supposed to
@@ -24,6 +31,9 @@ Games listed here with no entries underneath them have no known compatibility is
 ## Double Dragon
 * Fails to boot
 * Tries to write to CHR-ROM, then alternates between stack over/underflow
+
+## Dragon Warrior
+* Exits on assertion (battery) == (prg_nv_ram > 0)
 
 ## DuckTales
 * Horizontal scrolling is broken
@@ -40,12 +50,20 @@ Games listed here with no entries underneath them have no known compatibility is
 * Horizontal scrolling is broken.
 * Weird visual artifacts after selecting stage that should be investigated
 
+## Mega Man
+* Slightly glitchy vertical scrolling at the title screen
+* High pitched noise before title screen
+
 ## Metroid
 * Visual corruption before title screen
 * All sprites are invisible
 * "Out of bounds palette index" warnings 
 
 ## Pac-Man
+
+## Paperboy
+* Controller input doesn't seem to work
+* Most of the background isn't rendered
 
 ## Super Mario Bros.
 * Black boxes around clods (wrong palette index 0 color?)
@@ -55,3 +73,6 @@ Games listed here with no entries underneath them have no known compatibility is
 
 ## Tennis
 
+## Time Lord
+* Stalls on title screen
+* Lots of out of bounds palette index warnings
