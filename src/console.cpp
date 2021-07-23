@@ -6,6 +6,7 @@ NES::NES(Audio& audio, Video& video)
     apu = std::make_shared<APU>(*this, audio);
     ppu = std::make_shared<PPU>(*this, video);
     mem = std::make_unique<Memory>(*this);
+    config = std::make_unique<Config>();
 }
 
 void NES::reset()

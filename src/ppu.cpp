@@ -493,7 +493,12 @@ Pixel PPU::getColor(ubyte palette, ubyte pal_i)
 {
     assert(region == Region::NTSC);
     assert(palette < 8 && pal_i < 4);
-    uint system_palette_i = nes.mem->ppuRead(0x3F00 + 4*palette + pal_i);
+    uint system_palette_i;
+    if (nes.config->HIDE_OVERSCAN && (scanline <= 8 || scanline > (post_render_start - 8)))
+    {
+        system_palette_i = nes.mem->ppuRead(0x3F00);
+    }
+    else system_palette_i = nes.mem->ppuRead(0x3F00 + 4*palette + pal_i);
     #ifndef NDEBUG
     if (system_palette_i >= 64)
         std::cerr << "Warning: out of bounds palette index: " << system_palette_i << std::endl;

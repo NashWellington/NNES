@@ -1,4 +1,4 @@
-objects =  nnes.o boot.o cart.o console.o cpu.o ppu.o apu.o mem.o 
+objects =  nnes.o boot.o cart.o  config.o console.o cpu.o ppu.o apu.o mem.o 
 objects += $(mapper_objects) 
 objects += isa.o mode.o scheduler.o savestate.o video.o audio.o input.o 
 objects += controller.o util.o 
@@ -30,80 +30,83 @@ $(target) : $(objects)
 		$(compiler) $(flags) $(objects) -o ../build/$(target) $(libs)
 		rm $(objects)
 
-nnes.o : nnes.cpp globals.h boot.h console.h audio.h video.h input.h savestate.h
+nnes.o : nnes.cpp globals.hpp boot.hpp console.hpp audio.hpp video.hpp input.hpp savestate.hpp
 		$(compiler) $(flags) -c nnes.cpp
 
-boot.o : boot.h globals.h mappers/mapper.h
+boot.o : boot.hpp globals.hpp mappers/mapper.hpp
 		$(compiler) $(flags) -c boot.cpp
 
-console.o : console.h globals.h scheduler.h cpu.h ppu.h apu.h mem.h peripheral.h cart.h
+config.o : config.hpp globals.hpp
+		$(compiler) $(flags) -c config.cpp
+
+console.o : console.hpp globals.hpp scheduler.hpp cpu.hpp ppu.hpp apu.hpp mem.hpp peripheral.hpp cart.hpp config.hpp
 		$(compiler) $(flags) -c console.cpp
 
-processor.o : processor.h globals.h savestate.h
+processor.o : processor.hpp globals.hpp savestate.hpp
 		$(compiler) $(flags) -c processor.cpp
 
-cpu.o : cpu.h globals.h processor.h isa.h mem.h savestate.h
+cpu.o : cpu.hpp globals.hpp processor.hpp isa.hpp mem.hpp savestate.hpp
 		$(compiler) $(flags) -c cpu.cpp
 
-ppu.o : ppu.h globals.h processor.h mem.h video.h savestate.h util.h
+ppu.o : ppu.hpp globals.hpp processor.hpp mem.hpp video.hpp savestate.hpp util.hpp
 		$(compiler) $(flags) -c ppu.cpp
 
-apu.o : apu.h globals.h processor.h audio.h mem.h
+apu.o : apu.hpp globals.hpp processor.hpp audio.hpp mem.hpp
 		$(compiler) $(flags) -c apu.cpp
 
-isa.o : isa.h globals.h mode.h cpu.h
+isa.o : isa.hpp globals.hpp mode.hpp cpu.hpp
 		$(compiler) $(flags) -c isa.cpp
 
-mode.o : mode.h globals.h cpu.h
+mode.o : mode.hpp globals.hpp cpu.hpp
 		$(compiler) $(flags) -c mode.cpp
 
-mem.o : mem.h globals.h console.h savestate.h
+mem.o : mem.hpp globals.hpp console.hpp savestate.hpp
 		$(compiler) $(flags) -c mem.cpp
 
-cart.o : cart.h globals.h peripheral.h boot.h mappers/mapper.h
+cart.o : cart.hpp globals.hpp peripheral.hpp boot.hpp mappers/mapper.hpp
 		$(compiler) $(flags) -c cart.cpp
 
-mapper000.o : mappers/mapper.h globals.h savestate.h
+mapper000.o : mappers/mapper.hpp globals.hpp savestate.hpp
 		$(compiler) $(flags) -c mappers/mapper000.cpp
 
-mapper001.o : mappers/mapper.h globals.h savestate.h
+mapper001.o : mappers/mapper.hpp globals.hpp savestate.hpp
 		$(compiler) $(flags) -c mappers/mapper001.cpp
 
-mapper002.o : mappers/mapper.h globals.h savestate.h
+mapper002.o : mappers/mapper.hpp globals.hpp savestate.hpp
 		$(compiler) $(flags) -c mappers/mapper002.cpp
 
-mapper003.o : mappers/mapper.h globals.h savestate.h
+mapper003.o : mappers/mapper.hpp globals.hpp savestate.hpp
 		$(compiler) $(flags) -c mappers/mapper003.cpp
 
 #TODO figure out how to incorporate console memory
-#mapper004.o : mappers/mapper.h globals.h savestate.h mem.h
+#mapper004.o : mappers/mapper.hpp globals.hpp savestate.hpp mem.hpp
 #		$(compiler) $(flags) -c mappers/mapper004.cpp
 
-mapper007.o : mappers/mapper.h globals.h savestate.h
+mapper007.o : mappers/mapper.hpp globals.hpp savestate.hpp
 		$(compiler) $(flags) -c mappers/mapper007.cpp
 
-mapper009.o : mappers/mapper.h globals.h savestate.h
+mapper009.o : mappers/mapper.hpp globals.hpp savestate.hpp
 		$(compiler) $(flags) -c mappers/mapper009.cpp
 
-video.o : video.h globals.h util.h savestate.h libs/imgui/imgui.h libs/imgui/imgui_impl_sdl.h libs/imgui/imgui_impl_opengl3.h
+video.o : video.hpp globals.hpp util.hpp savestate.hpp libs/imgui/imgui.h libs/imgui/imgui_impl_sdl.h libs/imgui/imgui_impl_opengl3.h
 		$(compiler) $(flags) -c video.cpp
 
-audio.o : audio.h globals.h
+audio.o : audio.hpp globals.hpp
 		$(compiler) $(flags) -c audio.cpp
 
-input.o : input.h globals.h console.h audio.h video.h peripheral.h
+input.o : input.hpp globals.hpp console.hpp audio.hpp video.hpp peripheral.hpp
 		$(compiler) $(flags) -c input.cpp
 
-controller.o : peripheral.h
+controller.o : peripheral.hpp
 		$(compiler) $(flags) -c controller.cpp
 
-scheduler.o : scheduler.h globals.h processor.h
+scheduler.o : scheduler.hpp globals.hpp processor.hpp
 		$(compiler) $(flags) -c scheduler.cpp
 
-savestate.o : savestate.h globals.h mappers/mapper.h
+savestate.o : savestate.hpp globals.hpp mappers/mapper.hpp
 		$(compiler) $(flags) -c savestate.cpp
 
-util.o : util.h globals.h mem.h
+util.o : util.hpp globals.hpp mem.hpp
 		$(compiler) $(flags) -c util.cpp
 
 # external libs

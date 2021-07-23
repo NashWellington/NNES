@@ -15,6 +15,7 @@ class Memory;
 #include "mem.hpp"
 #include "peripheral.hpp"
 #include "cart.hpp"
+#include "config.hpp"
 
 class Console
 {
@@ -28,6 +29,7 @@ public:
     std::string region = {};
     std::vector<std::shared_ptr<Controller>> controllers;
     //Scheduler scheduler;
+    std::unique_ptr<Config> config;
 };
 
 class NES : public Console
