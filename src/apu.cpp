@@ -541,7 +541,8 @@ void Triangle::clock()
         if (len.count > 0 && lin.count > 0)
         {
             seq.clock();
-            out = abs(seq.sequence);
+            // Can't just take the absolute value because 0 occurs twice in a row
+            out = seq.sequence < 0 ? -seq.sequence + 1 : seq.sequence;
         }
     }
 }

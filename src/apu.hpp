@@ -7,8 +7,6 @@ class NES;
 #include "audio.hpp"
 #include "mem.hpp"
 
-// TODO move these inside APU somewhere
-// Really this is a timer, but a timer only contains a divider anyway
 struct Timer
 {
     virtual ~Timer() {}
@@ -29,7 +27,7 @@ struct LFSR : public Timer
     // Return true if bit 0 of shift_reg is set
     // If true, blocks envelope data
     bool clock();
-    uword shift_reg = 0; // TODO init at 0??? (or some other complicated behavior)
+    uword shift_reg = 0;
     bool mode = false;
 };
 
@@ -89,7 +87,7 @@ struct Pulse
 {
     void clock();
     ubyte duty = 0;
-    Sequencer seq = { .seq_min = 0, .seq_max = 7 };
+    Sequencer seq = { .seq_min = 0, .seq_max = 7, .sequence = 7 };
     Divider timer = {};
     LengthCounter len = {};
     Envelope env = {};
@@ -101,7 +99,9 @@ struct Triangle
 {
     void clock();
     Divider timer = {}; // This gets called twice (b/c tri timer runs at CPU clock speed)
-    Sequencer seq = { .seq_min = -15, .seq_max = 15 };
+    //  The real sequence goes from 15 to 0 then 0 to 15,
+    // but it's just easier to do this and take the absolute value
+    Sequencer seq = { .seq_min = -16, .seq_max = 15, .sequence = 7 };
     LengthCounter len = {};
     LinearCounter lin = {};
     uint out = 0; // the value to be mixed (0-15)

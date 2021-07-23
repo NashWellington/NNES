@@ -63,13 +63,13 @@ At this point, CPU tests that fail depend on:
 | APU Phase Reset | Rahsennor | | No CHR-RAM/ROM? (If iNES, it should default to some CHR-RAM). Worth investigating. |
 | APU Reset | blargg | 3/6 | <l><li>len_ctrs_enabled passes</li> <li>irq_flag_cleared passes</li> <li>4015_cleared passes</li></l> |
 | APU Sweep Test | blargg | 1/2 | Noises at the beginning and end are swapped for Cutoff |
-| APU Tests | blargg | 4/11 | <l><li>Tests 1-4 pass</li> <li>Test 5 fails #2 (first length clocked too soon)</li> <li>Test 6 fails #2 (first length clocked too soon)</li> <li>Test 7 fails #2 (first flag set too soon)</li> <li>Test 8 fails #2 (IRQ triggered too soon after writing $00 to $4017)</li> <li>Test 9 fails #3 (fourth step too soon)</li> <li>Test 10 passes</li> <li>Test 11 fails #4</li></l> |
-| APU Tests 2 | x0000 | 6/11 | <l><li>Note: test 2 is supposed to fail after some resets on real hardware, likely because of CPU/PPU alignments</li> <li>Note: there's no readme provided so I'll have to figure out the specifics of these tests (beyond testing the frame counter)</li> <li>Tests 1, 3, 4, 7, 8, 11 pass</li> <li>Tests 2, 6, 5, 9, 10 fail</li></l> |
-| APU Timer Test | blargg | 2/4 | <l><li>Square, DMC pass</li> <li>Triangle fails</li> <li>Noise wave fails (maybe clocking too fast?)</li> <li>Triangle fails (need to adjust frequency/linear counter?)</li></l> |
-| APU Triangle Linear Counter Test | blargg | Pass | |
+| APU Tests | blargg | 5/11 | <l><li>Tests 1-4 pass</li> <li>Test 5 fails #2 (first length clocked too soon)</li> <li>Test 6 fails #2 (first length clocked too soon)</li> <li>Test 7 fails #2 (first flag set too soon)</li> <li>Test 8 fails #2 (IRQ triggered too soon after writing $00 to $4017)</li> <li>Test 9 passes</li> <li>Test 10 passes</li> <li>Test 11 fails #4</li></l> |
+| APU Tests 2 | x0000 | 5/11 | <l><li>Note: test 2 is supposed to fail after some resets on real hardware, likely because of CPU/PPU alignments</li> <li>Note: there's no readme provided so I'll have to figure out the specifics of these tests (beyond testing the frame counter)</li> <li>Tests 1, 3, 4, 7, 8 pass</li> <li>Tests 2, 5, 6, 9, 10, 11 fail</li></l> |
+| APU Timer Test | blargg | 3/4 | <l><li>Square, DMC, triangle pass</li> <li>Noise wave fails (maybe clocking too fast?)</li></l> |
+| APU Triangle Linear Counter Test | blargg | Fail | Pitch slightly too low |
 | DMC DMA During Read | blargg | | Not worth testing until I implement DMC DMA behavior |
-| DMC Tests | ??? | | DMC not fully supported |
-| DPCM Letterbox | tepples | | DPCM unsupported |
+| DMC Tests | ??? | ?/4 | Not sure what a valid test result is supposed to look like, but all four tests sound the same when played |
+| DPCM Letterbox | tepples | ? | Unsure what this test is supposed to do |
 | PAL APU Tests | blargg | | PAL unsupported |
 | Square Timer Div 2 | blargg | 0/1 | Sound output matches div2_after.wav |
 | Volume Tests | tepples | Fail | |
