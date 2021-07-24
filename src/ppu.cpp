@@ -87,12 +87,14 @@ ubyte PPU::read(uword address)
         case 0x2004: // OAM data
             if (reg_status.vblank)
             {
-                return primary_oam[oam_addr/4].data[oam_addr%4];
+                data = primary_oam[oam_addr/4].data[oam_addr%4];
             }
             else
             {
-                return oam_data;
+                data = oam_data;
             }
+            ppu_io_open_bus = data;
+            return data;
         case 0x2005: // PPU scroll
             return ppu_io_open_bus;
         case 0x2006: // PPU address
@@ -110,7 +112,7 @@ ubyte PPU::read(uword address)
     }
 }
 
-// Writes to any PPU port load ppu_io_open_bus 
+// Writes to any PPU port
 void PPU::write(uword address, ubyte data)
 {
     assert((address >= 0x2000 && address <= 0x2007) || address == 0x4014);
@@ -230,12 +232,12 @@ ubyte PPU::getPTByte(uint table, uint tile, uint bit_plane, uint fine_y)
 
 bool PPU::sprEnabled()
 {
-    return !reg_status.vblank && reg_mask.show_sprites && (reg_mask.left_sprites || (cycle-1 >= 8));
+    return !reg_status.vblank && reg_mask.show_sprites;
 }
 
 bool PPU::bgEnabled()
 {
-    return !reg_status.vblank && reg_mask.show_background && (reg_mask.left_background || (cycle-1 >= 8));
+    return !reg_status.vblank && reg_mask.show_background;
 }
 
 bool PPU::checkRange(ubyte y)
@@ -344,7 +346,7 @@ void PPU::fetchSprites()
         // Read garbage NT byte
         // Read y-coord from secondary OAM (unnecessary?)
         case 1:
-            ppu_data = nes.mem->ppuRead(vram_addr.addr);
+            if (sprEnabled()) ppu_data = nes.mem->ppuRead(vram_addr.addr);
             oam_data = secondary_oam[spr_i].y;
             tmp_spr_y = scanline - oam_data; 
             break;
@@ -358,7 +360,7 @@ void PPU::fetchSprites()
         // Read garbage NT byte
         // Read sprite attribute
         case 3:
-            ppu_data = nes.mem->ppuRead(vram_addr.addr);
+            if (sprEnabled()) ppu_data = nes.mem->ppuRead(vram_addr.addr);
             oam_data = secondary_oam[spr_i].attributes;
             spr_at[spr_i] = oam_data;
             // Flip vertically
@@ -383,7 +385,7 @@ void PPU::fetchSprites()
         // Read sprite pattern table byte (low)
         // Read sprite x-pos
         case 5:
-            ppu_data = getPTByte(reg_ctrl.spr_size ? 0 : reg_ctrl.spr_table, tmp_spr_tile_i, 0, tmp_spr_y);
+            if (sprEnabled()) ppu_data = getPTByte(reg_ctrl.spr_size ? 0 : reg_ctrl.spr_table, tmp_spr_tile_i, 0, tmp_spr_y);
             oam_data = secondary_oam[spr_i].x;
             spr_x_pos[spr_i] = oam_data;
             break;
@@ -398,7 +400,7 @@ void PPU::fetchSprites()
         // Read sprite pattern table byte (high)
         // Read sprite x-pos
         case 7:
-            ppu_data = getPTByte(reg_ctrl.spr_size ? 0 : reg_ctrl.spr_table, tmp_spr_tile_i, 1, tmp_spr_y);
+            if (sprEnabled()) ppu_data = getPTByte(reg_ctrl.spr_size ? 0 : reg_ctrl.spr_table, tmp_spr_tile_i, 1, tmp_spr_y);
             oam_data = secondary_oam[spr_i].x;
             spr_x_pos[spr_i] = oam_data;
             break;
@@ -418,28 +420,28 @@ void PPU::fetchTiles()
     {
         // NT fetch
         case 1:
-            ppu_data = getNTByte();
+            if (bgEnabled()) ppu_data = getNTByte();
             break;
         case 2:
             bg_nt_latch = ppu_data;
             break;
         // AT fetch
         case 3:
-            ppu_data = getAttribute();
+            if (bgEnabled()) ppu_data = getAttribute();
             break;
         case 4:
             bg_at_latch = ppu_data;
             break;
         // PT fetch low
         case 5:
-            ppu_data = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 0, vram_addr.fine_y);
+            if (bgEnabled()) ppu_data = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 0, vram_addr.fine_y);
             break;
         case 6:
             bg_pt_low_latch = ppu_data;
             break;
         // PT fetch high
         case 7:
-            ppu_data = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 1, vram_addr.fine_y);
+            if (bgEnabled()) ppu_data = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 1, vram_addr.fine_y);
             break;
         case 0:
             bg_at.load(bg_at_latch);
@@ -461,20 +463,20 @@ void PPU::dummyFetchTiles()
     {
         // NT fetch
         case 1:
-            ppu_data = getNTByte();
+            if (bgEnabled()) ppu_data = getNTByte();
             bg_nt_latch = ppu_data;
             break;
         // AT fetch
         case 3:
-            ppu_data = getAttribute();
+            if (bgEnabled()) ppu_data = getAttribute();
             break;
         // PT fetch low
         case 5:
-            ppu_data = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 0, vram_addr.fine_y);
+            if (bgEnabled()) ppu_data = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 0, vram_addr.fine_y);
             break;
         // PT fetch high
         case 7:
-            ppu_data = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 1, vram_addr.fine_y);
+            if (bgEnabled()) ppu_data = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 1, vram_addr.fine_y);
             break;
         case 0:
             if (vram_addr.fine_y < 7) // incr fine y
@@ -545,7 +547,7 @@ void PPU::renderPixel()
     // Background pixel
     uint bg_px = 0;
     uint bg_bit = 0;
-    if (bgEnabled())
+    if (bgEnabled() && (reg_mask.left_background || cycle >= 8))
     {
         bg_bit = ((cycle-1) % 8) + fine_x_scroll;
         bg_px = (bg_pt_high.peekBit(bg_bit) << 1) | bg_pt_low.peekBit(bg_bit);
@@ -554,7 +556,7 @@ void PPU::renderPixel()
     // Sprite pixel
     uint spr_px = 0;
     uint spr_i = 0;
-    if (sprEnabled() && cycle >= 2 && scanline >= 1)
+    if (sprEnabled() && (reg_mask.left_sprites || cycle >= 8) && cycle >= 2 && scanline >= 1)
     {
         for (spr_i = 0; spr_i < 8; spr_i++)
         {
@@ -572,7 +574,9 @@ void PPU::renderPixel()
     }
 
     // Sprite 0 hit
-    if (spr_i == 0 && spr_zero_curr && spr_px > 0 && bg_px > 0 && bgEnabled() && sprEnabled())
+    if (spr_i == 0 && spr_zero_curr && spr_px > 0 && bg_px > 0 
+        && bgEnabled() && (reg_mask.left_background || cycle >= 8) 
+        && sprEnabled() && (reg_mask.left_sprites || cycle >= 8))
     {
         reg_status.sprite_zero = true;
     }
@@ -634,6 +638,10 @@ void PPU::processScanline()
         {
             dummyFetchTiles();
         }
+        else if (cycle >= 321 && cycle <= 336)
+        {
+            fetchTiles();
+        }
         else if (cycle == 338 || cycle == 340)
         {
             getNTByte();
@@ -651,7 +659,7 @@ void PPU::tick()
 {
     if (scanline >= 0 && scanline < post_render_start && cycle >= 1 && cycle <= 256)
         renderPixel();
-    if (scanline < post_render_start) 
+    if (scanline < post_render_start)
         processScanline();
     else if (scanline == vblank_start && cycle == 1)
     {

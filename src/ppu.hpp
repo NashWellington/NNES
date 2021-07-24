@@ -113,7 +113,6 @@ private:
         }
         void shift(uint num_bits)
         {
-            assert(bits > 0);
             reg <<= num_bits;
             bits -= num_bits;
         }
