@@ -547,7 +547,7 @@ void PPU::renderPixel()
     // Background pixel
     uint bg_px = 0;
     uint bg_bit = 0;
-    if (bgEnabled() && (reg_mask.left_background || cycle >= 8))
+    if (bgEnabled() && (reg_mask.left_background || cycle >= 9))
     {
         bg_bit = ((cycle-1) % 8) + fine_x_scroll;
         bg_px = (bg_pt_high.peekBit(bg_bit) << 1) | bg_pt_low.peekBit(bg_bit);
@@ -556,17 +556,17 @@ void PPU::renderPixel()
     // Sprite pixel
     uint spr_px = 0;
     uint spr_i = 0;
-    if (sprEnabled() && (reg_mask.left_sprites || cycle >= 8) && cycle >= 2 && scanline >= 1)
+    if (sprEnabled() && (reg_mask.left_sprites || cycle >= 9) && scanline >= 1)
     {
         for (spr_i = 0; spr_i < 8; spr_i++)
         {
             ubyte x = spr_x_pos[spr_i];
-            if ((cycle-2) >= x && (cycle-2) < x+8)
+            if ((cycle-1) >= x && (cycle-1) < x+8 && (cycle-1) < 255)
             {
                 uint spr_bit;
                 if (spr_at[spr_i] & 0x40) // Flip horizontally
-                    spr_bit = 7 - ((cycle-2) - x);
-                else spr_bit = (cycle-2) - x;
+                    spr_bit = 7 - ((cycle-1) - x);
+                else spr_bit = (cycle-1) - x;
                 spr_px = (spr_pt_high[spr_i].peekBit(spr_bit) << 1) | spr_pt_low[spr_i].peekBit(spr_bit);
             }
             if (spr_px != 0) break;
