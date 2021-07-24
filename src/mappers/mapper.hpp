@@ -53,9 +53,6 @@ public:
     }
 };
 
-// TODO uword& address for all ppuRead/Write
-// TODO add mirrorNametables to all ppuRead/Write
-
 /* NROM
 * http://wiki.nesdev.com/w/index.php/NROM
 * Games: 248
@@ -78,8 +75,6 @@ public:
     }
 private:
     /* Program RAM
-    * NOTE: only available in Family Basic mode
-    * // TODO what in the fuck is Family Basic mode
     * capacity: $0800 or $1000
     * window:   $2000
     */

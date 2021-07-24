@@ -77,7 +77,7 @@ std::optional<ubyte> Mapper000::cpuRead(uword address)
 
 bool Mapper000::cpuWrite(uword address, ubyte data)
 {
-    if (address < 0x6000) return false;
+    if (address < 0x4020) return false;
     else if (address >= 0x4020 && address < 0x6000)
     {
         #ifndef NDEBUG

@@ -17,7 +17,7 @@ Games listed here with no entries underneath them have no known compatibility is
 * Crash on opcode 32 at PC $8012
 
 ## Castlevania
-* Some sprites look weird
+* Sprites are being loaded from incorrect pattern tiles
 * Horizontal scrolling is clearly broken
 * Part of the "C" in "Castlevania" on the title screen is shifted 1 pixel left
 
