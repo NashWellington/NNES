@@ -102,7 +102,7 @@ ubyte PPU::read(uword address)
         case 0x2007: // PPU data
             data = ppu_data;
             ppu_data = nes.mem->ppuRead(ppu_addr);
-            if (ppu_addr >= 0x3F00) data = ppu_data;
+            if (ppu_addr%0x4000 >= 0x3F00) data = ppu_data;
             ppu_addr += reg_ctrl.incr ? 32 : 1;
             return data;
         case 0x4014: // OAM DMA
@@ -179,7 +179,6 @@ void PPU::write(uword address, ubyte data)
             }
             break;
         case 0x2007: // PPU data
-            // TODO buffer
             nes.mem->ppuWrite(ppu_addr, data);
             ppu_addr += reg_ctrl.incr ? 32 : 1;
             ppu_io_open_bus = data;
@@ -512,10 +511,6 @@ Pixel PPU::getColor(ubyte palette, ubyte pal_i)
         system_palette_i = nes.mem->ppuRead(0x3F00);
     }
     else system_palette_i = nes.mem->ppuRead(0x3F00 + 4*palette + pal_i);
-    #ifndef NDEBUG
-    if (system_palette_i >= 64)
-        std::cerr << "Warning: out of bounds palette index: " << system_palette_i << std::endl;
-    #endif
     system_palette_i %= 0x40;
     if (reg_mask.greyscale) system_palette_i &= 0x30;
     // TODO color emphasis

@@ -65,12 +65,13 @@ void Memory::cpuWrite(uword address, ubyte data)
 
 ubyte Memory::ppuRead(uword address)
 {
+    address %= 0x4000;
     std::optional<ubyte> data = nes.cart->ppuRead(address); // Pattern tables
     if (data) return data.value();
     else if (address < 0x2000)
     {
         #ifndef NDEBUG
-        std::cerr << "Warning: read from dummy CHR-ROM at " << hex(address) << std::endl;
+        std::cerr << "Warning: read from dummy CHR-RAM at " << hex(address) << std::endl;
         #endif
         return dummy_pattern_tables[address];
     }
@@ -93,11 +94,12 @@ ubyte Memory::ppuRead(uword address)
 
 void Memory::ppuWrite(uword address, ubyte data)
 {
+    address %= 0x4000;
     if (nes.cart->ppuWrite(address, data)) return;
     else if (address < 0x2000)
     {
         #ifndef NDEBUG
-        std::cerr << "Warning: write to dummy CHR-ROM at " << hex(address) << std::endl;
+        std::cerr << "Warning: write to dummy CHR-RAM at " << hex(address) << std::endl;
         #endif
         dummy_pattern_tables[address] = data;
     }

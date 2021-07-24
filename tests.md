@@ -124,15 +124,17 @@ None yet
 ## PPU
 * MAJOR: There seems to be either an issue with coarse horizontal scrolling or vertical nametable mirroring (probably the second)
 * MAJOR: Sprites in Casltevania are being loaded from the wrong tiles. This might be an issue with OAM DMA (is oam_addr not being set/updated right?)
-* PPU should output a solid color based on the value at PPU $3F00 (palette RAM index 0)
+* PPU should output a solid color based on the value at PPU $3F00 (palette RAM index 0) if rendering is off
 * translating palette values to pixel values may be doable with integer math, instead of pre-defined values (http://forums.nesdev.com/viewtopic.php?f=2&t=14338)
 * Non-palette PPU memory reads should have one-byte buffer
 
 ## APU
+* Noise channel not properly emulated
 
 ## Mapper
 * Cartridges don't save SRAM to file
 * Mapper 1 doesn't work correctly with 512K PRG-ROM and/or >8K PRG-RAM
+* Battery and NV-RAM can be simultaneously set in the header
 
 ## Input
 * Keyboard input seems to only take 1 key press at a time
@@ -150,7 +152,7 @@ None yet
 
 ## Mapper
 * Mapper 4 not compiled (intentional)
-* All holy mapperel tests fail w/ morse code error codes signifying that CHR-ROM reads/writes are the problem
+* Holy mapperel tests with RAM halt on black screen after reloading
 
 ## Input
 * allpads test
