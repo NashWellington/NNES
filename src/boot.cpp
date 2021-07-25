@@ -182,7 +182,7 @@ Header Boot::readHeader(std::ifstream& rom, std::string filename)
     return header;
 }
 
-std::shared_ptr<Mapper> Boot::getMapper(Header& header, std::ifstream& rom)
+std::shared_ptr<Mapper> Boot::getMapper(NES& nes, Header& header, std::ifstream& rom)
 {
     std::shared_ptr<Mapper> mapper;
     // TODO function pointer array?
@@ -201,11 +201,9 @@ std::shared_ptr<Mapper> Boot::getMapper(Header& header, std::ifstream& rom)
             mapper = std::make_shared<Mapper003>(header, rom);
             break;
 
-        /*
         case 4:
-            mapper = std::make_shared<Mapper004>(header, rom);
+            mapper = std::make_shared<Mapper004>(nes, header, rom);
             break;
-        */
         
         /* This isn't quite done yet :)
         case 5:

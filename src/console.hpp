@@ -14,6 +14,7 @@ class Memory;
 #include "apu.hpp"
 #include "mem.hpp"
 #include "peripheral.hpp"
+class Cartridge;
 #include "cart.hpp"
 #include "config.hpp"
 

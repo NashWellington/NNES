@@ -3,10 +3,11 @@
 #include "../globals.hpp"
 #include "../savestate.hpp"
 
+#include "../console.hpp"
+
 #include <algorithm> // Needed to .fill(0) PRG-RAM after resets
 
 // TODO check nes20db for min/max RAM/ROM sizes
-// TODO address mirroring w/ references
 
 class Mapper
 {
@@ -258,7 +259,7 @@ private:
 class Mapper004 : public Mapper
 {
 public:
-    Mapper004(Header& header, std::ifstream& rom);
+    Mapper004(NES& _nes, Header& header, std::ifstream& rom);
     std::optional<ubyte> cpuRead(uword address);
     bool cpuWrite(uword address, ubyte data);
     std::optional<ubyte> ppuRead(uword address);
@@ -269,6 +270,7 @@ public:
         if (chr_ram) std::for_each(chr_mem.begin(), chr_mem.end(), [](auto& a){ a.fill(0); });
     }
 private:
+    NES& nes;
 // Banks
     /* Program RAM
     * capacity: $0 or $2000 (0 or 8KiB)
@@ -291,9 +293,9 @@ private:
     /* Character ROM/RAM
     * capacity: $8,000 to $40,000 (32KiB to 256 Kib)
     * banks:     8* to 64*
-    * window:   $2000 x2 + $1000 x 4
+    * window:   $0800 x2 + $0400 x 4
     */
-    std::vector<std::array<ubyte,0x1000>> chr_mem = {};
+    std::vector<std::array<ubyte,0x0400>> chr_mem = {};
     bool chr_ram = false;
     std::array<uint,8> chr_bank = {};
 

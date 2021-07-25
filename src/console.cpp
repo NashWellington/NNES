@@ -29,7 +29,7 @@ void NES::insertROM(std::ifstream& rom, std::string filename)
     controllers[0] = std::make_shared<NESStandardController>();
     controllers[1] = std::make_shared<NESStandardController>();
     // TODO support for non-ROM carts
-    cart = std::make_unique<Cartridge>(header, rom);
+    cart = std::make_unique<Cartridge>(*this, header, rom);
     cpu->start();
     mem->start();
     // TODO have master cycle/frame vals depend on region

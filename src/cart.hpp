@@ -3,21 +3,23 @@
 #include "globals.hpp"
 #include "peripheral.hpp"
 #include "boot.hpp"
+
+class Mapper;
 #include "mappers/mapper.hpp"
 
 class Cartridge : public Peripheral
 {
 public:
-    Cartridge(Header& header, std::ifstream& rom);
-    std::optional<byte> cpuRead(uword address) { return mapper->cpuRead(address); }
-    bool cpuWrite(uword address, ubyte data) { return mapper->cpuWrite(address, data); }
+    Cartridge(NES& nes, Header& header, std::ifstream& rom);
+    std::optional<byte> cpuRead(uword address);
+    bool cpuWrite(uword address, ubyte data);
 
-    std::optional<byte> ppuRead(uword& address) { mapper->mirrorNametables(address); return mapper->ppuRead(address); }
-    bool ppuWrite(uword& address, ubyte data)   { mapper->mirrorNametables(address); return mapper->ppuWrite(address, data); }
+    std::optional<byte> ppuRead(uword& address);
+    bool ppuWrite(uword& address, ubyte data);
 
-    void processInputs() { return; }
-
-    void reset() { mapper->reset(); }
+    void processInputs();
+    
+    void reset();
 
 private:
     /* Not going to implement these until I get further along in savestate development

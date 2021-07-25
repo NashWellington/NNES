@@ -1,11 +1,8 @@
 #include "mapper.hpp"
 
-// Needed for generating IRQs
-#include "../mem.hpp"
-
 // TODO submappers
 
-Mapper004::Mapper004(Header& header, std::ifstream& rom)
+Mapper004::Mapper004(NES& _nes, Header& header, std::ifstream& rom) : nes(_nes)
 {
     mirroring = header.mirroring;
 
@@ -33,17 +30,17 @@ Mapper004::Mapper004(Header& header, std::ifstream& rom)
 
     if (header.chr_rom_size > 0)
     {
-        banks = header.chr_rom_size / 0x1000;
+        banks = header.chr_rom_size / 0x0400;
     }
     else
     {
-        banks = header.chr_ram_size / 0x1000;
+        banks = header.chr_ram_size / 0x0400;
         chr_ram = true;
     }
     chr_mem.resize(banks);
     for (uint i = 0; i < banks; i++)
     {
-        rom.read(reinterpret_cast<char*>(chr_mem[i].data()), 0x1000);
+        rom.read(reinterpret_cast<char*>(chr_mem[i].data()), 0x0400);
     }
 }
 
@@ -66,7 +63,8 @@ std::optional<ubyte> Mapper004::cpuRead(uword address)
         }
         else
         {
-            return {};
+            // TODO open bus behavior
+            return 0;
         }
     }
     else
@@ -93,7 +91,7 @@ bool Mapper004::cpuWrite(uword address, ubyte data)
         }
         else
         {
-            return false;
+            return true;
         }
     }
     else if (address >= 0x8000 && address < 0xA000)
@@ -110,30 +108,30 @@ bool Mapper004::cpuWrite(uword address, ubyte data)
                 case 0:
                     bank = (reg_bank_select.chr_bank_mode) ? 4 : 0;
                     data &= 0xFE;
-                    chr_bank[bank] = data;
-                    chr_bank[bank+1] = data+1;
+                    chr_bank[bank] = data % chr_mem.size();
+                    chr_bank[bank+1] = (data+1) % chr_mem.size();
                     break;
                 case 1:
                     bank = (reg_bank_select.chr_bank_mode) ? 6 : 2;
                     data &= 0xFE;
-                    chr_bank[bank] = data;
-                    chr_bank[bank+1] = data+1;
+                    chr_bank[bank] = data % chr_mem.size();
+                    chr_bank[bank+1] = (data+1) % chr_mem.size();
                     break;
                 case 2:
                     bank = (reg_bank_select.chr_bank_mode) ? 0 : 4;
-                    chr_bank[bank] = data;
+                    chr_bank[bank] = data % chr_mem.size();
                     break;
                 case 3:
                     bank = (reg_bank_select.chr_bank_mode) ? 1 : 5;
-                    chr_bank[bank] = data;
+                    chr_bank[bank] = data % chr_mem.size();
                     break;
                 case 4:
                     bank = (reg_bank_select.chr_bank_mode) ? 2 : 6;
-                    chr_bank[bank] = data;
+                    chr_bank[bank] = data % chr_mem.size();
                     break;
                 case 5:
                     bank = (reg_bank_select.chr_bank_mode) ? 3 : 7;
-                    chr_bank[bank] = data;
+                    chr_bank[bank] = data % chr_mem.size();
                     break;
                 case 6:
                     prg_bank[3] = prg_rom.size()-1; // Probably unnecessary
@@ -233,12 +231,12 @@ std::optional<ubyte> Mapper004::ppuRead(uword address)
                 // TODO differentiate between MMC3 rev A or rev B
                 if (irq_counter == 0 && irq_enable)
                 {
-                    bus.addInterrupt(InterruptType::IRQ);
+                    nes.mem->addInterrupt(InterruptType::IRQ);
                 }
             }
             a12 = 1;
         }
-        return chr_mem[chr_bank[address / 0x1000]][address % 0x1000];
+        return chr_mem[chr_bank[address / 0x0400]][address % 0x0400];
     }
 }
 
@@ -249,7 +247,7 @@ bool Mapper004::ppuWrite(uword address, ubyte data)
     {
         if (chr_ram)
         {
-            chr_mem[chr_bank[address / 0x1000]][address % 0x1000] = data;
+            chr_mem[chr_bank[address / 0x0400]][address % 0x0400] = data;
         }
         return true;
     }
