@@ -128,9 +128,8 @@ ubyte Memory::cpuReadReg(uword address)
     {
         return nes.ppu->read(address);
     }
-    else if ((address >= 0x4000 && address <= 0x4013) || address == 0x4015 || address == 0x4017)
+    else if ((address >= 0x4000 && address <= 0x4013) || address == 0x4015)
     {
-        // TODO is this correct?
         if (address == 0x4015) return nes.apu->read(address);
         else return cpu_open_bus;
     }
@@ -168,6 +167,7 @@ void Memory::cpuWriteReg(uword address, ubyte data)
     else if ((address >= 0x4000 && address <= 0x4013) || address == 0x4015 || address == 0x4017)
     {
         nes.apu->write(address, data);
+        cpu_open_bus = data;
     }
     else if (address == 0x4016) // Poll input
     {

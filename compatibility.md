@@ -69,7 +69,8 @@ Games listed here with no entries underneath them have no known compatibility is
 * Crashed on invalid opcode (only on one reset. Possibly due to randomized RAM values?)
 
 ## Metroid
-* All sprites are invisible (might have to do with PRG-RAM and iNES headers???)
+* Mapper 1 PRG-ROM 128K CHR-RAM 8K (should have PRG-RAM but I'm reading iNES headers wrong)
+* All sprites are invisible
 
 ## Mike Tyson's Punch-Out!!
 * Sprite weirdness
@@ -83,6 +84,7 @@ Games listed here with no entries underneath them have no known compatibility is
 ## Paperboy
 * Mapper 3, 32K PRG-ROM, 32K CHR-ROM
 * Controller input doesn't seem to work
+* Note: according to https://wiki.nesdev.com/w/index.php/Open_bus_behavior "Paperboy relies on the controller port being exactly $41 for a button press to be recognized"
 * Most of the background isn't rendered
 * General scrolling weirdness that we know and love
 
