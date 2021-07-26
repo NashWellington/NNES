@@ -10,9 +10,11 @@ Games listed here with no entries underneath them have no known compatibility is
 * Incorrect background color (green instead of black) for some tiles on the title screen
 
 ## Battletoads
-* 
+* All noise channel sfx sound wrong
+* Game freezes at the start of level 2
 
 ## Bionic Commando
+* Mapper 1, 256K PRG-ROM, 8K CHR-RAM
 * Crash on opcode 32 at PC $8012
 
 ## Castlevania
@@ -28,14 +30,14 @@ Games listed here with no entries underneath them have no known compatibility is
 * Triangle sound channel's pitch seems to be too low
 
 ## Double Dragon
+* Mapper 1, 128K PRG-ROM, 128K CHR-ROM
 * Fails to boot
-* Tries to write to CHR-ROM, then alternates between stack over/underflow
+* Tries to write to about 0x400 bytes of CHR-ROM, then alternates between stack over/underflow
 
 ## Double Dribble
 * "Double Dribble" sfx is muted (DMC is probably not emulated properly)
 
 ## Dragon Warrior
-* Exits on assertion (battery) == (prg_nv_ram > 0)
 
 ## DuckTales
 * Horizontal scrolling is broken
@@ -44,9 +46,8 @@ Games listed here with no entries underneath them have no known compatibility is
 * Horizontal scrolling weirdness
 
 ## Final Fantasy
-* Regression: exits on assertion ((battery) == (prg_nv_ram > 0))
-* Prior: crashes on opcode $22
-* Note: figure out difference between battery-backed and nv
+* Mapper 1, 256K PRG-ROM, 8K CHR-RAM
+* Crashes on opcode $12
 
 ## Ice Climber
 * Vertical scrolling is broken
@@ -54,7 +55,8 @@ Games listed here with no entries underneath them have no known compatibility is
 * CPU read from unmapped address $58A9 (intentional?)
 
 ## The Legend of Zelda
-* Fails on battery/nv-ram assertion
+* Missing/corrupted sprites for selecting save file, text, etc.
+* No sound when Link gets hit (probably DMC)
 
 ## Mega Man
 * Horizontal scrolling is broken.
@@ -67,18 +69,19 @@ Games listed here with no entries underneath them have no known compatibility is
 * Crashed on invalid opcode (only on one reset. Possibly due to randomized RAM values?)
 
 ## Metroid
-* All sprites are invisible
+* All sprites are invisible (might have to do with PRG-RAM and iNES headers???)
 
 ## Mike Tyson's Punch-Out!!
 * Sprite weirdness
 * Noise channel SFX weirdness
 
 ## Ms. Pac-Man
-* Fails to boot (only in the unlicensed version)
+* Fails to boot (only in the unlicensed version - mapper 0, 32K PRG-ROM, 8K CHR-ROM)
 
 ## Pac-Man
 
 ## Paperboy
+* Mapper 3, 32K PRG-ROM, 32K CHR-ROM
 * Controller input doesn't seem to work
 * Most of the background isn't rendered
 * General scrolling weirdness that we know and love
@@ -87,9 +90,11 @@ Games listed here with no entries underneath them have no known compatibility is
 * Artifacts at the bottom split screen
 
 ## Super Mario Bros.
+* Mapper 0, 32K PRG-ROM, 8K CHR-ROM
 * Black boxes around clouds (wrong palette index 0 color?)
 * Lots of weird visual artifacts
 * Horizontal scrolling is broken
+* Wrong tiles loaded on first screen (after starting game)
 
 ## Tennis
 

@@ -22,36 +22,14 @@ public:
     // inline void tick() {return;} // Probably won't use this
     virtual void reset() = 0;
     MirrorType mirroring = MirrorType::HORIZONTAL;
-    // Only call this from ppuRead/Write
-    void mirrorNametables(uword& address)
-    {
-        if (address >= 0x2000 && address < 0x3F00)
-        {
-            uint table_i = ((address - 0x2000) % 0x1000) / 0x0400;
-            uint tile_i = ((address - 0x2000) % 0x1000) % 0x0400;
-            switch (mirroring)
-            {
-                case MirrorType::HORIZONTAL:
-                    table_i /= 2;
-                    break;
-                case MirrorType::VERTICAL:
-                    table_i %= 2;
-                    break;
-                case MirrorType::SINGLE_SCREEN_LOWER:
-                    table_i = 0;
-                    break;
-                case MirrorType::SINGLE_SCREEN_UPPER:
-                    table_i = 1;
-                    break;
-                case MirrorType::OTHER:
-                    std::cerr << "Error: Unsupported mirroring mode" << std::endl;
-                    throw std::exception();
-                default: // currently just 4-screen
-                    break;
-            }
-            address = 0x2000 + 0x0400 * table_i + tile_i;
-        }
-    }
+
+    void mirrorNametables(uword& address);
+// protected:
+//     virtual void saveToFile(uword address, ubyte data) = 0;
+
+//     // Should only be called once per boot
+//     // TODO also called at reset?
+//     virtual void loadFromFile(std::string name) = 0;
 };
 
 /* NROM
@@ -108,6 +86,7 @@ class Mapper001 : public Mapper
 {
 public:
     Mapper001(Header& header, std::ifstream& rom);
+    ~Mapper001();
     std::optional<ubyte> cpuRead(uword address);
     bool cpuWrite(uword address, ubyte data);
     std::optional<ubyte> ppuRead(uword address);
@@ -119,6 +98,11 @@ public:
         if (chr_ram) std::for_each(chr_mem.begin(), chr_mem.end(), [](auto& a){ a.fill(0); });
     }
 private:
+    void saveToFile(uword address, ubyte data);
+    void loadFromFile(std::string name);
+    std::string save_name = "";
+    std::fstream save_file;
+
     uint submapper = 0;
 
 // Registers
@@ -154,12 +138,6 @@ private:
     std::vector<std::array<ubyte,0x2000>> prg_ram = {};
     bool prg_ram_enabled = false;
     int nv_ram_i = -1; // Index of the first PRG-RAM bank that's battery-backed
-
-    /* Determines which PRG-RAM bank is non-volatile
-    * -1 - no NV-RAM
-    * 0,1 - bank 0 or 1
-    */
-    int nv = -1;
 
     /* Program ROM
     * capacity: $8,000 to $80,000 (32-512 KiB)

@@ -113,8 +113,6 @@ Header Boot::readHeader(std::ifstream& rom, std::string filename)
         ubyte prg_nv_ram_ctrl = (header_data[10] & 0xF0) >> 4;
         if (prg_nv_ram_ctrl) header.prg_nv_ram_size = 64 << prg_nv_ram_ctrl;
     }
-    // This must be true (for iNES compatibility)
-    assert((header.battery) == (header.prg_nv_ram_size > 0));
 
     // Detect CHR-RAM size
     if (header.type == HeaderType::INES)

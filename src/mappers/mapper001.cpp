@@ -2,7 +2,6 @@
 
 // TODO support for SZROM
 // TODO support submapper 5
-// TODO battery-backed save
 
 Mapper001::Mapper001(Header& header, std::ifstream& rom)
 {
@@ -16,7 +15,8 @@ Mapper001::Mapper001(Header& header, std::ifstream& rom)
 
     if (header.prg_nv_ram_size == 0 && header.prg_ram_size == 0 && header.type == HeaderType::INES)
     {
-        header.prg_ram_size = 0x8000;
+        if (header.battery) header.prg_nv_ram_size = 0x8000;
+        else header.prg_ram_size = 0x8000;
     }
 
     uint banks = 0;
@@ -29,12 +29,19 @@ Mapper001::Mapper001(Header& header, std::ifstream& rom)
     if (header.prg_nv_ram_size > 0)
     {
         assert(prg_ram.size() <= 1);
-        assert(header.battery);
         nv_ram_i = banks;
         banks += header.prg_nv_ram_size / 0x2000;
         prg_ram_enabled = true;
     }
     prg_ram.resize(banks);
+
+    if (header.battery)
+    {
+        assert(header.prg_nv_ram_size > 0);
+        save_name = "./saves/" + header.name + ".sav";
+        loadFromFile(save_name);
+        save_file.open(save_name, std::fstream::in | std::fstream::out | std::ios::binary);
+    }
 
     banks = header.prg_rom_size / 0x4000;
     prg_rom.resize(banks);
@@ -61,6 +68,51 @@ Mapper001::Mapper001(Header& header, std::ifstream& rom)
     assert(prg_rom.size() >= 2 && prg_rom.size() <= 32);
     assert(prg_ram.size() <= 4 && prg_ram.size() != 3);
     assert(chr_mem.size() >= 2 && chr_mem.size() <= 32);
+}
+
+Mapper001::~Mapper001()
+{
+    save_file.close();
+}
+
+void Mapper001::saveToFile(uword address, ubyte data)
+{
+    save_file.seekp(address);
+    save_file << static_cast<char>(data);
+}
+
+void Mapper001::loadFromFile(std::string name)
+{
+    std::fstream load_file;
+    load_file.open(name, std::fstream::in | std::fstream::out | std::ios::binary);
+    if (!load_file)
+    {
+        #ifndef NDEBUG
+        std::cerr << "Warning: " << name << " not found" << std::endl;
+        #endif
+        load_file.open(name, std::fstream::out | std::fstream::trunc | std::ios::binary);
+        if (load_file)
+        {
+            // Zero out enough bytes
+            for (uint i = nv_ram_i; i < prg_ram.size(); i++)
+            {
+                load_file.write(reinterpret_cast<char*>(prg_ram[i].data()), 0x2000);
+            }
+        }
+        else
+        {
+            std::cerr << "Error: save file could not be opened" << std::endl;
+            throw std::exception();
+        }
+    }
+    else
+    {
+        for (uint i = nv_ram_i; i < prg_ram.size(); i++)
+        {
+            load_file.read(reinterpret_cast<char*>(prg_ram[i].data()), 0x2000);
+        }
+    }
+    load_file.close();
 }
 
 std::optional<ubyte> Mapper001::cpuRead(uword address)
@@ -140,7 +192,16 @@ bool Mapper001::cpuWrite(uword address, ubyte data)
             return 0; // TODO open bus?
         }
         else if (!prg_ram_enabled) return true;
-        else { prg_ram[prg_ram_bank % prg_ram.size()][address-0x6000] = data; return true; }
+        else 
+        {
+            uint bank = prg_ram_bank % prg_ram.size();
+            prg_ram[bank][address-0x6000] = data;
+            if (bank >= static_cast<uint>(nv_ram_i)) 
+            {
+                saveToFile(0x2000 * (bank - nv_ram_i) + (address-0x6000), data);
+            }
+            return true;
+        }
     }
     else 
     {

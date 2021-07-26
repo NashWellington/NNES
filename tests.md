@@ -132,7 +132,6 @@ None yet
 * Noise channel not properly emulated
 
 ## Mapper
-* Cartridges don't save SRAM to file
 * Mapper 1 doesn't work correctly with 512K PRG-ROM and/or >8K PRG-RAM
 * Mapper 4's IRQs don't work properly
 * Some mapper 4 tests have corrupted nametable or CHR data
