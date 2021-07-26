@@ -50,6 +50,9 @@ private:
     inline void dummyFetchTiles(); // Unused tile fetch
     inline bool sprEnabled();
     inline bool  bgEnabled();
+    inline bool renderEnabled();
+    inline void incrHoriV();
+    inline void incrVertV();
     inline bool checkRange(ubyte y);
     inline void incrCycle();
     inline void pushPixel(Pixel p);

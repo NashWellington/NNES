@@ -101,9 +101,15 @@ ubyte PPU::read(uword address)
             return ppu_io_open_bus;
         case 0x2007: // PPU data
             data = ppu_data;
-            ppu_data = nes.mem->ppuRead(ppu_addr);
-            if (ppu_addr%0x4000 >= 0x3F00) data = ppu_data;
-            ppu_addr += reg_ctrl.incr ? 32 : 1;
+            ppu_data = nes.mem->ppuRead(vram_addr.addr);
+            if (vram_addr.addr%0x4000 >= 0x3F00) data = ppu_data;
+            if (renderEnabled() && scanline < post_render_start)
+            {
+                incrHoriV();
+                incrVertV();
+            }
+            // else reg_ctrl.incr ? incrVertV() : incrHoriV();
+            else vram_addr.addr += reg_ctrl.incr ? 32 : 1;
             return data;
         case 0x4014: // OAM DMA
             return ppu_io_open_bus;
@@ -172,15 +178,22 @@ void PPU::write(uword address, ubyte data)
         case 0x2006: // PPU address
             if (!reset_signal)
             {
-                ppu_addr &= 0x00FF << (write_toggle ? 8 : 0);
-                ppu_addr |= data << (write_toggle ? 0 : 8);
+                tmp_vram_addr.addr &= 0x00FF << (write_toggle ? 8 : 0);
+                tmp_vram_addr.addr |= data << (write_toggle ? 0 : 8);
+                if (write_toggle) vram_addr.addr = tmp_vram_addr.addr;
                 write_toggle = !write_toggle;
                 ppu_io_open_bus = data;
             }
             break;
         case 0x2007: // PPU data
-            nes.mem->ppuWrite(ppu_addr, data);
-            ppu_addr += reg_ctrl.incr ? 32 : 1;
+            nes.mem->ppuWrite(vram_addr.addr, data);
+            if (renderEnabled() && scanline < post_render_start)
+            {
+                incrHoriV();
+                incrVertV();
+            }
+            // else reg_ctrl.incr ? incrVertV() : incrHoriV();
+            else vram_addr.addr += reg_ctrl.incr ? 32 : 1;
             ppu_io_open_bus = data;
             break;
         case 0x4014: // OAM DMA
@@ -237,6 +250,43 @@ bool PPU::sprEnabled()
 bool PPU::bgEnabled()
 {
     return !reg_status.vblank && reg_mask.show_background;
+}
+
+bool PPU::renderEnabled()
+{
+    return reg_mask.show_sprites || reg_mask.show_background;
+}
+
+inline void PPU::incrHoriV()
+{
+    if (vram_addr.coarse_x == 31) 
+    {
+        vram_addr.coarse_x = 0;
+        vram_addr.nametable ^= 1;
+    }
+    else vram_addr.coarse_x++;
+}
+
+inline void PPU::incrVertV()
+{
+    if (vram_addr.fine_y < 7) // incr fine y
+    {
+        vram_addr.fine_y++;
+    }
+    else // overflow fine y to coarse y
+    {
+        vram_addr.fine_y = 0;
+        if (vram_addr.coarse_y == 29)
+        {
+            vram_addr.coarse_y = 0;
+            vram_addr.nametable ^= 2;
+        }
+        else if (vram_addr.coarse_y == 31)
+        {
+            vram_addr.coarse_y = 0;
+        }
+        else vram_addr.coarse_y++;
+    }
 }
 
 bool PPU::checkRange(ubyte y)
@@ -345,7 +395,7 @@ void PPU::fetchSprites()
         // Read garbage NT byte
         // Read y-coord from secondary OAM (unnecessary?)
         case 1:
-            if (sprEnabled()) ppu_data = nes.mem->ppuRead(vram_addr.addr);
+            if (sprEnabled()) ppu_vram_open_bus = nes.mem->ppuRead(vram_addr.addr);
             oam_data = secondary_oam[spr_i].y;
             tmp_spr_y = scanline - oam_data; 
             break;
@@ -359,7 +409,7 @@ void PPU::fetchSprites()
         // Read garbage NT byte
         // Read sprite attribute
         case 3:
-            if (sprEnabled()) ppu_data = nes.mem->ppuRead(vram_addr.addr);
+            if (sprEnabled()) ppu_vram_open_bus = nes.mem->ppuRead(vram_addr.addr);
             oam_data = secondary_oam[spr_i].attributes;
             spr_at[spr_i] = oam_data;
             // Flip vertically
@@ -384,14 +434,14 @@ void PPU::fetchSprites()
         // Read sprite pattern table byte (low)
         // Read sprite x-pos
         case 5:
-            if (sprEnabled()) ppu_data = getPTByte(reg_ctrl.spr_size ? 0 : reg_ctrl.spr_table, tmp_spr_tile_i, 0, tmp_spr_y);
+            if (sprEnabled()) ppu_vram_open_bus = getPTByte(reg_ctrl.spr_size ? 0 : reg_ctrl.spr_table, tmp_spr_tile_i, 0, tmp_spr_y);
             oam_data = secondary_oam[spr_i].x;
             spr_x_pos[spr_i] = oam_data;
             break;
 
         // Read sprite x-pos
         case 6:
-            spr_pt_low[spr_i].load(ppu_data);
+            spr_pt_low[spr_i].load(ppu_vram_open_bus);
             oam_data = secondary_oam[spr_i].x;
             spr_x_pos[spr_i] = oam_data;
             break;
@@ -399,14 +449,14 @@ void PPU::fetchSprites()
         // Read sprite pattern table byte (high)
         // Read sprite x-pos
         case 7:
-            if (sprEnabled()) ppu_data = getPTByte(reg_ctrl.spr_size ? 0 : reg_ctrl.spr_table, tmp_spr_tile_i, 1, tmp_spr_y);
+            if (sprEnabled()) ppu_vram_open_bus = getPTByte(reg_ctrl.spr_size ? 0 : reg_ctrl.spr_table, tmp_spr_tile_i, 1, tmp_spr_y);
             oam_data = secondary_oam[spr_i].x;
             spr_x_pos[spr_i] = oam_data;
             break;
 
         // Read sprite x-pos
         case 0:
-            spr_pt_high[spr_i].load(ppu_data);
+            if (renderEnabled()) spr_pt_high[spr_i].load(ppu_vram_open_bus);
             oam_data = secondary_oam[spr_i].x;
             spr_x_pos[spr_i] = oam_data;
             break;
@@ -419,39 +469,37 @@ void PPU::fetchTiles()
     {
         // NT fetch
         case 1:
-            if (bgEnabled()) ppu_data = getNTByte();
+            if (bgEnabled()) ppu_vram_open_bus = getNTByte();
             break;
         case 2:
-            bg_nt_latch = ppu_data;
+            bg_nt_latch = ppu_vram_open_bus;
             break;
         // AT fetch
         case 3:
-            if (bgEnabled()) ppu_data = getAttribute();
+            if (bgEnabled()) ppu_vram_open_bus = getAttribute();
             break;
         case 4:
-            bg_at_latch = ppu_data;
+            bg_at_latch = ppu_vram_open_bus;
             break;
         // PT fetch low
         case 5:
-            if (bgEnabled()) ppu_data = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 0, vram_addr.fine_y);
+            if (bgEnabled()) ppu_vram_open_bus = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 0, vram_addr.fine_y);
             break;
         case 6:
-            bg_pt_low_latch = ppu_data;
+            bg_pt_low_latch = ppu_vram_open_bus;
             break;
         // PT fetch high
         case 7:
-            if (bgEnabled()) ppu_data = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 1, vram_addr.fine_y);
+            if (bgEnabled()) ppu_vram_open_bus = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 1, vram_addr.fine_y);
             break;
         case 0:
-            bg_at.load(bg_at_latch);
-            bg_pt_low.load(bg_pt_low_latch);
-            bg_pt_high.load(ppu_data);
-            if (vram_addr.coarse_x == 31) 
+            if (renderEnabled())
             {
-                vram_addr.coarse_x = 0;
-                vram_addr.nametable ^= 1;
+                bg_at.load(bg_at_latch);
+                bg_pt_low.load(bg_pt_low_latch);
+                bg_pt_high.load(ppu_vram_open_bus);
+                incrHoriV();
             }
-            else vram_addr.coarse_x++;
             break;
     }
 }
@@ -462,40 +510,23 @@ void PPU::dummyFetchTiles()
     {
         // NT fetch
         case 1:
-            if (bgEnabled()) ppu_data = getNTByte();
-            bg_nt_latch = ppu_data;
+            if (bgEnabled()) ppu_vram_open_bus = getNTByte();
+            bg_nt_latch = ppu_vram_open_bus;
             break;
         // AT fetch
         case 3:
-            if (bgEnabled()) ppu_data = getAttribute();
+            if (bgEnabled()) ppu_vram_open_bus = getAttribute();
             break;
         // PT fetch low
         case 5:
-            if (bgEnabled()) ppu_data = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 0, vram_addr.fine_y);
+            if (bgEnabled()) ppu_vram_open_bus = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 0, vram_addr.fine_y);
             break;
         // PT fetch high
         case 7:
-            if (bgEnabled()) ppu_data = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 1, vram_addr.fine_y);
+            if (bgEnabled()) ppu_vram_open_bus = getPTByte(reg_ctrl.bg_table, bg_nt_latch, 1, vram_addr.fine_y);
             break;
         case 0:
-            if (vram_addr.fine_y < 7) // incr fine y
-            {
-                vram_addr.fine_y++;
-            }
-            else // overflow fine y to coarse y
-            {
-                vram_addr.fine_y = 0;
-                if (vram_addr.coarse_y == 29)
-                {
-                    vram_addr.coarse_y = 0;
-                    vram_addr.nametable ^= 2;
-                }
-                else if (vram_addr.coarse_y == 31)
-                {
-                    vram_addr.coarse_y = 0;
-                }
-                else vram_addr.coarse_y++;
-            }
+            if (renderEnabled()) incrVertV();
             break;
     }
 }
@@ -598,7 +629,7 @@ void PPU::processScanline()
         if (odd_frame) reset_signal = false;
     }
 
-    if (scanline == -1 && cycle >= 280 && cycle <= 304)
+    if (scanline == -1 && cycle >= 280 && cycle <= 304 && renderEnabled())
     {
         // vert (v) = vert (t)
         vram_addr.addr = tmp_vram_addr.addr;
@@ -643,7 +674,7 @@ void PPU::processScanline()
         }
     }
 
-    if (cycle == 257)
+    if (cycle == 257 && renderEnabled())
     {
         vram_addr.coarse_x = tmp_vram_addr.coarse_x;
         vram_addr.nametable = tmp_vram_addr.nametable;
