@@ -41,6 +41,10 @@ Mapper005::Mapper005(Header& header, std::ifstream& rom)
     {
         rom.read(reinterpret_cast<char*>(chr_mem[i].data()), 0x0400);
     }
+
+    #ifndef NDEBUG
+    header.print(std::cerr);
+    #endif
 }
 
 std::optional<ubyte> Mapper005::cpuRead(uword address)

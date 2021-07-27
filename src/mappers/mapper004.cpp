@@ -42,6 +42,10 @@ Mapper004::Mapper004(NES& _nes, Header& header, std::ifstream& rom) : nes(_nes)
     {
         rom.read(reinterpret_cast<char*>(chr_mem[i].data()), 0x0400);
     }
+
+    #ifndef NDEBUG
+    header.print(std::cerr);
+    #endif
 }
 
 std::optional<ubyte> Mapper004::cpuRead(uword address)

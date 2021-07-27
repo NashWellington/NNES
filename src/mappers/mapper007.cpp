@@ -38,6 +38,10 @@ Mapper007::Mapper007(Header& header, std::ifstream& rom)
     }
     chr_mem.resize(size);
     rom.read(reinterpret_cast<char*>(chr_mem.data()), size);
+
+    #ifndef NDEBUG
+    header.print(std::cerr);
+    #endif
 }
 
 std::optional<ubyte> Mapper007::cpuRead(uword address)

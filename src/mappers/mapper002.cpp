@@ -20,6 +20,10 @@ Mapper002::Mapper002(Header& header, std::ifstream& rom)
 
     rom.read(reinterpret_cast<char*>(chr_mem.data()), 0x2000);
     if (header.chr_ram_size > 0) chr_ram = true;
+
+    #ifndef NDEBUG
+    header.print(std::cerr);
+    #endif
 }
 
 std::optional<ubyte> Mapper002::cpuRead(uword address)

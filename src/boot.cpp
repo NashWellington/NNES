@@ -163,20 +163,6 @@ Header Boot::readHeader(std::ifstream& rom, std::string filename)
 
     // TODO default expansion device
 
-    // Log cartridge memory bank sizes
-    #ifndef NDEBUG
-    std::cerr << "Mapper: " << header.mapper << std::endl;
-    std::cerr << "Submapper: " << header.submapper << std::endl;
-    std::cerr << "Battery? " << header.battery << std::endl;
-    std::cerr << "PRG-ROM size: " << header.prg_rom_size << std::endl;
-    std::cerr << "PRG-RAM size: " << header.prg_ram_size << std::endl;
-    std::cerr << "PRG-NV-RAM size: " << header.prg_nv_ram_size << std::endl;
-    std::cerr << "CHR-ROM size: " << header.chr_rom_size << std::endl;
-    std::cerr << "CHR-RAM size: " << header.chr_ram_size << std::endl;
-    std::cerr << "CHR-NV-RAM size: " << header.chr_nv_ram_size << std::endl;
-    std::cerr << "Misc ROMs: " << header.misc_rom_num << std::endl;
-    #endif
-
     return header;
 }
 

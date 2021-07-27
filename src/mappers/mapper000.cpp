@@ -36,6 +36,7 @@ Mapper000::Mapper000(Header& header, std::ifstream& rom)
     rom.read(reinterpret_cast<char*>(chr_mem.data()), chr_size);
     
     #ifndef NDEBUG
+    header.print(std::cerr);
     if (chr_size != 0x2000)
         std::cerr << "Warning: CHR has a weird size" << std::endl;
     #endif

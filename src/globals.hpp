@@ -115,6 +115,20 @@ struct Header
     uint64_t chr_ram_size = 0;
     uint64_t chr_nv_ram_size = 0;
     uint misc_rom_num = 0; // Number of misc ROMs present
+
+    void print(std::ostream& stream)
+    {
+        stream << "Mapper: " << mapper << std::endl;
+        stream << "Submapper: " << submapper << std::endl;
+        stream << "Battery? " << battery << std::endl;
+        stream << "PRG-ROM size: " << prg_rom_size << std::endl;
+        stream << "PRG-RAM size: " << prg_ram_size << std::endl;
+        stream << "PRG-NV-RAM size: " << prg_nv_ram_size << std::endl;
+        stream << "CHR-ROM size: " << chr_rom_size << std::endl;
+        stream << "CHR-RAM size: " << chr_ram_size << std::endl;
+        stream << "CHR-NV-RAM size: " << chr_nv_ram_size << std::endl;
+        stream << "Misc ROMs: " << misc_rom_num << std::endl;
+    }
 };
 
 struct Pixel

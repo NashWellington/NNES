@@ -65,6 +65,10 @@ Mapper001::Mapper001(Header& header, std::ifstream& rom)
         rom.read(reinterpret_cast<char*>(chr_mem[i].data()), 0x1000);
     }
 
+    #ifndef NDEBUG
+    header.print(std::cerr);
+    #endif
+
     assert(prg_rom.size() >= 2 && prg_rom.size() <= 32);
     assert(prg_ram.size() <= 4 && prg_ram.size() != 3);
     assert(chr_mem.size() >= 2 && chr_mem.size() <= 32);

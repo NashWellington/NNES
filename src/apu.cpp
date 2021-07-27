@@ -515,9 +515,6 @@ void APU::write(uword address, ubyte data)
             break;
 
         default:
-            #ifndef NDEBUG
-            std::cerr << "Warning: unsupported CPU write to " << hex(address) << std::endl;
-            #endif
             break;
     }
 }
