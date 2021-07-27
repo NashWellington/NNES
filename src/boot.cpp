@@ -43,7 +43,7 @@ Header Boot::readHeader(std::ifstream& rom, std::string filename)
 
     // Detect mirroring type
     // Note: setting to horizontal here could also mean mapper-controlled
-    header.mirroring = (header_data[6] & 0x01) ? MirrorType::HORIZONTAL : MirrorType::VERTICAL;
+    header.mirroring = (header_data[6] & 0x01) ? MirrorType::VERTICAL : MirrorType::HORIZONTAL;
 
     // Detect battery
     header.battery = (header_data[6] & 0x02) >> 1;

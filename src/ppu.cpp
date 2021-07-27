@@ -181,7 +181,11 @@ void PPU::write(uword address, ubyte data)
             {
                 tmp_vram_addr.addr &= 0x00FF << (write_toggle ? 8 : 0);
                 tmp_vram_addr.addr |= data << (write_toggle ? 0 : 8);
-                if (write_toggle) vram_addr.addr = tmp_vram_addr.addr;
+                if (write_toggle) 
+                {
+                    tmp_vram_addr.addr &= 0x7FFF;
+                    vram_addr.addr = tmp_vram_addr.addr;
+                }
                 write_toggle = !write_toggle;
                 ppu_io_open_bus = data;
             }

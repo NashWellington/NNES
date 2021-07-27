@@ -48,7 +48,7 @@ At this point, CPU tests that fail depend on:
 | Palette Test | rainwarrior | 0/1 | Same as color test |
 | PPU Open Bus Test | blargg | 0/1 | Fails #3 (Note: I probably won't be fixing this for a while. It seems to test obscure VRAM decay behavior) |
 | PPU Read Buffer Test | bisqwit | 0/1 | Doesn't display any results. Attempts to write three times to pattern tables despite not having CHR-RAM. Forcing CHR-RAM doesn't seem to help. |
-| Scanline Test | Quietust | 0/3 | |
+| Scanline Test | Quietust | Pass | |
 | Sprite DMA and DMC DMA Tests | blargg | 0/2 | Flashes some text for a few frames and displays a black screen |
 | Sprite Hit Tests | blargg | Pass | |
 | Sprite Overflow Tests | blargg | 2/5 | <l><li>Test 1 passes</li> <li>Test 2 fails #9</li> <li>Test 3 fails #12</li> <li>Test 4 fails #5</li> <li>Test 5 passes</li></l> |
@@ -102,15 +102,15 @@ At this point, CPU tests that fail depend on:
 
 | Test | Author | Status | Details |
 | :--- | :----: | :----: | :------ |
-| Allpads | tepples | 1/? | Regression: black screen (but some visual feedback on button presses) |
+| Allpads | tepples | ? | Controller 2 not yet tested |
 | Ctrl Test | rainwarrior | | ROM unavailable |
-| DMA Sync Test 2 | Rahsennor | | DMC not yet emulated |
+| DMA Sync Test 2 | Rahsennor | | DMC not yet emulated correctly |
 | Input data line diagnostic | lidnariq | | No pass/fail because this isn't a test. I might just remove this |
 | Joypad Read Test 3 | blargg | Pass | |
 | Mouse Test | rainwarrior | | ROM unavailable |
 | Mic Test | rainwarrior | | ROM unavailable |
 | Paddle Test 3 (Arkanoid Controller) | 3gengames | | Arkanoid controller not yet emulated |
-| Telling LYs? (per-scanline input change test) | tepples | | ROM unavailable|
+| Telling LYs? (per-scanline input change test) | tepples | | ROM unavailable |
 | Zap Ruder (zapper test) | tepples | | Zapper not yet emulated |
 
 ## Misc Tests
@@ -122,19 +122,18 @@ None yet
 ## CPU
 
 ## PPU
-* MAJOR: There seems to be either an issue with coarse horizontal scrolling or vertical nametable mirroring (probably the second)
-* PPU should output a solid color based on the value at PPU $3F00 (palette RAM index 0) if rendering is off
 * translating palette values to pixel values may be doable with integer math, instead of pre-defined values (http://forums.nesdev.com/viewtopic.php?f=2&t=14338)
 * Non-palette PPU memory reads should have one-byte buffer
 
 ## APU
-* Noise channel not properly emulated
+* MAJOR: Noise channel not properly emulated
+* MAJOR: DMC channel not properly emulated
+* MAJOR: Crackles and pops in audio (note: this may be because I'm not letting SDL resample?)
 
 ## Mapper
 * Mapper 1 doesn't work correctly with 512K PRG-ROM and/or >8K PRG-RAM
 * Mapper 4's IRQs don't work properly
 * Some mapper 4 tests have corrupted nametable or CHR data
-* Battery and NV-RAM can be simultaneously set in the header
 
 ## Input
 * Keyboard input seems to only take 1 key press at a time
@@ -153,6 +152,5 @@ None yet
 ## Mapper
 
 ## Input
-* allpads test
 
 ## Misc
