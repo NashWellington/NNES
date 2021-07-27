@@ -18,7 +18,6 @@ Games listed here with no entries underneath them have no known compatibility is
 * Crash on opcode 32 at PC $8012
 
 ## Castlevania
-* Sprites are being loaded from incorrect pattern tiles
 * Horizontal scrolling is clearly broken
 * Whip sfx incorrect
 
@@ -55,7 +54,7 @@ Games listed here with no entries underneath them have no known compatibility is
 * CPU read from unmapped address $58A9 (intentional?)
 
 ## The Legend of Zelda
-* Missing/corrupted sprites for selecting save file, text, etc.
+* Missing/corrupted sprites for selecting text, etc.
 * No sound when Link gets hit (probably DMC)
 
 ## Mega Man

@@ -51,7 +51,7 @@ At this point, CPU tests that fail depend on:
 | Scanline Test | Quietust | 0/3 | |
 | Sprite DMA and DMC DMA Tests | blargg | 0/2 | Flashes some text for a few frames and displays a black screen |
 | Sprite Hit Tests | blargg | Pass | |
-| Sprite Overflow Tests | blargg | 1/5 | <l><li>Test 1 passes</li> <li>Test 2 fails #9</li> <li>Test 3 fails #12</li> <li>Test 4 fails #5</li> <li>Test 5 #4</li></l> |
+| Sprite Overflow Tests | blargg | 2/5 | <l><li>Test 1 passes</li> <li>Test 2 fails #9</li> <li>Test 3 fails #12</li> <li>Test 4 fails #5</li> <li>Test 5 passes</li></l> |
 | VBL NMI Tests | blargg | 0/10 | <l><li>Test 1 fails #7 (vbl period too short w/ bg off)</li> <li>Test 4 fails #5</li> <li>Tests 9 and 10 fail #2 (clock skipped too soon relative to enabling bg)</li> <li>All other tests have complex error messages that wouldn't make sense to type out in this table</li> <li>Note: it seems vblank flags are being set 2-3 frames early (relative to the CPU's clock)</li></l> |
 
 ## APU Tests
@@ -123,7 +123,6 @@ None yet
 
 ## PPU
 * MAJOR: There seems to be either an issue with coarse horizontal scrolling or vertical nametable mirroring (probably the second)
-* MAJOR: Sprites in Casltevania are being loaded from the wrong tiles. This might be an issue with OAM DMA (is oam_addr not being set/updated right?)
 * PPU should output a solid color based on the value at PPU $3F00 (palette RAM index 0) if rendering is off
 * translating palette values to pixel values may be doable with integer math, instead of pre-defined values (http://forums.nesdev.com/viewtopic.php?f=2&t=14338)
 * Non-palette PPU memory reads should have one-byte buffer

@@ -29,6 +29,8 @@ public:
     ubyte read(uword address);
     void write(uword address, ubyte data);
 
+    bool oamWrite(bool odd_cycle);
+
     enum Revision
     {
         REV_2C02, REV_2C03, REV_2C04,
@@ -173,6 +175,7 @@ private:
     // Temporary values for holding sprite data while doing fetches
     ubyte tmp_spr_y = 0; // y-coord within pattern tile
     ubyte tmp_spr_tile_i = 0;
+    uint tmp_spr_pt_i = 0; // Determines pattern table used for 8x16 sprites
 
 // Register data
 // For more info: https://wiki.nesdev.com/w/index.php/PPU_registers
@@ -315,8 +318,6 @@ private:
         ubyte& x            = data[3]; // left pixels
     };
 
-public:
-
     // Holds 8 4-byte sprites for the next scanline
     std::array<Sprite,8> secondary_oam = {};
     std::array<Sprite,64> primary_oam = {}; // Contains 64 4-byte sprites
@@ -342,4 +343,7 @@ public:
     * On boot & reset: unspecified
     */
     uword dma_addr = 0;
+
+public:
+    uint oam_dma_cycles_left = 0;
 };

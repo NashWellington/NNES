@@ -63,9 +63,6 @@ public:
     ubyte cpuReadReg(uword address);
     void cpuWriteReg(uword address, ubyte data);
 
-    // Write to OAM (if necessary) and decrement cpu_suspend_cycles
-    bool oamWrite(bool odd_cycle);
-
     void save(Savestate& savestate);
     void load(Savestate& savestate);
 
@@ -153,7 +150,4 @@ private:
 
 public:
     ubyte cpu_open_bus = 0;
-
-// Other
-    int cpu_suspend_cycles = 0; // Used to stall CPU during OAM DMA
 };

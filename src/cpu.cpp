@@ -92,7 +92,7 @@ void CPU::tick()
 {
     if (cycle == 0)
     {
-        if (!nes.mem->oamWrite(odd_cycle)) 
+        if (!nes.ppu->oamWrite(odd_cycle)) 
         {
             step();
         }

@@ -63,6 +63,7 @@ void PPU::reset()
     cycle = 0;
     scanline = -1;
     reset_signal = true;
+    oam_dma_cycles_left = 0;
 }
 
 ubyte PPU::read(uword address)
@@ -200,12 +201,37 @@ void PPU::write(uword address, ubyte data)
             dma_addr = data << 8;
             ppu_io_open_bus = data;
             // Be careful of this if implementing multithreading in the scheduler
-            nes.mem->cpu_suspend_cycles = 514;
+            oam_dma_cycles_left = 514;
             break;
         default:
             // Should never be here b/c of assertion
             break;
     }
+}
+
+bool PPU::oamWrite(bool odd_cycle)
+{
+    assert(oam_dma_cycles_left <= 514);
+    if (oam_dma_cycles_left == 0) return false;
+    if (oam_dma_cycles_left > 512)
+    {
+        if (oam_dma_cycles_left == 514 && !odd_cycle) oam_dma_cycles_left -=1; // One less idle cycle if even
+    }
+    else
+    {
+        if (!(oam_dma_cycles_left % 2))
+        {
+            oam_data = nes.mem->cpuRead(dma_addr);
+            dma_addr++;
+        }
+        else
+        {
+            primary_oam[oam_addr/4].data[oam_addr%4] = oam_data;
+            oam_addr++;
+        }
+    }
+    oam_dma_cycles_left--;
+    return true;
 }
 
 void PPU::sendFrame()
@@ -309,10 +335,7 @@ void PPU::evalSprites()
     if (cycle % 2 == 1)
     {
         assert(spr_eval_seq != 2);
-        // if (spr_eval_seq == 1)
-        // {
-            oam_data = primary_oam[oam_addr/4].data[oam_addr%4];
-        // }
+        oam_data = primary_oam[oam_addr/4].data[oam_addr%4];
     }
 
     // Write to secondary OAM on even cycles
@@ -341,7 +364,7 @@ void PPU::evalSprites()
         {
             if (checkRange(oam_data))
             {
-                if ((sprEnabled() || bgEnabled()) && oam_data < 240)
+                if (renderEnabled() && oam_data < 240)
                     reg_status.overflow = true;
                 // TODO read next 3 entries
                 oam_addr++;
@@ -395,7 +418,7 @@ void PPU::fetchSprites()
         // Read garbage NT byte
         // Read y-coord from secondary OAM (unnecessary?)
         case 1:
-            if (sprEnabled()) ppu_vram_open_bus = nes.mem->ppuRead(vram_addr.addr);
+            if (renderEnabled()) ppu_vram_open_bus = nes.mem->ppuRead(vram_addr.addr);
             oam_data = secondary_oam[spr_i].y;
             tmp_spr_y = scanline - oam_data; 
             break;
@@ -409,13 +432,14 @@ void PPU::fetchSprites()
         // Read garbage NT byte
         // Read sprite attribute
         case 3:
-            if (sprEnabled()) ppu_vram_open_bus = nes.mem->ppuRead(vram_addr.addr);
+            if (renderEnabled()) ppu_vram_open_bus = nes.mem->ppuRead(vram_addr.addr);
             oam_data = secondary_oam[spr_i].attributes;
-            spr_at[spr_i] = oam_data;
+            if (renderEnabled()) spr_at[spr_i] = oam_data;
             // Flip vertically
             if (oam_data & 0x80) tmp_spr_y = (reg_ctrl.spr_size ? 15 : 7) - tmp_spr_y;
             if (reg_ctrl.spr_size) 
             {
+                tmp_spr_pt_i = tmp_spr_tile_i & 1;
                 tmp_spr_tile_i &= 0xFE;
                 if (tmp_spr_y >= 8)
                 {
@@ -428,37 +452,37 @@ void PPU::fetchSprites()
         // Read sprite x-pos
         case 4:
             oam_data = secondary_oam[spr_i].x;
-            spr_x_pos[spr_i] = oam_data;
+            if (renderEnabled()) spr_x_pos[spr_i] = oam_data;
             break;
 
         // Read sprite pattern table byte (low)
         // Read sprite x-pos
         case 5:
-            if (sprEnabled()) ppu_vram_open_bus = getPTByte(reg_ctrl.spr_size ? 0 : reg_ctrl.spr_table, tmp_spr_tile_i, 0, tmp_spr_y);
+            if (renderEnabled()) ppu_vram_open_bus = getPTByte(reg_ctrl.spr_size ? tmp_spr_pt_i : reg_ctrl.spr_table, tmp_spr_tile_i, 0, tmp_spr_y);
             oam_data = secondary_oam[spr_i].x;
-            spr_x_pos[spr_i] = oam_data;
+            if (renderEnabled()) spr_x_pos[spr_i] = oam_data;
             break;
 
         // Read sprite x-pos
         case 6:
             spr_pt_low[spr_i].load(ppu_vram_open_bus);
             oam_data = secondary_oam[spr_i].x;
-            spr_x_pos[spr_i] = oam_data;
+            if (renderEnabled()) spr_x_pos[spr_i] = oam_data;
             break;
 
         // Read sprite pattern table byte (high)
         // Read sprite x-pos
         case 7:
-            if (sprEnabled()) ppu_vram_open_bus = getPTByte(reg_ctrl.spr_size ? 0 : reg_ctrl.spr_table, tmp_spr_tile_i, 1, tmp_spr_y);
+            if (renderEnabled()) ppu_vram_open_bus = getPTByte(reg_ctrl.spr_size ? tmp_spr_pt_i : reg_ctrl.spr_table, tmp_spr_tile_i, 1, tmp_spr_y);
             oam_data = secondary_oam[spr_i].x;
-            spr_x_pos[spr_i] = oam_data;
+            if (renderEnabled()) spr_x_pos[spr_i] = oam_data;
             break;
 
         // Read sprite x-pos
         case 0:
             if (renderEnabled()) spr_pt_high[spr_i].load(ppu_vram_open_bus);
             oam_data = secondary_oam[spr_i].x;
-            spr_x_pos[spr_i] = oam_data;
+            if (renderEnabled()) spr_x_pos[spr_i] = oam_data;
             break;
     }
 }
@@ -645,7 +669,7 @@ void PPU::processScanline()
         }
         else if (cycle >= 65 && cycle <= 256)
         {
-            evalSprites();
+            if (renderEnabled()) evalSprites();
         }
         else if (cycle >= 257 && cycle <= 320)
         {

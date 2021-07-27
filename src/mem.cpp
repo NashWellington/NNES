@@ -185,31 +185,6 @@ void Memory::cpuWriteReg(uword address, ubyte data)
     }
 }
 
-bool Memory::oamWrite(bool odd_cycle)
-{
-    assert(cpu_suspend_cycles <= 514 && cpu_suspend_cycles >= 0);
-    if (cpu_suspend_cycles == 0) return false;
-    if (cpu_suspend_cycles > 512)
-    {
-        if (cpu_suspend_cycles == 514 && !odd_cycle) cpu_suspend_cycles -=1; // One less idle cycle if even
-    }
-    else
-    {
-        if (!(cpu_suspend_cycles % 2))
-        {
-            nes.ppu->oam_data = cpuRead(nes.ppu->dma_addr);
-            nes.ppu->dma_addr++;
-        }
-        else
-        {
-            nes.ppu->primary_oam[nes.ppu->oam_addr/4].data[nes.ppu->oam_addr%4] = nes.ppu->oam_data;
-            nes.ppu->oam_addr++;
-        }
-    }
-    cpu_suspend_cycles -= 1;
-    return true;
-}
-
 /*TODO Implement these
 void Memory::save(Savestate& savestate)
 {
@@ -246,7 +221,6 @@ void Memory::clearInterrupt()
 // TODO option to set all to $00, $FF, or random
 void Memory::start()
 {
-    cpu_suspend_cycles = 0;
     // TODO I/O regs
     std::srand(std::time(nullptr));
     std::for_each(zero_page.begin(), zero_page.end(), [](ubyte& n){n = std::rand() % 256;});
