@@ -66,6 +66,7 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 
 ## Mike Tyson's Punch-Out!!
 * Invisible sprites in some places
+* Pulse (or triangle?) channels cut out after reset
 * Glass Joe is bald at some point
 
 ## Ms. Pac-Man

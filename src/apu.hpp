@@ -12,13 +12,13 @@ struct Timer
     virtual ~Timer() {}
     // Returns true if a clock cycle is output
     virtual bool clock() = 0;
+    int period = 0;
+    int counter = 0;
 };
 
 struct Divider : public Timer
 {
     bool clock();
-    int period = 0;
-    int counter = 0;
 };
 
 // Linear Feedback Shift Register (used by noise channel)
@@ -113,7 +113,6 @@ struct Noise
     LFSR timer = {};
     Envelope env = {};
     LengthCounter len = {};
-    ubyte period = 0;
     uint out = 0; // 0-15
 };
 

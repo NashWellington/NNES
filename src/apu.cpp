@@ -87,7 +87,7 @@ void APU::reset()
     // APU should act like 4017 was written to 9-12 cycles before start/reset
     frame_ctr = 2;
     triangle.seq.sequence = 0;
-    // TODO AND APU DPCM output with 1
+    dmc.out &= 1;
     // TODO reset APU Frame Counter if 2A03G
 }
 
@@ -384,7 +384,7 @@ void APU::write(uword address, ubyte data)
         * M - noise channel mode
         */
         case 0x400E:
-            noise.period = noise_period_lookup[data & 0x0F];
+            noise.timer.period = noise_period_lookup[data & 0x0F];
             noise.timer.mode = data & 0x80;
             break;
 
@@ -546,7 +546,7 @@ void Triangle::clock()
 
 void Noise::clock()
 {
-    out = (!timer.clock() && len.count > 0) ? env.out : 0;
+    out = !timer.clock() && len.count > 0 ? env.out : 0;
 }
 
 void DMC::clock(NES& nes)
@@ -693,10 +693,15 @@ bool Divider::clock()
 bool LFSR::clock()
 {
     uword feedback;
-    if (shift_reg == 0) feedback = 1;
-    else feedback = (shift_reg & 1) ^ (mode ? (shift_reg & 0x40) >> 5 : (shift_reg & 0x02) >> 1);
-    shift_reg >>= 1;
-    shift_reg |= feedback << 14;
+    if (counter > 0) counter--;
+    else
+    {
+        counter = period;
+        if (shift_reg == 0) feedback = 1;
+        else feedback = (shift_reg & 1) ^ (mode ? (shift_reg & 0x40) >> 6 : (shift_reg & 0x02) >> 1);
+        shift_reg >>= 1;
+        shift_reg |= feedback << 14;
+    }
     return shift_reg & 1;
 }
 

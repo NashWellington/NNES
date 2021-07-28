@@ -1,10 +1,10 @@
 # NNES Test Results
 
-Test files are located in the test_roms folder. Most tests should be accompanied by a readme.txt file detailing what they test and what their failure codes mean.
+Test files are located in the roms/tests/ folder. Most tests should be accompanied by a readme.txt file detailing what they test and what their failure codes mean.
 
-None of these tests were written by me. Credit is given in this file to each test's author. Most (if not all) of these tests can be found through [this page](https://wiki.nesdev.com/w/index.php/Emulator_tests) of the NesDev wiki.
+None of these tests were written by me. Credit is given in this file to each test's author to the best of my ability. Most (if not all) of these tests can be found through [this page](https://wiki.nesdev.com/w/index.php/Emulator_tests) of the NesDev wiki.
 
-Note: "240p test suite" is not included, and has been added to .gitignore, because its license (GPL v2) is incompatible with NNES's license (GPL v3).
+Note: "240p test suite" is not included, and has been added to the .gitignore, because its license (GPL v2) is incompatible with NNES's license (GPL v3).
 
 Note: some tests (notably mapper/input tests by rainwarrior) are missing because of corruption of the NesDev forums database.
 
@@ -65,7 +65,7 @@ At this point, CPU tests that fail depend on:
 | APU Sweep Test | blargg | 1/2 | Noises at the beginning and end are swapped for Cutoff |
 | APU Tests | blargg | 5/11 | <l><li>Tests 1-4 pass</li> <li>Test 5 fails #2 (first length clocked too soon)</li> <li>Test 6 fails #2 (first length clocked too soon)</li> <li>Test 7 fails #2 (first flag set too soon)</li> <li>Test 8 fails #2 (IRQ triggered too soon after writing $00 to $4017)</li> <li>Test 9 passes</li> <li>Test 10 passes</li> <li>Test 11 fails #4</li></l> |
 | APU Tests 2 | x0000 | 5/11 | <l><li>Note: test 2 is supposed to fail after some resets on real hardware, likely because of CPU/PPU alignments</li> <li>Note: there's no readme provided so I'll have to figure out the specifics of these tests (beyond testing the frame counter)</li> <li>Tests 1, 3, 4, 7, 8 pass</li> <li>Tests 2, 5, 6, 9, 10, 11 fail</li></l> |
-| APU Timer Test | blargg | 3/4 | <l><li>Square, DMC, triangle pass</li> <li>Noise wave fails (maybe clocking too fast?)</li></l> |
+| APU Timer Test | blargg | 3/4 | <l><li>Square, DMC, triangle pass</li> <li>Noise wave fails & sounds like noise_pitch_bad</li></l> |
 | APU Triangle Linear Counter Test | blargg | Fail | Pitch slightly too low |
 | DMC DMA During Read | blargg | | Not worth testing until I implement DMC DMA behavior |
 | DMC Tests | ??? | ?/4 | Not sure what a valid test result is supposed to look like, but all four tests sound the same when played |
@@ -126,7 +126,6 @@ None yet
 * Non-palette PPU memory reads should have one-byte buffer
 
 ## APU
-* MAJOR: Noise channel not properly emulated
 * MAJOR: DMC channel not properly emulated
 * MAJOR: Crackles and pops in audio (note: this may be because I'm not letting SDL resample?)
 
