@@ -26,7 +26,7 @@ Header Boot::readHeader(std::ifstream& rom, std::string filename)
         {
             header.type = HeaderType::NES20;
             #ifndef NDEBUG
-            std::cerr << "Header format: iNES" << std::endl;
+            std::cerr << "Header format: iNES 2.0" << std::endl;
             #endif
         }
         else 

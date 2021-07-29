@@ -105,4 +105,3 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 
 ## Time Lord
 * Sound effect made when getting the fifth orb is missing
-* Opening theme sounds wrong after a reset
