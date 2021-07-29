@@ -82,6 +82,10 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 
 ## R.C. Pro-AM
 
+## Silver Surfer
+* Goes back to title screen after stage selection
+* Audio is probably not correct
+
 ## Super Mario Bros.
 * Mapper 0, 32K PRG-ROM, 8K CHR-ROM
 * Black boxes around clouds (wrong palette index 0 color?)
@@ -91,4 +95,6 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 ## Tennis
 
 ## Time Lord
-* Missing/broken sfx
+* Missing DMC sounds
+* Wrong bg color on a lot of tiles on the title screen
+* Opening theme sounds wrong after a reset

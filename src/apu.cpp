@@ -38,7 +38,7 @@ const std::array<int,16> rate_lookup =
 
 // TODO let SDL handle resampling???
 
-// clock these every quarter frame
+// Envelopes/linear counter clocked every qurter frame
 #define clockQF() {\
 pulse_1.env.clock();\
 pulse_2.env.clock();\
@@ -46,7 +46,7 @@ noise.env.clock();\
 triangle.lin.clock();\
 }
 
-// clock these every half frame
+// Length counters/sweep units clocked every half frame
 #define clockHF() {\
 pulse_1.len.clock();\
 pulse_2.len.clock();\
@@ -83,11 +83,17 @@ void APU::reset()
 {
     // Reset reg $4015
     write(0x4015, 0);
+    // Rewrite reg $4017 with val previously written
+    ubyte data = 0;
+    if (interrupt_inhibit) data |= 0x40;
+    if (frame_count_mode) data |= 0x80;
+    write(0x4017, data);
     frame_interrupt = false;
     // APU should act like 4017 was written to 9-12 cycles before start/reset
     frame_ctr = 2;
     triangle.seq.sequence = 0;
     dmc.out &= 1;
+    noise.timer.shift_reg = 1;
     // TODO reset APU Frame Counter if 2A03G
 }
 
@@ -130,6 +136,7 @@ void APU::tick()
         default:
             break;
     }
+    assert(frame_ctr < 18641);
     frame_ctr++;
     cycle++;
 
@@ -338,6 +345,8 @@ void APU::write(uword address, ubyte data)
             triangle.len.halt = data & 0x80;
             break;
 
+        // $4009 unused
+
         /* Triangle timer (low 8 bits)
         * $400A
         */
@@ -366,11 +375,12 @@ void APU::write(uword address, ubyte data)
         * 
         * V - volume/envelope divider period
         * C - constant volume
-        * L - length counter halt
+        * L - length counter halt or loop envelope flag
         */
         case 0x400C:
             noise.env.period = data & 0x0F;
             noise.env.cv = data & 0x10;
+            noise.env.loop = data & 0x20;
             noise.len.halt = data & 0x20;
             break;
 
@@ -415,7 +425,7 @@ void APU::write(uword address, ubyte data)
         * I - IRQ enable
         */
         case 0x4010:
-            dmc.rate = rate_lookup[data & 0x0F];
+            dmc.timer.period = rate_lookup[data & 0x0F];
             dmc.loop = data & 0x40;
             dmc.irq_enable = data & 0x80;
             if (!dmc.irq_enable) dmc.interrupt = false;
@@ -473,7 +483,7 @@ void APU::write(uword address, ubyte data)
             if (!noise.len.enabled) noise.len.count = 0;
             if (data & 0x10)    // enable DMC
             {
-                if (dmc.bytes_remaining > 0) dmc.start();
+                dmc.start = true;
             }
             else                // clear DMC
             {
@@ -551,10 +561,7 @@ void Noise::clock()
 
 void DMC::clock(NES& nes)
 {
-    cycles_left = rate;
-
     // Read memory
-
     // TODO weird DMC DMA behavior
     if (!sample_buf && bytes_remaining > 0)
     {
@@ -563,37 +570,41 @@ void DMC::clock(NES& nes)
         if (curr_addr == 0xFFFF) curr_addr = 0x8000;
         else curr_addr++;
         bytes_remaining--;
-        if (bytes_remaining == 0)
+    }
+    if (bytes_remaining == 0)
+    {
+        if (loop || start)
         {
-            if (loop) start();
-            else if (irq_enable) interrupt = true;
+            curr_addr = sample_addr;
+            bytes_remaining = sample_len;
+            start = false;
         }
+        else if (irq_enable) interrupt = true;
     }
 
     // Output
-
-    // change output level
-
-    if (cycles_left == 0)
+    if (timer.clock())
     {
+        // 1. Change output level
         if (!silence)
         {
-            if (shift_reg & 0x01) // bit set -> add 2
+            if (shift_reg & 0x01) // bit 0 set -> add 2
             {
                 out = out > 125 ? out : out + 2; // prevent overflow
             }
-            else
+            else                  // bit 0 clear -> subtract 2
             {
                 out = out < 2 ? out : out - 2; // prevent underflow
             }
         }
 
-        // clock shift reg
-        shift_reg >>= 1;
-        bits_remaining--;
+        // 2. Clock shift register
+        shift_reg >>= 1;        
 
-        // new output cycle
-        if (bits_remaining == 0)
+        // 3. Decrement bits-remaining counter, possibly start new cycle
+        assert(bits_remaining <= 8);
+        if (bits_remaining > 1) bits_remaining--;
+        else if (bits_remaining <= 1)
         {
             bits_remaining = 8;
             if (!sample_buf) silence = true;
@@ -605,14 +616,6 @@ void DMC::clock(NES& nes)
             }
         }
     }
-    else cycles_left--;
-}
-
-// TODO wait until buffer is empty
-void DMC::start()
-{
-    curr_addr = sample_addr;
-    bytes_remaining = sample_len;
 }
 
 void LengthCounter::load(ubyte length) 
@@ -683,15 +686,16 @@ void Sweep::clock(Divider& timer)
     }
 }
 
-// void Divider::reload() { counter = period; }
 bool Divider::clock()
 {
+    assert(period >= 0);
     if (counter == 0) { counter = period; return true; }
     else { counter--; return false; }
 }
 
 bool LFSR::clock()
 {
+    assert(shift_reg != 0);
     uword feedback;
     if (counter > 0) counter--;
     else

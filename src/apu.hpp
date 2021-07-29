@@ -27,7 +27,7 @@ struct LFSR : public Timer
     // Return true if bit 0 of shift_reg is set
     // If true, blocks envelope data
     bool clock();
-    uword shift_reg = 0;
+    uword shift_reg = 1;
     bool mode = false;
 };
 
@@ -119,14 +119,13 @@ struct Noise
 struct DMC
 {
     void clock(NES& nes);
-    void start(); // start or restart
+    bool start = false;
     bool irq_enable = false;
     bool interrupt = false;
     bool loop = false;
-    int rate = 428; // Default NTSC val //TODO PAL
-    int cycles_left = 428; // Number of cycles output level next changes
     ubyte out = 0; // 0-127
     bool silence = true;
+    Divider timer = {};
 
     // Memory reader
     uword sample_addr = 0x8000; // Minimum address to read from
