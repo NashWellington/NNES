@@ -569,6 +569,7 @@ Pixel PPU::getColor(ubyte palette, ubyte pal_i)
     {
         system_palette_i = nes.mem->ppuRead(0x3F00);
     }
+    else if (pal_i == 0) system_palette_i = nes.mem->ppuRead(0x3F00);
     else system_palette_i = nes.mem->ppuRead(0x3F00 + 4*palette + pal_i);
     system_palette_i %= 0x40;
     if (reg_mask.greyscale) system_palette_i &= 0x30;

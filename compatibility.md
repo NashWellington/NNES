@@ -8,10 +8,9 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 * Random audio crackles/pops
 
 ## The Addams Family
-* Invisible sprites?
+* Ghost sprites are actually invisible instead of being translucent
 
 ## Barbie
-* Incorrect background color (green instead of black) for some tiles on the title screen
 
 ## Battletoads
 * Game freezes at the start of level 2
@@ -66,6 +65,7 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 
 ## Mike Tyson's Punch-Out!!
 * Invisible sprites in some places
+* Note: this might have something to do with MMC2 PPU fetch sniffing?
 * Pulse (or triangle?) channels cut out after reset
 * Glass Joe is bald at some point
 
@@ -78,23 +78,27 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 * Mapper 3, 32K PRG-ROM, 32K CHR-ROM
 * Controller input doesn't seem to work
 * Note: according to https://wiki.nesdev.com/w/index.php/Open_bus_behavior "Paperboy relies on the controller port being exactly $41 for a button press to be recognized"
-* Most of the background isn't rendered
+* The background is ridiculously screwed up
 
 ## R.C. Pro-AM
+
+## River City Ransom
+* Scrolling is messed up
+* Music muted? (Need to compare to Mesen/console)
 
 ## Silver Surfer
 * Goes back to title screen after stage selection
 * Audio is probably not correct
 
+## Slalom
+
 ## Super Mario Bros.
 * Mapper 0, 32K PRG-ROM, 8K CHR-ROM
-* Black boxes around clouds (wrong palette index 0 color?)
-* Black background behind block tiles after broken/hit/moved
 * No animation when going into/out of a pipe (Mario just appears/disappears)
+* Mushroom/star/power up sprites are invisible for a second after appearing
 
 ## Tennis
 
 ## Time Lord
 * Missing DMC sounds
-* Wrong bg color on a lot of tiles on the title screen
 * Opening theme sounds wrong after a reset
