@@ -8,7 +8,7 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 * Random audio crackles/pops
 
 ## The Addams Family
-* Ghost sprites are actually invisible instead of being translucent
+* Ghost sprites are actually invisible instead of being translucent (spooky!)
 
 ## Barbie
 
@@ -104,5 +104,5 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 ## Tennis
 
 ## Time Lord
-* Missing DMC sounds
+* Sound effect made when getting the fifth orb is missing
 * Opening theme sounds wrong after a reset

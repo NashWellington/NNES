@@ -69,10 +69,10 @@ At this point, CPU tests that fail depend on:
 | APU Triangle Linear Counter Test | blargg | Fail | Pitch slightly too low |
 | DMC DMA During Read | blargg | | Not worth testing until I implement DMC DMA behavior |
 | DMC Tests | ??? | ?/4 | Not sure what a valid test result is supposed to look like, but all four tests sound the same when played |
-| DPCM Letterbox | tepples | ? | Probably a failure; text display appears to be too low (meaning IRQ gets triggered too late?) |
+| DPCM Letterbox | tepples | Pass? | I'm almost positive it looks correct, but I have nothing to compare this to |
 | PAL APU Tests | blargg | | PAL unsupported |
 | Square Timer Div 2 | blargg | 0/1 | Sound output matches div2_after.wav + a constant high pitched whine |
-| Volume Tests | tepples | Fail | |
+| Volume Tests | tepples | Fail | Regression: Doesn't play any sound |
 
 ## Mapper Tests
 

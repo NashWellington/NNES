@@ -425,7 +425,7 @@ void APU::write(uword address, ubyte data)
         * I - IRQ enable
         */
         case 0x4010:
-            dmc.timer.period = rate_lookup[data & 0x0F];
+            dmc.timer.period = rate_lookup[data & 0x0F]/2; // lookup table is for CPU cycles
             dmc.loop = data & 0x40;
             dmc.irq_enable = data & 0x80;
             if (!dmc.irq_enable) dmc.interrupt = false;
