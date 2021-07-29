@@ -41,8 +41,10 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 ## Excitebike
 
 ## Final Fantasy
-* Mapper 1, 256K PRG-ROM, 8K CHR-RAM
-* Crashes on opcode $12
+* Mapper 1, 256K PRG-ROM, 8K PRG-NV-RAM, 8K CHR-RAM
+* Crashes on invalid opcodes at different addresses most of the time
+* This is definitely because of randomized RAM contents
+* High-pitched whine when selecting an option in the UI
 
 ## Ice Climber
 * Some sound channels cut out at some point

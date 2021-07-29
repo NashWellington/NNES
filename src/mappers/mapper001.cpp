@@ -15,8 +15,8 @@ Mapper001::Mapper001(Header& header, std::ifstream& rom)
 
     if (header.prg_nv_ram_size == 0 && header.prg_ram_size == 0 && header.type == HeaderType::INES)
     {
-        if (header.battery) header.prg_nv_ram_size = 0x8000;
-        else header.prg_ram_size = 0x8000;
+        if (header.battery) header.prg_nv_ram_size = 0x2000;
+        else header.prg_ram_size = 0x2000;
     }
 
     uint banks = 0;
