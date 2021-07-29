@@ -12,7 +12,18 @@ Mapper003::Mapper003(Header& header, std::ifstream& rom)
     assert(header.prg_rom_size == 0x4000 || header.prg_rom_size == 0x8000);
     assert((header.chr_rom_size >= 0x2000 && header.chr_rom_size <= 0x200'000)
             != (header.chr_ram_size >= 0x2000 && header.chr_ram_size <= 0x200'000));
-    assert(header.prg_ram_size == 0);
+    assert(header.prg_ram_size == 0 || header.prg_ram_size == 0x2000);
+    assert(!header.battery);
+
+    if (header.prg_ram_size == 0 && header.type == HeaderType::INES)
+    {
+        header.prg_ram_size = 0x2000;
+    }
+
+    if (header.prg_ram_size == 0x2000)
+    {
+        prg_ram_exists = true;
+    }
 
     uint banks = header.prg_rom_size / 0x4000;
     prg_rom.resize(banks);
@@ -44,12 +55,20 @@ Mapper003::Mapper003(Header& header, std::ifstream& rom)
 std::optional<ubyte> Mapper003::cpuRead(uword address)
 {
     if (address < 0x4020) return {};
-    else if (address >= 0x4020 && address < 0x8000)
+    else if (address >= 0x4020 && address < 0x6000) return 0;
+    else if (address >= 0x6000 && address < 0x8000)
     {
-        #ifndef NDEBUG
-        std::cerr << "Warning: CPU read from unmapped address " << hex(address) << std::endl;
-        #endif
-        return 0;
+        if (prg_ram_exists)
+        {
+            return prg_ram[address-0x6000];
+        }
+        else
+        {
+            #ifndef NDEBUG
+            std::cerr << "Warning: CPU read from unmapped address " << hex(address) << std::endl;
+            #endif
+            return 0;
+        }
     }
     else
     {
@@ -67,11 +86,19 @@ std::optional<ubyte> Mapper003::cpuRead(uword address)
 bool Mapper003::cpuWrite(uword address, ubyte data)
 {
     if (address < 0x4020) return false;
-    else if (address >= 0x4020 && address < 0x8000) 
+    else if (address >= 0x4020 && address < 0x6000) return true;
+    else if (address >= 0x6000 && address < 0x8000) 
     {
-        #ifndef NDEBUG
-        std::cerr << "Warning: CPU write to unmapped address " << hex(address) << std::endl;
-        #endif
+        if (prg_ram_exists)
+        {
+            prg_ram[address-0x6000] = data;
+        }
+        else
+        {
+            #ifndef NDEBUG
+            std::cerr << "Warning: CPU write to unmapped address " << hex(address) << std::endl;
+            #endif
+        }
         return true;
     }
     else

@@ -214,6 +214,13 @@ private:
     */
     std::vector<std::array<ubyte,0x4000>> prg_rom = {};
 
+    /* Program RAM
+    *  Exactly 1 mapper 3 game uses PRG-RAM,
+    * but some test ROMs also use it
+    */
+    std::array<ubyte,0x2000> prg_ram = {};
+    bool prg_ram_exists = false;
+
     /* Character ROM/RAM
     * capacity: $2,000 to $200,000 (8 KiB to 2MiB)
     * banks:     1 to 256

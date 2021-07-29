@@ -44,6 +44,7 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 * Mapper 1, 256K PRG-ROM, 8K PRG-NV-RAM, 8K CHR-RAM
 * Crashes on invalid opcodes at different addresses most of the time
 * This is definitely because of randomized RAM contents
+* This might also have something to do with mapper 1 large PRG-ROM bank-switching issues
 * High-pitched whine when selecting an option in the UI
 
 ## Ice Climber
@@ -85,7 +86,8 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 ## R.C. Pro-AM
 
 ## River City Ransom
-* Scrolling is messed up
+* Mapper 4 128K PRG-ROM, 128K CHR-ROM
+* Scrolling is messed up (might have to do with mapper 4 IRQ behavior)
 * Music muted? (Need to compare to Mesen/console)
 
 ## Silver Surfer
