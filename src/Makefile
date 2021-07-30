@@ -4,15 +4,15 @@ objects += isa.o mode.o scheduler.o savestate.o video.o audio.o input.o
 objects += controller.o util.o 
 objects += imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
 
-mapper_objects = mapper000.o mapper001.o mapper002.o mapper003.o mapper007.o mapper009.o
+mapper_objects = mapper.o mapper000.o mapper001.o mapper002.o mapper003.o mapper004.o mapper007.o mapper009.o
 
 compiler = g++
 
 optimizations = -march=native
 # Comment out if debugging
-# optimizations += -O3 -flto
+optimizations += -O3 -flto
 
-flags = -std=c++17 -g -fsanitize=address
+flags = -std=c++17 #-g -fsanitize=address
 flags += $(optimizations)
 flags += -Wall -Werror -Wextra
 flags += -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align
@@ -24,7 +24,7 @@ flags += -I/usr/include/SDL2 -I/usr/include/freetype2
 
 libs = -lGLEW -lGL -lGLU -lSDL2 -lfreetype -lpthread
 
-target = NNES-g
+target = NNES
 
 $(target) : $(objects)
 		$(compiler) $(flags) $(objects) -o ../build/$(target) $(libs)
@@ -66,26 +66,28 @@ mem.o : mem.hpp globals.hpp console.hpp savestate.hpp
 cart.o : cart.hpp globals.hpp peripheral.hpp boot.hpp mappers/mapper.hpp
 		$(compiler) $(flags) -c cart.cpp
 
-mapper000.o : mappers/mapper.hpp globals.hpp savestate.hpp
+mapper.o : mappers/mapper.hpp globals.hpp savestate.hpp console.hpp
+		$(compiler) $(flags) -c mappers/mapper.cpp
+
+mapper000.o : mappers/mapper.hpp globals.hpp savestate.hpp console.hpp
 		$(compiler) $(flags) -c mappers/mapper000.cpp
 
-mapper001.o : mappers/mapper.hpp globals.hpp savestate.hpp
+mapper001.o : mappers/mapper.hpp globals.hpp savestate.hpp console.hpp
 		$(compiler) $(flags) -c mappers/mapper001.cpp
 
-mapper002.o : mappers/mapper.hpp globals.hpp savestate.hpp
+mapper002.o : mappers/mapper.hpp globals.hpp savestate.hpp console.hpp
 		$(compiler) $(flags) -c mappers/mapper002.cpp
 
-mapper003.o : mappers/mapper.hpp globals.hpp savestate.hpp
+mapper003.o : mappers/mapper.hpp globals.hpp savestate.hpp console.hpp
 		$(compiler) $(flags) -c mappers/mapper003.cpp
 
-#TODO figure out how to incorporate console memory
-#mapper004.o : mappers/mapper.hpp globals.hpp savestate.hpp mem.hpp
-#		$(compiler) $(flags) -c mappers/mapper004.cpp
+mapper004.o : mappers/mapper.hpp globals.hpp savestate.hpp console.hpp
+		$(compiler) $(flags) -c mappers/mapper004.cpp
 
-mapper007.o : mappers/mapper.hpp globals.hpp savestate.hpp
+mapper007.o : mappers/mapper.hpp globals.hpp savestate.hpp console.hpp
 		$(compiler) $(flags) -c mappers/mapper007.cpp
 
-mapper009.o : mappers/mapper.hpp globals.hpp savestate.hpp
+mapper009.o : mappers/mapper.hpp globals.hpp savestate.hpp console.hpp
 		$(compiler) $(flags) -c mappers/mapper009.cpp
 
 video.o : video.hpp globals.hpp util.hpp savestate.hpp libs/imgui/imgui.h libs/imgui/imgui_impl_sdl.h libs/imgui/imgui_impl_opengl3.h
