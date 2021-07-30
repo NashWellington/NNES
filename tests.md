@@ -94,7 +94,7 @@ At this point, CPU tests that fail depend on:
 | Mapper 28 Tests | tepples | | Mapper 28 unsupported |
 | Mapper 31 Tests | rainwarrior | | ROMs unavailable |
 | NES 2.0 Submapper Tests | rainwarrior | | ROMs unavailable |
-| SEROM Test | lidnariq | 0/1 | Fails, likely because mapper 1 submapper 5 unsupported |
+| SEROM Test | lidnariq | Pass | |
 | VRC 2/4 Tests | AWJ | | Mappers 21, 22, 23, 25 unsupported |
 | VRC6 Tests | natt | | Mappers 24, 26 unsupported |
 
@@ -126,11 +126,10 @@ None yet
 * Non-palette PPU memory reads should have one-byte buffer
 
 ## APU
-* MAJOR: DMC channel not properly emulated
+* MAJOR: Most or all sound channels are broken in their own special way
 * MAJOR: Crackles and pops in audio (note: this may be because I'm not letting SDL resample?)
 
 ## Mapper
-* Mapper 1 doesn't work correctly with 512K PRG-ROM and/or >8K PRG-RAM
 * Mapper 4's IRQs don't work properly
 * Some mapper 4 tests have corrupted nametable or CHR data
 

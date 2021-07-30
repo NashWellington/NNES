@@ -16,8 +16,7 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 * Game freezes at the start of level 2
 
 ## Bionic Commando
-* Mapper 1, 256K PRG-ROM, 8K CHR-RAM
-* Crash on opcode 32 at PC $8012
+* Constant buzzing noise
 
 ## Castlevania
 
@@ -28,11 +27,9 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 * Triangle sound channel's pitch seems to be too low (not sure about this one)
 
 ## Double Dragon
-* Mapper 1, 128K PRG-ROM, 128K CHR-ROM
-* Fails to boot
-* Tries to write to about 0x400 bytes of CHR-ROM, then alternates between stack over/underflow
 
 ## Double Dribble
+* Slam dunk sfx doesn't loop correctly (noise channel issue)
 
 ## Dragon Warrior
 
@@ -41,14 +38,14 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 ## Excitebike
 
 ## Final Fantasy
-* Mapper 1, 256K PRG-ROM, 8K PRG-NV-RAM, 8K CHR-RAM
-* Crashes on invalid opcodes at different addresses most of the time
-* This is definitely because of randomized RAM contents
+* Constantly reads from open bus after some power cycles (probably has something to do with random contents of RAM)
 * High-pitched whine when selecting an option in the UI
 
 ## Ice Climber
 * Some sound channels cut out at some point
 * CPU read from unmapped address $58A9 (intentional?)
+* Invisible sprites
+* Broken blocks don't disappear
 
 ## The Legend of Zelda
 * Missing sprite for selecting text
@@ -62,7 +59,7 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 * Crashed on invalid opcode (only on one reset. Possibly due to randomized RAM values?)
 
 ## Metroid
-* Mapper 1 PRG-ROM 128K CHR-RAM 8K (should have PRG-RAM but I'm reading iNES headers wrong)
+* Mapper 1 PRG-ROM 128K CHR-RAM 8K
 * All sprites are invisible
 
 ## Mike Tyson's Punch-Out!!

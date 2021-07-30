@@ -8,6 +8,7 @@ Mapper001::Mapper001(Header& header, std::ifstream& rom)
     submapper = header.submapper;
 
     assert(!header.trainer);
+    if (submapper == 5) assert(header.prg_rom_size == 0x8000);
     assert(header.prg_rom_size >= 0x8000 && header.prg_rom_size <= 0x80000);
     assert(header.prg_ram_size <= 0x8000 && header.prg_nv_ram_size <= 0x8000);
     assert((header.chr_rom_size > 0) != (header.chr_ram_size > 0));
@@ -194,11 +195,13 @@ std::optional<ubyte> Mapper001::cpuRead(uword address)
         address -= 0x8000;
         if (address < 0x4000) // Low bank
         {
-            return prg_rom[low_bank % prg_rom.size()][address];
+            if (submapper == 5) return prg_rom[0][address];
+            else return prg_rom[low_bank % prg_rom.size()][address];
         }
         else // high bank
         {
-            return prg_rom[high_bank % prg_rom.size()][address - 0x4000];
+            if (submapper == 5) return prg_rom[1][address-0x4000];
+            else return prg_rom[high_bank % prg_rom.size()][address - 0x4000];
         }
     }
 }
