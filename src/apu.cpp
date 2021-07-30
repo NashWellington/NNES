@@ -689,7 +689,11 @@ void Sweep::clock(Divider& timer)
 bool Divider::clock()
 {
     assert(period >= 0);
-    if (counter == 0) { counter = period; return true; }
+    if (counter == 0)
+    {
+        counter = period;
+        return counter > 0; 
+    }
     else { counter--; return false; }
 }
 

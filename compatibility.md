@@ -16,7 +16,6 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 * Game freezes at the start of level 2
 
 ## Bionic Commando
-* Constant buzzing noise
 
 ## Castlevania
 
@@ -29,7 +28,7 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 ## Double Dragon
 
 ## Double Dribble
-* Slam dunk sfx doesn't loop correctly (noise channel issue)
+* Slam dunk sound doesn't loop correctly (noise channel issue)
 
 ## Dragon Warrior
 
@@ -51,11 +50,9 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 * Missing sprite for selecting text
 
 ## Mega Man
-* High pitched noise at title screen
 
 ## Mega Man 2
 * Weird behavior when scrolling up on the opening credit scene
-* High pitched noise before title screen
 * Crashed on invalid opcode (only on one reset. Possibly due to randomized RAM values?)
 
 ## Metroid
@@ -84,7 +81,7 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 ## River City Ransom
 * Mapper 4 128K PRG-ROM, 128K CHR-ROM
 * Scrolling is messed up (might have to do with mapper 4 IRQ behavior)
-* Music muted? (Need to compare to Mesen/console)
+* Sound completely muted while ingame (but not at title screen)
 
 ## Silver Surfer
 * Goes back to title screen after stage selection

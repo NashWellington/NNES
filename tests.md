@@ -71,8 +71,8 @@ At this point, CPU tests that fail depend on:
 | DMC Tests | ??? | ?/4 | Not sure what a valid test result is supposed to look like, but all four tests sound the same when played |
 | DPCM Letterbox | tepples | Pass? | I'm almost positive it looks correct, but I have nothing to compare this to |
 | PAL APU Tests | blargg | | PAL unsupported |
-| Square Timer Div 2 | blargg | 0/1 | Sound output matches div2_after.wav + a constant high pitched whine |
-| Volume Tests | tepples | Fail | Regression: Doesn't play any sound |
+| Square Timer Div 2 | blargg | 0/1 | Sound output matches div2_after.wav |
+| Volume Tests | tepples | Fail |  |
 
 ## Mapper Tests
 
@@ -123,7 +123,6 @@ None yet
 
 ## PPU
 * translating palette values to pixel values may be doable with integer math, instead of pre-defined values (http://forums.nesdev.com/viewtopic.php?f=2&t=14338)
-* Non-palette PPU memory reads should have one-byte buffer
 
 ## APU
 * MAJOR: Most or all sound channels are broken in their own special way
