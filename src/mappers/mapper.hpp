@@ -113,7 +113,7 @@ private:
     * 2: fix first bank at $8000 and switch 16KiB at $C000
     * 3: fix last bank at $C000 and switch 16KiB at $8000
     */
-    ubyte prg_rom_bank_mode = 0;
+    ubyte prg_rom_bank_mode = 3;
 
     /* Controls CHR-ROM bank switching
     * 0: switch one 8KiB bank uses prg_bank_0 for indices
@@ -121,13 +121,29 @@ private:
     */
     ubyte chr_bank_mode = 0;
 
-    ubyte prg_rom_bank = 0; // Used w/ prg_bank_mode to determine PRG-ROM banking
+    /* Controls PRG-ROM and PRG-RAM banking
+    * bits 0-3: selects 16K PRG-ROM bank (low bit ignored in 32K mode)
+    * bit 4: disable PRG-RAM (ignored on MMC1A)
+    */
+    ubyte reg_prg_bank = 0;
 
-    ubyte prg_ram_bank = 0;
+    /* Controls CHR-ROM/RAM banking and a few other things
+    * bit 0: chr bank select (ignored in 8K mode)
+    * bit 1: chr bank select (CHR >= 16K)
+    * bit 2: chr bank select (CHR >= 32K)
+    *        prg-ram bank select (PRG-RAM = 32K)
+    * bit 3: chr bank select (CHR >= 64K)
+    *        prg-ram bank select (PRG-RAM >= 16K)
+    *        Note: bits 2 and 3 get switched when selecting PRG-RAM
+    * bit 4: chr bank select (CHR = 128K)
+    *        prg-rom bank select (PRG-ROM = 512K)
+    *        prg-ram bank select (SZROM only; ignores bits 2&3)
+    *        prg-ram disable (SNROM only; OR's with reg_prg_bank bit 4)
+    */
+    ubyte reg_chr_bank_0 = 0;
 
-    // https://wiki.nesdev.com/w/index.php/MMC1#Variants
-    // TODO check to see if this bitfield is fucked
-    std::array<ubyte,2> chr_bank = {};
+    // Same as above, except everything is ignored in 8K mode
+    ubyte reg_chr_bank_1 = 0;
 
 // Banks
     /* Program RAM (optional)
@@ -136,7 +152,6 @@ private:
     * window:   $2000
     */
     std::vector<std::array<ubyte,0x2000>> prg_ram = {};
-    bool prg_ram_enabled = false;
     int nv_ram_i = -1; // Index of the first PRG-RAM bank that's battery-backed
 
     /* Program ROM

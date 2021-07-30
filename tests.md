@@ -85,7 +85,7 @@ At this point, CPU tests that fail depend on:
 | Famicom Audio Swap Tests | rainwarrior | | ROM unavailable |
 | FME-7 Ack Test | tepples | 0/1 | Mapper 69 unsupported |
 | FME-7 RAM Test | tepples | 0/1 | Mapper 69 unsupported |
-| Holy Mapperel/Holy Diver Batman | tepples | 12/26 | <l><li>Mapper 0, 2, 3, 7, 9 tests pass</li> <li>Mapper 1 P128K tests pass (7 tests)</li> <li>Mapper 1 P512K tests fail: P512K bank switching isn't working</li> <li>Mapper 4 tests fail IRQ portion</li> <li>All other mappers unsupported</li></l> |
+| Holy Mapperel/Holy Diver Batman | tepples | 14/26 | <l><li>Mapper 0, 1, 2, 3, 7, 9 tests pass</li> <li>Mapper 4 tests fail IRQ portion</li> <li>All other mappers unsupported</li></l> |
 | MMC3 Big CHR-RAM Test | tepples | Pass? | Passes test, but there is visible VRAM corruption |
 | MMC3 Test | blargg | 0/6 | All tests fail + VRAM corruption |
 | MMC5 RAM Size Tests | rainwarrior | | ROM unavailable |

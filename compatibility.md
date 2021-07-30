@@ -44,7 +44,6 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 * Mapper 1, 256K PRG-ROM, 8K PRG-NV-RAM, 8K CHR-RAM
 * Crashes on invalid opcodes at different addresses most of the time
 * This is definitely because of randomized RAM contents
-* This might also have something to do with mapper 1 large PRG-ROM bank-switching issues
 * High-pitched whine when selecting an option in the UI
 
 ## Ice Climber
@@ -105,3 +104,8 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 
 ## Time Lord
 * Sound effect made when getting the fifth orb is missing
+
+## Zelda II
+* Mapper 1 128K PRG-ROM 128K CHR-ROM 8K PRG-NV-RAM
+* Vertical black bar on the right side of the screen in the overworld
+* Completely wrong bg tiles after moving 1 tile up in the overworld
