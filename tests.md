@@ -60,7 +60,7 @@ At this point, CPU tests that fail depend on:
 | :--- | :----: | :----: | :------ |
 | APU Envelope Test | blargg | 0/1 | Plays a constant tone instead of increasing volume |
 | APU Mixer | blargg | 0/4 | |
-| APU Phase Reset | Rahsennor | | No CHR-RAM/ROM? (If iNES, it should default to some CHR-RAM). Worth investigating. |
+| APU Phase Reset | Rahsennor | | Not NTSC |
 | APU Reset | blargg | 3/6 | <l><li>len_ctrs_enabled passes</li> <li>irq_flag_cleared passes</li> <li>4015_cleared passes</li></l> |
 | APU Sweep Test | blargg | 1/2 | Noises at the beginning and end are swapped for Cutoff |
 | APU Tests | blargg | 5/11 | <l><li>Tests 1-4 pass</li> <li>Test 5 fails #2 (first length clocked too soon)</li> <li>Test 6 fails #2 (first length clocked too soon)</li> <li>Test 7 fails #2 (first flag set too soon)</li> <li>Test 8 fails #2 (IRQ triggered too soon after writing $00 to $4017)</li> <li>Test 9 passes</li> <li>Test 10 passes</li> <li>Test 11 fails #4</li></l> |
@@ -122,7 +122,6 @@ None yet
 ## CPU
 
 ## PPU
-* translating palette values to pixel values may be doable with integer math, instead of pre-defined values (http://forums.nesdev.com/viewtopic.php?f=2&t=14338)
 
 ## APU
 * MAJOR: Most or all sound channels are broken in their own special way

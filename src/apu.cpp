@@ -538,6 +538,7 @@ void Pulse::clock()
         seq.clock();
         seq.out = pulse_waveforms[duty][seq.sequence];
     }
+    sweep.mute = (timer.period < 8) || ((timer.period+sweep.change) > 0x07FF);
     out = (!sweep.mute && seq.out && len.count > 0) ? env.out : 0;
 }
 
@@ -660,29 +661,29 @@ void Envelope::clock()
 
 void Sweep::clock(Divider& timer)
 {
-    if (enabled)
+    assert(count >= 0);
+
+    // Calculate change between current & target period
+    change = timer.period >> shift;
+    if (negate)
+    {
+        // Pulse 1 -> one's comp, 2 -> 2's comp
+        change = (ones_comp) ? -change - 1 : -change;
+    }
+
+    if (count == 0 && enabled && !mute)
+    {
+        // Adjust period
+        timer.period += change;
+    }
+    if (count == 0 || reload)
+    {
+        count = period;
+        reload = false;
+    }
+    else
     {
         count--;
-        if (count < 0)
-        {
-            int change = timer.period >> shift;
-            if (negate)
-            {
-                // Pulse 1 -> one's comp, 2 -> 2's comp
-                change = (ones_comp) ? -change - 1 : -change;
-            }
-            timer.period += change;
-            if (timer.period < 8 || timer.period > 0x7FF) // TODO also mute if target > 0x7FF before?
-            {
-                mute = true;
-                enabled = false;
-            }
-        }
-        if (count < 0 || reload)
-        {
-            count = period;
-            reload = false;
-        }
     }
 }
 

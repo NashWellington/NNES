@@ -75,6 +75,7 @@ struct Sweep
     void clock(Divider& timer);
     bool ones_comp = false; // Set to true for Pulse 1
     ubyte shift = 0;
+    int change = 0;
     bool negate = false;
     ubyte period = 0;
     bool enabled = false;

@@ -22,8 +22,6 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 ## Contra
 
 ## Donkey Kong
-* Pulse sound channels mute when they're not supposed to
-* Triangle sound channel's pitch seems to be too low (not sure about this one)
 
 ## Double Dragon
 
@@ -38,10 +36,9 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 
 ## Final Fantasy
 * Constantly reads from open bus after some power cycles (probably has something to do with random contents of RAM)
-* High-pitched whine when selecting an option in the UI
+* Switching between options at the opening screen messes with sound
 
 ## Ice Climber
-* Some sound channels cut out at some point
 * CPU read from unmapped address $58A9 (intentional?)
 * Invisible sprites
 * Broken blocks don't disappear
@@ -82,6 +79,7 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 * Mapper 4 128K PRG-ROM, 128K CHR-ROM
 * Scrolling is messed up (might have to do with mapper 4 IRQ behavior)
 * Sound completely muted while ingame (but not at title screen)
+* Weird scrolling behavior after pressing select while ingame
 
 ## Silver Surfer
 * Goes back to title screen after stage selection
@@ -97,7 +95,7 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 ## Tennis
 
 ## Time Lord
-* Sound effect made when getting the fifth orb is missing
+* Potentially some issue with the health bar
 
 ## Zelda II
 * Mapper 1 128K PRG-ROM 128K CHR-ROM 8K PRG-NV-RAM
