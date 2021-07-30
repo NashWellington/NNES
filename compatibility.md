@@ -2,13 +2,7 @@
 Game-specific bugs are logged here.
 Games listed here with no entries underneath them have no known compatibility issues.
 
-Some bugs affect most or all games, and it would be redundant to add them under the games affected. They include:
-* Noise channel not working correctly
-* DMC channel not working correctly
-* Random audio crackles/pops
-
 ## The Addams Family
-* Ghost sprites are actually invisible instead of being translucent (spooky!)
 
 ## Barbie
 
@@ -40,11 +34,10 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 
 ## Ice Climber
 * CPU read from unmapped address $58A9 (intentional?)
-* Invisible sprites
-* Broken blocks don't disappear
+* Some broken blocks don't disappear
+* Weird scrolling behavior
 
 ## The Legend of Zelda
-* Missing sprite for selecting text
 
 ## Mega Man
 
@@ -53,14 +46,10 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 * Crashed on invalid opcode (only on one reset. Possibly due to randomized RAM values?)
 
 ## Metroid
-* Mapper 1 PRG-ROM 128K CHR-RAM 8K
-* All sprites are invisible
 
 ## Mike Tyson's Punch-Out!!
-* Invisible sprites in some places
-* Note: this might have something to do with MMC2 PPU fetch sniffing?
-* Pulse (or triangle?) channels cut out after reset
-* Glass Joe is bald at some point
+* Constant buzzing noise starts at some point in match 1
+* Glass Joe lost his hair
 
 ## Ms. Pac-Man
 * Fails to boot (only in the unlicensed version - mapper 0, 32K PRG-ROM, 8K CHR-ROM)
@@ -83,14 +72,10 @@ Some bugs affect most or all games, and it would be redundant to add them under 
 
 ## Silver Surfer
 * Goes back to title screen after stage selection
-* Audio is probably not correct
 
 ## Slalom
 
 ## Super Mario Bros.
-* Mapper 0, 32K PRG-ROM, 8K CHR-ROM
-* No animation when going into/out of a pipe (Mario just appears/disappears)
-* Mushroom/star/power up sprites are invisible for a second after appearing
 
 ## Tennis
 

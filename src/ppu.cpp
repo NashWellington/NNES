@@ -559,7 +559,6 @@ void PPU::dummyFetchTiles()
     }
 }
 
-// TODO color emphasis, integer math
 Pixel PPU::getColor(ubyte palette, ubyte pal_i)
 {
     assert(region == Region::NTSC);
@@ -637,8 +636,8 @@ void PPU::renderPixel()
     }
 
     // Multiplexer
-    // Sprite pixel gets drawn if non-zero && foreground priority
-    if (spr_px > 0 && !(spr_at[spr_i] & 0x20))
+    // Sprite pixel gets drawn if foreground priority or bg_px == 0
+    if (spr_px > 0 && (!(spr_at[spr_i] & 0x20) || bg_px == 0))
     {
         pushPixel(getColor((spr_at[spr_i] & 0x03) + 4, spr_px));
     }
