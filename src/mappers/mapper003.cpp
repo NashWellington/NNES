@@ -54,21 +54,11 @@ Mapper003::Mapper003(Header& header, std::ifstream& rom)
 
 std::optional<ubyte> Mapper003::cpuRead(uword address)
 {
-    if (address < 0x4020) return {};
-    else if (address >= 0x4020 && address < 0x6000) return 0;
+    if (address < 0x6000) return {};
     else if (address >= 0x6000 && address < 0x8000)
     {
-        if (prg_ram_exists)
-        {
-            return prg_ram[address-0x6000];
-        }
-        else
-        {
-            #ifndef NDEBUG
-            std::cerr << "Warning: CPU read from unmapped address " << hex(address) << std::endl;
-            #endif
-            return 0;
-        }
+        if (prg_ram_exists) return prg_ram[address-0x6000];
+        else return {};
     }
     else
     {
@@ -85,21 +75,15 @@ std::optional<ubyte> Mapper003::cpuRead(uword address)
 
 bool Mapper003::cpuWrite(uword address, ubyte data)
 {
-    if (address < 0x4020) return false;
-    else if (address >= 0x4020 && address < 0x6000) return true;
+    if (address < 0x6000) return false;
     else if (address >= 0x6000 && address < 0x8000) 
     {
         if (prg_ram_exists)
         {
             prg_ram[address-0x6000] = data;
+            return true;
         }
-        else
-        {
-            #ifndef NDEBUG
-            std::cerr << "Warning: CPU write to unmapped address " << hex(address) << std::endl;
-            #endif
-        }
-        return true;
+        else return false;
     }
     else
     {

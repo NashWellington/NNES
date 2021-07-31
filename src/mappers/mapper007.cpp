@@ -46,14 +46,7 @@ Mapper007::Mapper007(Header& header, std::ifstream& rom)
 
 std::optional<ubyte> Mapper007::cpuRead(uword address)
 {
-    if (address < 0x4020) return {};
-    else if (address >= 0x4020 && address < 0x8000)
-    {
-        #ifndef NDEBUG
-        std::cerr << "Warning: CPU read from unmapped address " << hex(address) << std::endl;
-        #endif
-        return 0;
-    }
+    if (address < 0x8000) return {};
     else 
     {
         return prg_rom[prg_bank][(address-0x8000) % (prg_rom[prg_bank].size())];
@@ -62,14 +55,7 @@ std::optional<ubyte> Mapper007::cpuRead(uword address)
 
 bool Mapper007::cpuWrite(uword address, ubyte data)
 {
-    if (address < 0x4020) return false;
-    else if (address >= 0x4020 && address < 0x8000)
-    {
-        #ifndef NDEBUG
-        std::cerr << "Warning: CPU write to unmapped address " << hex(address) << std::endl;
-        #endif
-        return true;
-    }
+    if (address < 0x8000) return false;
     else
     {
         // Bank selection

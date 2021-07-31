@@ -53,23 +53,8 @@ std::optional<ubyte> Mapper004::cpuRead(uword address)
     if (address < 0x6000) return {};
     else if (address < 0x8000) // PRG RAM
     {
-        if (prg_ram_exists)
-        {
-            if (prg_ram_enabled)
-            {
-                return prg_ram[address-0x6000];
-            }
-            else
-            {
-                // TODO emulate open bus behavior
-                return 0;
-            }
-        }
-        else
-        {
-            // TODO open bus behavior
-            return 0;
-        }
+        if (prg_ram_exists && prg_ram_enabled) return prg_ram[address-0x6000];
+        else return {};
     }
     else
     {
@@ -85,18 +70,12 @@ bool Mapper004::cpuWrite(uword address, ubyte data)
     if (address < 0x6000) return false;
     else if (address < 0x8000) // PRG RAM
     {
-        if (prg_ram_exists)
+        if (prg_ram_exists && prg_ram_enabled)
         {
-            if (prg_ram_enabled && !prg_ram_write_protect)
-            {
-                prg_ram[address-0x6000] = data;
-            }
+            if (!prg_ram_write_protect) prg_ram[address-0x6000] = data;
             return true;
         }
-        else
-        {
-            return true;
-        }
+        else return false;
     }
     else if (address >= 0x8000 && address < 0xA000)
     {

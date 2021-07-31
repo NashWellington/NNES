@@ -1,36 +1,33 @@
 #include "mem.hpp"
 
-// TODO emulate open bus behavior
-
 ubyte Memory::cpuRead(uword address)
 {
     std::optional<ubyte> data = nes.cart->cpuRead(address); // Cartridge mem
-    if (data) return data.value();
-    else if (address < 0x2000) // zpg, stack, RAM, or their mirrors
+    if (!data)
     {
-        address %= 0x0800;
-        if      (address >= 0x0200) return ram[address - 0x0200];
-        else if (address >= 0x0100) return stack[address - 0x0100];
-        else                        return zero_page[address];
-    }
-    else if (address < 0x4020) return cpuReadReg(address);
-    else
-    {
-        #ifndef NDEBUG
-        std::cerr << "Warning: read from dummy cart memory at " << hex(address) << std::endl;
-        #endif
-        if (address >= 0x4020 && address < 0x6000)
-            return dummy_misc_ram[address-0x4020];
-        else if (address >= 0x6000 && address < 0x8000)
-            return dummy_prg_ram[address-0x6000];
-        #ifndef NDEBUG
+        if (address < 0x2000) // zpg, stack, RAM, or their mirrors
+        {
+            address %= 0x0800;
+            if      (address >= 0x0200) data = ram[address - 0x0200];
+            else if (address >= 0x0100) data = stack[address - 0x0100];
+            else                        data = zero_page[address];
+        }
+        else if (address >= 0x2000 && address < 0x4018) 
+        {
+            data = cpuReadReg(address);
+        }
+        else if (address >= 0x4018 && address < 0x8000)
+        {
+            data = cpu_open_bus;
+        }
         else
         {
             std::cerr << "Error: no PRG-ROM found" << std::endl;
             throw std::exception();
         }
-        #endif
     }
+    cpu_open_bus = data.value();
+    return data.value();
 }
 
 void Memory::cpuWrite(uword address, ubyte data)
@@ -43,23 +40,18 @@ void Memory::cpuWrite(uword address, ubyte data)
         else if (address >= 0x0100) stack[address - 0x0100] = data;
         else                        zero_page[address] = data;
     }
-    else if (address < 0x4020) cpuWriteReg(address, data);
+    else if (address >= 0x2000 && address < 0x4018) 
+    {
+        cpuWriteReg(address, data);
+    }
+    else if (address >= 0x4018 && address < 0x8000)
+    {
+        // Writes to CPU open bus don't affect it
+    }
     else 
     {
-        #ifndef NDEBUG
-        std::cerr << "Warning: write to dummy cart memory at " << hex(address) << std::endl;
-        #endif
-        if (address >= 0x4020 && address < 0x6000)
-            dummy_misc_ram[address-0x4020] = data;
-        else if (address >= 0x6000 && address < 0x8000)
-            dummy_prg_ram[address-0x6000] = data;
-        #ifndef NDEBUG
-        else
-        {
-            std::cerr << "Error: no PRG-ROM found" << std::endl;
-            throw std::exception();
-        }
-        #endif
+        std::cerr << "Error: no PRG-ROM found" << std::endl;
+        throw std::exception();
     }
 }
 
@@ -70,10 +62,8 @@ ubyte Memory::ppuRead(uword address)
     if (data) return data.value();
     else if (address < 0x2000)
     {
-        #ifndef NDEBUG
-        std::cerr << "Warning: read from dummy CHR-RAM at " << hex(address) << std::endl;
-        #endif
-        return dummy_pattern_tables[address];
+        std::cerr << "Error: no CHR memory found" << hex(address) << std::endl;
+        throw std::exception();
     }
     else if (address < 0x3F00) // Nametables + mirrors
     {
@@ -98,10 +88,8 @@ void Memory::ppuWrite(uword address, ubyte data)
     if (nes.cart->ppuWrite(address, data)) return;
     else if (address < 0x2000)
     {
-        #ifndef NDEBUG
-        std::cerr << "Warning: write to dummy CHR-RAM at " << hex(address) << std::endl;
-        #endif
-        dummy_pattern_tables[address] = data;
+        std::cerr << "Error: no CHR memory found" << hex(address) << std::endl;
+        throw std::exception();
     }
     else if (address < 0x3F00) // Nametables + mirrors
     {
@@ -135,17 +123,19 @@ ubyte Memory::cpuReadReg(uword address)
     }
     else if (address == 0x4016) // Read input port 1
     {
-        ubyte data = 0;
-        data |= nes.controllers[0]->read();
         // TODO expansion etc.
+        ubyte data = cpu_open_bus & 0xE0;
+        data |= nes.controllers[0]->read();
+        cpu_open_bus = data;
         return data;
     }
     else if (address == 0x4017) // Read input port 2
     {
-        ubyte data = 0;
-        // TODO DMC conflicts?
-        data |= nes.controllers[1]->read();
+        // TODO DMC conflicts
         // TODO expansion etc.
+        ubyte data = cpu_open_bus & 0xE0;
+        data |= nes.controllers[1]->read();
+        cpu_open_bus = data;
         return data;
     }
     else
@@ -167,15 +157,12 @@ void Memory::cpuWriteReg(uword address, ubyte data)
     else if ((address >= 0x4000 && address <= 0x4013) || address == 0x4015 || address == 0x4017)
     {
         nes.apu->write(address, data);
-        cpu_open_bus = data;
     }
     else if (address == 0x4016) // Poll input
     {
         nes.controllers[0]->poll(data & 0x01);
         nes.controllers[1]->poll(data & 0x01);
         // TODO expansion ports (if I ever get there)
-        cpu_open_bus &= 0xF8;
-        cpu_open_bus |= (data & 0x07);
     }
     else
     {

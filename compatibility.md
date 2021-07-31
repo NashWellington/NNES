@@ -2,6 +2,8 @@
 Game-specific bugs are logged here.
 Games listed here with no entries underneath them have no known compatibility issues.
 
+These games were picked for testing because they are popular, because they are good at quickly and easily testing specific features (Double Dribble is good for testing DMC and noise channel behavior), or because they are [tricky to emulate](https://wiki.nesdev.com/w/index.php/Tricky-to-emulate_games) and can be used to identify emulator bugs that would not normally be identifiable in other games or test ROMs.
+
 ## The Addams Family
 
 ## Barbie
@@ -9,13 +11,27 @@ Games listed here with no entries underneath them have no known compatibility is
 ## Battletoads
 * Game freezes at the start of level 2
 
+## Balloon Fight
+
+## Bases Loaded II
+
 ## Bionic Commando
+
+## Burai Fighter
+* Mapper 4, 32K PRG-ROM, 32K CHR-ROM
+* Fails to boot, plays random noise
 
 ## Castlevania
 
 ## Contra
 
+## Crystalis
+* Mapper 4, 256K PRG-ROM, 128K CHR-ROM
+* crashes on $42 at PC $C50B
+* Battery is set to true in the header, so maybe this is supposed to have PRG-NV-RAM?
+
 ## Donkey Kong
+* Mario's jumps sound wrong (some have ascending pitch, some descending)
 
 ## Double Dragon
 
@@ -29,7 +45,6 @@ Games listed here with no entries underneath them have no known compatibility is
 ## Excitebike
 
 ## Final Fantasy
-* Constantly reads from open bus after some power cycles (probably has something to do with random contents of RAM)
 * Switching between options at the opening screen messes with sound
 
 ## Ice Climber
@@ -43,7 +58,6 @@ Games listed here with no entries underneath them have no known compatibility is
 
 ## Mega Man 2
 * Weird behavior when scrolling up on the opening credit scene
-* Crashed on invalid opcode (only on one reset. Possibly due to randomized RAM values?)
 
 ## Metroid
 
@@ -53,14 +67,16 @@ Games listed here with no entries underneath them have no known compatibility is
 
 ## Ms. Pac-Man
 * Fails to boot (only in the unlicensed version - mapper 0, 32K PRG-ROM, 8K CHR-ROM)
+* Relies on obscure NMI delay behavior with PPUSTATUS
 
 ## Pac-Man
 
 ## Paperboy
 * Mapper 3, 32K PRG-ROM, 32K CHR-ROM
-* Controller input doesn't seem to work
-* Note: according to https://wiki.nesdev.com/w/index.php/Open_bus_behavior "Paperboy relies on the controller port being exactly $41 for a button press to be recognized"
-* The background is ridiculously screwed up
+* The background is ridiculously screwed up (might be an issue with vertical scrolling?)
+
+## Pirates
+* Some text boxes are glitched after docking at a port
 
 ## R.C. Pro-AM
 
@@ -77,10 +93,33 @@ Games listed here with no entries underneath them have no known compatibility is
 
 ## Super Mario Bros.
 
+## Super Mario Bros. 2
+* Mapper 4, 128K PRG-ROM, 128K CHR-ROM
+* Freeze on purple screen after starting game
+* Infinite stack under/overflow loop
+
+## Super Mario Bros. 3
+* Mapper 4, 256K PRG-ROM, 128K CHR-ROM
+* Completely fails to boot
+
+## Teenage Mutant Ninja Turtles
+* Incorrect overworld scrolling behavior
+* Missing/invisible text on death
+
 ## Tennis
 
 ## Time Lord
-* Potentially some issue with the health bar
+* Potentially some issue with the health bar (DMC IRQ timing issue?)
+
+## Wizards and Warriors 3
+* Mapper 7, 256K PRG-ROM, 8K CHR-RAM
+* Constant whining noise at title screen
+* Black bars over doors when crouching
+* "Life" meter is cut off at the top
+
+## The Young Indiana Jones Chronicles
+* Mapper 4, 128K PRG-ROM, 128K CHR-ROM
+* stack overflow x 50, then crash on opcode $32 at PC $2013
 
 ## Zelda II
 * Mapper 1 128K PRG-ROM 128K CHR-ROM 8K PRG-NV-RAM

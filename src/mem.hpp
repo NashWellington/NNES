@@ -92,29 +92,6 @@ private:
     */
     std::array<ubyte, 0x0600> ram = {};
 
-    /* APU and I/O registers
-    * $4000 to $4017
-    * $4018 to $401F (test mode, should not access)
-    */
-    std::array<ubyte, 0x0020> io_regs = {};
-
-// Cartridge memory not provided by the ROM
-    /* Cartridge mem that should be at $4020 to $5FFF
-    */
-    
-    std::array<ubyte, 0x1FD0> dummy_misc_ram = {};
-    
-    /* Cartridge mem that should be at $6000 to $7FFF
-    */
-    std::array<ubyte, 0x2000> dummy_prg_ram = {};
-
-// PPU memory arrays
-    /* Dummy pattern tables
-    * Note: only used if pattern tables not present on the cartridge,
-    *       generally for compatibility with test roms
-    */
-    std::array<ubyte, 0x2000> dummy_pattern_tables = {};
-
     /* Name tables
     * $2000 to $2FFF
     * Note: 4 nametables are addressable, but only 2 are present in memory.

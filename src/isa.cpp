@@ -1684,7 +1684,7 @@ int ISA::INC(CPU& cpu, int cycles, uword address)
 
 int ISA::INX(CPU& cpu)
 {
-    // Decrement X value
+    // Increment X value
     ubyte val = cpu.reg_x;
     val += 1;
     cpu.reg_x = val;

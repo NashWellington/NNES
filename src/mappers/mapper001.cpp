@@ -1,7 +1,5 @@
 #include "mapper.hpp"
 
-// TODO support submapper 5
-
 Mapper001::Mapper001(Header& header, std::ifstream& rom)
 {
     mirroring = header.mirroring;
@@ -124,29 +122,19 @@ void Mapper001::loadFromFile(std::string name)
 
 std::optional<ubyte> Mapper001::cpuRead(uword address)
 {
-    if (address < 0x4020) return {};
-    else if (address >= 0x4020 && address < 0x6000) // unused
-    {
-        #ifndef NDEBUG
-        std::cerr << "Warning: CPU read from unmapped memory address: " << hex(address) << std::endl; 
-        #endif
-        return 0;
-    }
+    if (address < 0x6000) return {};
     else if (address >= 0x6000 && address < 0x8000) // PRG-RAM
     {
         if (!prg_ram.size()) // No PRG-RAM
         {
-            #ifndef NDEBUG
-            std::cerr << "Warning: CPU read from unmapped memory address: " << hex(address) << std::endl; 
-            #endif
-            return 0; // TODO open bus
+            return {};
         }
         else if ((reg_prg_bank & 0x10) // PRG-RAM disabled
             || ((reg_chr_bank_0 & 0x10) 
             && (prg_rom.size() <= 16 && chr_mem.size() == 2 && chr_ram
             && prg_ram.size() == 1)))  // extra disable check for SNROM
         {
-            return 0; // TODO open bus
+            return {};
         }
         else 
         {
@@ -208,29 +196,19 @@ std::optional<ubyte> Mapper001::cpuRead(uword address)
 
 bool Mapper001::cpuWrite(uword address, ubyte data)
 {
-    if (address < 0x4020) return false;
-    else if (address >= 0x4020 && address < 0x6000)
-    {
-        #ifndef NDEBUG
-        std::cerr << "Warning: CPU write to unmapped memory address: " << hex(address) << std::endl; 
-        #endif
-        return true;
-    }
+    if (address < 0x6000) return false;
     else if (address >= 0x6000 && address < 0x8000)
     {
         if (!prg_ram.size()) // No PRG-RAM
         {
-            #ifndef NDEBUG
-            std::cerr << "Warning: CPU read from unmapped memory address: " << hex(address) << std::endl; 
-            #endif
-            return true; // TODO open bus
+            return false;
         }
         else if ((reg_prg_bank & 0x10) // PRG-RAM disabled
             || ((reg_chr_bank_0 & 0x10) 
             && (prg_rom.size() <= 16 && chr_mem.size() == 2 && chr_ram
             && prg_ram.size() == 1)))  // extra disable check for SNROM
         {
-            return true;
+            return false;
         }
         else 
         {
