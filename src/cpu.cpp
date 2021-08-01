@@ -171,6 +171,9 @@ void CPU::queueInterrupt(Interrupt interrupt)
 
 void CPU::serviceInterrupt()
 {
+    if (queued_interrupt == Interrupt::NONE 
+        && (nes.apu->frame_interrupt || nes.apu->dmc.interrupt))
+        queueInterrupt(Interrupt::IRQ);
     if (queued_interrupt == Interrupt::IRQ && reg_sr.i)
         queued_interrupt = Interrupt::NONE;
     if (queued_interrupt > serviced_interrupt)

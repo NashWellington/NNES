@@ -499,8 +499,8 @@ void CPU::BRK() noexcept
         case 4: push(reg_pc & 0x00FF); break;
         // Interrupt hijacking comes into play here
         case 5: push(reg_sr.reg | 0x30); reg_sr.i = true; break;
-        case 6: reg_pc &= 0xFF00; reg_pc |= read(0xFFFE); break;
-        case 7: reg_pc &= 0x00FF; reg_pc |= read(0xFFFF) << 8; instr.cycle = 0; break;
+        case 6: reg_pc = read(0xFFFE); break;
+        case 7: reg_pc |= read(0xFFFF) << 8; instr.cycle = 0; break;
     }
 }
 
@@ -514,8 +514,8 @@ void CPU::IRQ() noexcept
         case 4: push(reg_pc & 0x00FF); break;   // Push PCL
         // Interrupt hijacking comes into play here
         case 5: push((reg_sr.reg & 0xCF) | 0x20); break;
-        case 6: instr.address = read(0xFFFE); reg_sr.i = true; break;
-        case 7: instr.address |= read(0xFFFF) << 8; instr.cycle = 0; break;
+        case 6: reg_pc = read(0xFFFE); reg_sr.i = true; break;
+        case 7: reg_pc |= read(0xFFFF) << 8; instr.cycle = 0; break;
     }
 }
 
@@ -529,8 +529,8 @@ void CPU::NMI() noexcept
         case 4: push(reg_pc & 0x00FF); break;   // Push PCL
         // Interrupt hijacking comes into play here
         case 5: push((reg_sr.reg & 0xCF) | 0x20); break;
-        case 6: instr.address = read(0xFFFA); reg_sr.i = true; break;
-        case 7: instr.address |= read(0xFFFB) << 8; instr.cycle = 0; break;
+        case 6: reg_pc = read(0xFFFA); reg_sr.i = true; break;
+        case 7: reg_pc |= read(0xFFFB) << 8; instr.cycle = 0; break;
     }
 }
 

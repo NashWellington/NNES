@@ -158,8 +158,6 @@ void APU::tick()
         cycle = 0;
         sample_i = 0;
     }
-
-    if (frame_interrupt) nes.cpu->queueInterrupt(CPU::Interrupt::IRQ);
 }
 
 /* For more info on mixing: https://wiki.nesdev.com/w/index.php/APU_Mixer

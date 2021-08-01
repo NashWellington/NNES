@@ -139,15 +139,8 @@ None yet
 # Regressions
 
 ## CPU
-* Branch timing tests halt on gray screen
-* nestest has no sprite display/no change in nametable
-* CPU flag concurrency halts on "verifying basic CPU flag operations work properly"
-* CPU reset register tests fails (but RAM test passes)
+* nestest fails DCP, ISB, SLO, RLA, SRE, RRA
 * Most unintended opcodes fail instruction test v5
-* CPU timing test halts
-* interrupt test 1 (CLI) fails because APU doesn't generate IRQ correctly
-* interrupt tests 2-4 crash (all relating to NMIs)
-* interrupt test 5 halts
 
 ## PPU
 
