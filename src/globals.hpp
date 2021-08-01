@@ -55,14 +55,6 @@ typedef int16_t word;
 */
 typedef std::chrono::duration<int64_t,std::ratio<1,60>> frame;
 
-enum InterruptType
-{
-    NO_INTERRUPT,   // no interrupt
-    IRQ,            // maskable interrupt
-    NMI,            // non-maskable interrupt
-    RESET
-};
-
 enum class HeaderType
 {
     NO_HEADER,  // Not an iNES, NES 2.0, or UNIF header

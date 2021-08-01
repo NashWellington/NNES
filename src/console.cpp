@@ -51,3 +51,13 @@ void NES::processInputs()
     //expansion.processInputs();
     // Input doesn't touch expansion or cartridge slots yet
 }
+
+void NES::log()
+{
+    std::clog << hex(log_buffer.pc) << ": ";
+    for(auto str : disassemble(log_buffer.byte_queue))
+    {
+        std::clog << str << " ";
+    }
+    std::clog << std::endl;
+}

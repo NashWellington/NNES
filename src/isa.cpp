@@ -1,2254 +1,1048 @@
-#include "isa.hpp"
+#include "globals.hpp"
 
-const ubyte MAGIC_CONST = 0xFF;
+#include "cpu.hpp"
 
-// TODO clean up code so it's simpler and formatted better
-// TODO IRQ, NMI, RESET, BRK dummy CPU reads w/o incrementing
+#define MAGIC_CONST 0xFF
 
-int ISA::IRQ(CPU& cpu)
+// Addressing modes
+
+// Accumulator
+#define acc(op) { dummyNextByte(); reg_a = op(reg_a); instr.cycle = 0; break; }
+// Immediate
+#define imm(op) { op(nextByte()); instr.cycle = 0; break; }
+// Implied
+#define imp(op) { dummyNextByte(); op(); instr.cycle = 0; break; }
+// Zero Page
+#define zpg_r(op) {\
+switch (instr.cycle){\
+    case 2: instr.address = nextByte(); break;\
+    case 3: op(read(instr.address)); instr.cycle = 0; break;\
+} break; }
+#define zpg_w(op) {\
+switch (instr.cycle) {\
+    case 2: instr.address = nextByte(); break;\
+    case 3: write(instr.address, op()); instr.cycle = 0; break;\
+} break; }
+#define zpg_rmw(op) {\
+switch (instr.cycle) {\
+    case 2: instr.address = nextByte(); break;\
+    case 3: instr.value = read(instr.address); break;\
+    case 4: write(instr.address, instr.value); instr.value = op(instr.value); break;\
+    case 5: write(instr.address, instr.value); instr.cycle = 0; break;\
+} break; }
+// Zero Page, X- or Y-indexed
+#define zpg_i_r(op, i) {\
+switch (instr.cycle) {\
+    case 2: instr.address = nextByte(); break;\
+    case 3: read(instr.address); instr.address += i; instr.address &= 0x00FF; break;\
+    case 4: op(read(instr.address)); instr.cycle = 0; break;\
+} break; }
+#define zpg_i_w(op, i) {\
+switch (instr.cycle) {\
+    case 2: instr.address = nextByte(); break;\
+    case 3: read(instr.address); instr.address += i; instr.address &= 0x00FF; break;\
+    case 4: write(instr.address, op()); instr.cycle = 0; break;\
+} break; }
+#define zpg_i_rmw(op, i) {\
+switch (instr.cycle) {\
+    case 2: instr.address = nextByte(); break;\
+    case 3: read(instr.address); instr.address += i; instr.address &= 0x00FF; break;\
+    case 4: instr.value = read(instr.address); break;\
+    case 5: write(instr.address, instr.value); instr.value = op(instr.value); break;\
+    case 6: write(instr.address, instr.value); instr.cycle = 0; break;\
+} break; }
+// Absolute
+#define abs_r(op) {\
+switch (instr.cycle) {\
+    case 2: instr.address = nextByte(); break;\
+    case 3: instr.address |= nextByte() << 8; break;\
+    case 4: op(read(instr.address)); instr.cycle = 0; break;\
+} break; }
+#define abs_w(op) {\
+switch (instr.cycle) {\
+    case 2: instr.address = nextByte(); break;\
+    case 3: instr.address |= nextByte() << 8; break;\
+    case 4: write(instr.address, op()); instr.cycle = 0; break;\
+} break; }
+#define abs_rmw(op) {\
+switch (instr.cycle) {\
+    case 2: instr.address = nextByte(); break;\
+    case 3: instr.address |= nextByte() << 8; break;\
+    case 4: instr.value = read(instr.address); break;\
+    case 5: write(instr.address, instr.value); instr.value = op(instr.value); break;\
+    case 6: write(instr.address, instr.value); instr.cycle = 0; break;\
+} break; }
+// Absolute, X- or Y-indexed
+#define abs_i_r(op, i) {\
+switch (instr.cycle) {\
+    case 2: instr.address = nextByte(); break;\
+    case 3:\
+        {instr.address |= nextByte() << 8;\
+        uword addr_low = i + (instr.address & 0x00FF);\
+        instr.page_cross = addr_low > 0x00FF;\
+        instr.address &= 0xFF00;\
+        instr.address |= addr_low & 0x00FF;}\
+        break;\
+    case 4:\
+        if (instr.page_cross) { read(instr.address); instr.address += 0x0100; }\
+        else { op(read(instr.address)); instr.cycle = 0; }\
+        break;\
+    case 5: op(read(instr.address)); instr.cycle = 0; break;\
+} break; }
+#define abs_i_w(op, i) {\
+switch (instr.cycle) {\
+    case 2: instr.address = nextByte(); break;\
+    case 3:\
+        {instr.address |= nextByte() << 8;\
+        uword addr_low = i + (instr.address & 0x00FF);\
+        instr.page_cross = addr_low > 0x00FF;\
+        instr.address &= 0xFF00;\
+        instr.address |= addr_low & 0x00FF;}\
+        break;\
+    case 4: read(instr.address); if (instr.page_cross) instr.address += 0x0100; break;\
+    case 5: write(instr.address, op()); instr.cycle = 0; break;\
+} break; }
+#define abs_i_rmw(op, i) {\
+switch (instr.cycle) {\
+    case 2: instr.address = nextByte(); break;\
+    case 3:\
+        {instr.address |= nextByte() << 8;\
+        uword addr_low = i + (instr.address & 0x00FF);\
+        instr.page_cross = addr_low > 0x00FF;\
+        instr.address &= 0xFF00;\
+        instr.address |= addr_low & 0x00FF;}\
+        break;\
+    case 4: read(instr.address); if (instr.page_cross) instr.address += 0x0100; break;\
+    case 5: instr.value = read(instr.address); break;\
+    case 6: write(instr.address, instr.value); instr.value = op(instr.value); break;\
+    case 7: write(instr.address, instr.value); instr.cycle = 0; break;\
+} break; }
+// Relative
+#define rel(op) {\
+switch (instr.cycle) {\
+    case 2:\
+        instr.value = nextByte();\
+        instr.branch_taken = op();\
+        if (!instr.branch_taken) instr.cycle = 0;\
+        break;\
+    case 3:\
+        dummyNextByte();\
+        instr.address = reg_pc + static_cast<word>(static_cast<byte>(instr.value));\
+        {\
+            ubyte pcl = reg_pc & 0x00FF;\
+            pcl += instr.value;\
+            reg_pc &= 0xFF00;\
+            reg_pc |= pcl;\
+            instr.page_cross = instr.address != reg_pc;\
+        }\
+        if (!instr.page_cross) instr.cycle = 0;\
+        break;\
+    case 4:\
+        dummyNextByte();\
+        reg_pc = instr.address;\
+        instr.cycle = 0;\
+        break;\
+} break; }
+// Indirect, X-indexed (AKA indexed indirect)
+#define ind_x_r(op) {\
+switch (instr.cycle) {\
+    case 2: instr.value = nextByte(); break;\
+    case 3: read(instr.value); instr.value += reg_x; break;\
+    case 4: instr.address = read(instr.value); break;\
+    case 5: instr.address |= read(static_cast<ubyte>(instr.value+1)) << 8; break;\
+    case 6: op(read(instr.address)); instr.cycle = 0; break;\
+} break; }
+#define ind_x_w(op) {\
+switch (instr.cycle) {\
+    case 2: instr.value = nextByte(); break;\
+    case 3: read(instr.value); instr.value += reg_x; break;\
+    case 4: instr.address = read(instr.value); break;\
+    case 5: instr.address |= read(static_cast<ubyte>(instr.value+1)) << 8; break;\
+    case 6: write(instr.address, op()); instr.cycle = 0; break;\
+} break; }
+#define ind_x_rmw(op) {\
+switch (instr.cycle) {\
+    case 2: instr.value = nextByte(); break;\
+    case 3: read(instr.value); instr.value += reg_x; break;\
+    case 4: instr.address = read(instr.value); break;\
+    case 5: instr.address |= read(static_cast<ubyte>(instr.value+1)) << 8; break;\
+    case 6: instr.value = read(instr.address); break;\
+    case 7: write(instr.address, instr.value); instr.value = op(instr.value); break;\
+    case 8: write(instr.address, instr.value); instr.cycle = 0; break;\
+} break; }
+// Indirect, Y-indexed (AKA indirect indexed)
+#define ind_y_r(op) {\
+switch (instr.cycle) {\
+    case 2: instr.value = nextByte(); break;\
+    case 3: instr.address = read(instr.value); break;\
+    case 4:\
+        {instr.address |= read(ubyte(instr.value+1)) << 8;\
+        uword addr_low = reg_y + (instr.address & 0x00FF);\
+        instr.page_cross = addr_low > 0x00FF;\
+        instr.address &= 0xFF00;\
+        instr.address |= addr_low & 0x00FF;}\
+        break;\
+    case 5:\
+        if (instr.page_cross) { read(instr.address); instr.address += 0x0100; }\
+        else { op(read(instr.address)); instr.cycle = 0; }\
+        break;\
+    case 6: op(read(instr.address)); instr.cycle = 0; break;\
+} break; }
+#define ind_y_w(op) {\
+switch (instr.cycle) {\
+    case 2: instr.value = nextByte(); break;\
+    case 3: instr.address = read(instr.value); break;\
+    case 4:\
+        {instr.address |= read(ubyte(instr.value+1)) << 8;\
+        uword addr_low = reg_y + (instr.address & 0x00FF);\
+        instr.page_cross = addr_low > 0x00FF;\
+        instr.address &= 0xFF00;\
+        instr.address |= addr_low & 0x00FF;}\
+        break;\
+    case 5:\
+        read(instr.address);\
+        if (instr.page_cross) instr.address += 0x0100;\
+        break;\
+    case 6: write(instr.address, op()); instr.cycle = 0; break;\
+} break; }
+#define ind_y_rmw(op) {\
+switch (instr.cycle) {\
+    case 2: instr.value = nextByte(); break;\
+    case 3: instr.address = read(instr.value); break;\
+    case 4:\
+        {instr.address |= read(ubyte(instr.value+1)) << 8;\
+        uword addr_low = reg_y + (instr.address & 0x00FF);\
+        instr.page_cross = addr_low > 0x00FF;\
+        instr.address &= 0xFF00;\
+        instr.address |= addr_low & 0x00FF;}\
+        break;\
+    case 5:\
+        instr.value = read(instr.address);\
+        if (instr.page_cross) instr.address += 0x0100;\
+        break;\
+    case 6: instr.value = read(instr.address); break;\
+    case 7: write(instr.address, instr.value); instr.value = op(instr.value); break;\
+    case 8: write(instr.address, instr.value); instr.cycle = 0; break;\
+} break; }
+
+void CPU::executeInstruction()
 {
-    if (cpu.reg_sr.i) return 0;
-    else
+    switch (instr.code)
     {
-        ubyte pch = static_cast<ubyte>((cpu.reg_pc & 0xFF00) >> 8);
-        ubyte pcl = static_cast<ubyte>(cpu.reg_pc & 0x00FF);
-
-        cpu.push(pch);
-        cpu.push(pcl);
-        cpu.push(cpu.reg_sr.reg & 0xEF); // Push SR with break flag clear
-
-        cpu.reg_sr.i = true;
-        pcl = cpu.read(0xFFFE);
-        pch = cpu.read(0xFFFF);
-
-        cpu.reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
-        return 7;
+        case 0x00: BRK(); break;
+        case 0x01: ind_x_r(ORA);
+        case 0x02: STP(); break;
+        case 0x03: ind_x_rmw(SLO);
+        case 0x04: zpg_r(NOP);
+        case 0x05: zpg_r(ORA);
+        case 0x06: zpg_rmw(ASL);
+        case 0x07: zpg_rmw(SLO);
+        case 0x08: PHP(); break;
+        case 0x09: imm(ORA);
+        case 0x0A: acc(ASL);
+        case 0x0B: imm(ANC);
+        case 0x0C: abs_r(NOP);
+        case 0x0D: abs_r(ORA);
+        case 0x0E: abs_rmw(ASL);
+        case 0x0F: abs_rmw(SLO);
+        case 0x10: rel(BPL);
+        case 0x11: ind_y_r(ORA);
+        case 0x12: STP(); break;
+        case 0x13: ind_y_rmw(SLO);
+        case 0x14: zpg_i_r(NOP, reg_x);
+        case 0x15: zpg_i_r(ORA, reg_x);
+        case 0x16: zpg_i_rmw(ASL, reg_x);
+        case 0x17: zpg_i_rmw(SLO, reg_x);
+        case 0x18: imp(CLC);
+        case 0x19: abs_i_r(ORA, reg_y);
+        case 0x1A: imp(NOP);
+        case 0x1B: abs_i_rmw(SLO, reg_y);
+        case 0x1C: abs_i_r(NOP, reg_x);
+        case 0x1D: abs_i_r(ORA, reg_x);
+        case 0x1E: abs_i_rmw(ASL, reg_x);
+        case 0x1F: abs_i_rmw(SLO, reg_x);
+        case 0x20: JSR(); break;
+        case 0x21: ind_x_r(AND);
+        case 0x22: STP(); break;
+        case 0x23: ind_x_rmw(RLA);
+        case 0x24: zpg_r(BIT);
+        case 0x25: zpg_r(AND);
+        case 0x26: zpg_rmw(ROL);
+        case 0x27: zpg_rmw(RLA);
+        case 0x28: PLP(); break;
+        case 0x29: imm(AND);
+        case 0x2A: acc(ROL);
+        case 0x2B: imm(ANC);
+        case 0x2C: abs_r(BIT);
+        case 0x2D: abs_r(AND);
+        case 0x2E: abs_rmw(ROL);
+        case 0x2F: abs_rmw(RLA);
+        case 0x30: rel(BMI);
+        case 0x31: ind_y_r(AND);
+        case 0x32: STP(); break;
+        case 0x33: ind_y_rmw(RLA);
+        case 0x34: zpg_i_r(NOP, reg_x);
+        case 0x35: zpg_i_r(AND, reg_x);
+        case 0x36: zpg_i_rmw(ROL, reg_x);
+        case 0x37: zpg_i_rmw(RLA, reg_x);
+        case 0x38: imp(SEC);
+        case 0x39: abs_i_r(AND, reg_y);
+        case 0x3A: imp(NOP);
+        case 0x3B: abs_i_rmw(RLA, reg_y);
+        case 0x3C: abs_i_r(NOP, reg_x);
+        case 0x3D: abs_i_r(AND, reg_x);
+        case 0x3E: abs_i_rmw(ROL, reg_x);
+        case 0x3F: abs_i_rmw(RLA, reg_x);
+        case 0x40: RTI(); break;
+        case 0x41: ind_x_r(EOR);
+        case 0x42: STP(); break;
+        case 0x43: ind_x_rmw(SRE);
+        case 0x44: zpg_r(NOP);
+        case 0x45: zpg_r(EOR);
+        case 0x46: zpg_rmw(LSR);
+        case 0x47: zpg_rmw(SRE);
+        case 0x48: PHA(); break;
+        case 0x49: imm(EOR);
+        case 0x4A: acc(LSR);
+        case 0x4B: imm(ALR);
+        case 0x4C: JMP(); break;
+        case 0x4D: abs_r(EOR);
+        case 0x4E: abs_rmw(LSR);
+        case 0x4F: abs_rmw(SRE);
+        case 0x50: rel(BVC);
+        case 0x51: ind_y_r(EOR);
+        case 0x52: STP(); break;
+        case 0x53: ind_y_rmw(SRE);
+        case 0x54: zpg_i_r(NOP, reg_x);
+        case 0x55: zpg_i_r(EOR, reg_x);
+        case 0x56: zpg_i_rmw(LSR, reg_x);
+        case 0x57: zpg_i_rmw(SRE, reg_x);
+        case 0x58: imp(CLI);
+        case 0x59: abs_i_r(EOR, reg_y);
+        case 0x5A: imp(NOP);
+        case 0x5B: abs_i_rmw(SRE, reg_y);
+        case 0x5C: abs_i_r(NOP, reg_x);
+        case 0x5D: abs_i_r(EOR, reg_x);
+        case 0x5E: abs_i_rmw(LSR, reg_x);
+        case 0x5F: abs_i_rmw(SRE, reg_x);
+        case 0x60: RTS(); break;
+        case 0x61: ind_x_r(ADC);
+        case 0x62: STP(); break;
+        case 0x63: ind_x_rmw(RRA);
+        case 0x64: zpg_r(NOP);
+        case 0x65: zpg_r(ADC);
+        case 0x66: zpg_rmw(ROR);
+        case 0x67: zpg_rmw(RRA);
+        case 0x68: PLA(); break;
+        case 0x69: imm(ADC);
+        case 0x6A: acc(ROR);
+        case 0x6B: imm(ARR);
+        case 0x6C: JMP_IND(); break;
+        case 0x6D: abs_r(ADC);
+        case 0x6E: abs_rmw(ROR);
+        case 0x6F: abs_rmw(RRA);
+        case 0x70: rel(BVS);
+        case 0x71: ind_y_r(ADC);
+        case 0x72: STP(); break;
+        case 0x73: ind_y_rmw(RRA);
+        case 0x74: zpg_i_r(NOP, reg_x);
+        case 0x75: zpg_i_r(ADC, reg_x);
+        case 0x76: zpg_i_rmw(ROR, reg_x);
+        case 0x77: zpg_i_rmw(RRA, reg_x);
+        case 0x78: imp(SEI);
+        case 0x79: abs_i_r(ADC, reg_y);
+        case 0x7A: imp(NOP);
+        case 0x7B: abs_i_rmw(RRA, reg_y);
+        case 0x7C: abs_i_r(NOP, reg_x);
+        case 0x7D: abs_i_r(ADC, reg_x);
+        case 0x7E: abs_i_rmw(ROR, reg_x);
+        case 0x7F: abs_i_rmw(RRA, reg_x);
+        case 0x80: imm(NOP);
+        case 0x81: ind_x_w(STA);
+        case 0x82: imm(NOP);
+        case 0x83: ind_x_w(SAX);
+        case 0x84: zpg_w(STY);
+        case 0x85: zpg_w(STA);
+        case 0x86: zpg_w(STX);
+        case 0x87: zpg_w(SAX)
+        case 0x88: imp(DEY);
+        case 0x89: imm(NOP);
+        case 0x8A: imp(TXA);
+        case 0x8B: imm(ANE);
+        case 0x8C: abs_w(STY);
+        case 0x8D: abs_w(STA);
+        case 0x8E: abs_w(STX);
+        case 0x8F: abs_w(SAX);
+        case 0x90: rel(BCC);
+        case 0x91: ind_y_w(STA);
+        case 0x92: STP(); break;
+        case 0x93: ind_y_w(SHA);
+        case 0x94: zpg_i_w(STY, reg_x);
+        case 0x95: zpg_i_w(STA, reg_x);
+        case 0x96: zpg_i_w(STX, reg_y);
+        case 0x97: zpg_i_w(SAX, reg_y);
+        case 0x98: imp(TYA);
+        case 0x99: abs_i_w(STA, reg_y);
+        case 0x9A: imp(TXS);
+        case 0x9B: abs_i_w(TAS, reg_y);
+        case 0x9C: abs_i_w(SHY, reg_x);
+        case 0x9D: abs_i_w(STA, reg_x);
+        case 0x9E: abs_i_w(SHX, reg_y);
+        case 0x9F: abs_i_w(SHA, reg_y);
+        case 0xA0: imm(LDY);
+        case 0xA1: ind_x_r(LDA);
+        case 0xA2: imm(LDX);
+        case 0xA3: ind_x_r(LAX);
+        case 0xA4: zpg_r(LDY);
+        case 0xA5: zpg_r(LDA);
+        case 0xA6: zpg_r(LDX);
+        case 0xA7: zpg_r(LAX);
+        case 0xA8: imp(TAY);
+        case 0xA9: imm(LDA);
+        case 0xAA: imp(TAX);
+        case 0xAB: imm(LXA);
+        case 0xAC: abs_r(LDY);
+        case 0xAD: abs_r(LDA);
+        case 0xAE: abs_r(LDX);
+        case 0xAF: abs_r(LAX);
+        case 0xB0: rel(BCS);
+        case 0xB1: ind_y_r(LDA);
+        case 0xB2: STP(); break;
+        case 0xB3: ind_y_r(LAX);
+        case 0xB4: zpg_i_r(LDY, reg_x);
+        case 0xB5: zpg_i_r(LDA, reg_x);
+        case 0xB6: zpg_i_r(LDX, reg_y);
+        case 0xB7: zpg_i_r(LAX, reg_y);
+        case 0xB8: imp(CLV);
+        case 0xB9: abs_i_r(LDA, reg_y);
+        case 0xBA: imp(TSX);
+        case 0xBB: abs_i_r(LAS, reg_y);
+        case 0xBC: abs_i_r(LDY, reg_x);
+        case 0xBD: abs_i_r(LDA, reg_x);
+        case 0xBE: abs_i_r(LDX, reg_y);
+        case 0xBF: abs_i_r(LAX, reg_y);
+        case 0xC0: imm(CPY);
+        case 0xC1: ind_x_r(CMP);
+        case 0xC2: imm(NOP);
+        case 0xC3: ind_x_rmw(DCP);
+        case 0xC4: zpg_r(CPY);
+        case 0xC5: zpg_r(CMP);
+        case 0xC6: zpg_rmw(DEC);
+        case 0xC7: zpg_rmw(DCP);
+        case 0xC8: imp(INY);
+        case 0xC9: imm(CMP);
+        case 0xCA: imp(DEX);
+        case 0xCB: imm(SBX);
+        case 0xCC: abs_r(CPY);
+        case 0xCD: abs_r(CMP);
+        case 0xCE: abs_rmw(DEC);
+        case 0xCF: abs_rmw(DCP);
+        case 0xD0: rel(BNE);
+        case 0xD1: ind_y_r(CMP);
+        case 0xD2: STP(); break;
+        case 0xD3: ind_y_rmw(DCP);
+        case 0xD4: zpg_i_r(NOP, reg_x);
+        case 0xD5: zpg_i_r(CMP, reg_x);
+        case 0xD6: zpg_i_rmw(DEC, reg_x);
+        case 0xD7: zpg_i_rmw(DCP, reg_x);
+        case 0xD8: imp(CLD);
+        case 0xD9: abs_i_r(CMP, reg_y);
+        case 0xDA: imp(NOP);
+        case 0xDB: abs_i_rmw(DCP, reg_y);
+        case 0xDC: abs_i_r(NOP, reg_x);
+        case 0xDD: abs_i_r(CMP, reg_x);
+        case 0xDE: abs_i_rmw(DEC, reg_x);
+        case 0xDF: abs_i_rmw(DCP, reg_x);
+        case 0xE0: imm(CPX);
+        case 0xE1: ind_x_r(SBC);
+        case 0xE2: imm(NOP);
+        case 0xE3: ind_x_rmw(ISC);
+        case 0xE4: zpg_r(CPX);
+        case 0xE5: zpg_r(SBC);
+        case 0xE6: zpg_rmw(INC);
+        case 0xE7: zpg_rmw(ISC);
+        case 0xE8: imp(INX);
+        case 0xE9: imm(SBC);
+        case 0xEA: imp(NOP);
+        case 0xEB: imm(SBC); // Not a mistake, there are 2 of these
+        case 0xEC: abs_r(CPX);
+        case 0xED: abs_r(SBC);
+        case 0xEE: abs_rmw(INC);
+        case 0xEF: abs_rmw(ISC);
+        case 0xF0: rel(BEQ);
+        case 0xF1: ind_y_r(SBC);
+        case 0xF2: STP(); break;
+        case 0xF3: ind_y_rmw(ISC);
+        case 0xF4: zpg_i_r(NOP, reg_x);
+        case 0xF5: zpg_i_r(SBC, reg_x);
+        case 0xF6: zpg_i_rmw(INC, reg_x);
+        case 0xF7: zpg_i_rmw(ISC, reg_x);
+        case 0xF8: imp(SED);
+        case 0xF9: abs_i_r(SBC, reg_y);
+        case 0xFA: imp(NOP);
+        case 0xFB: abs_i_rmw(ISC, reg_y);
+        case 0xFC: abs_i_r(NOP, reg_x);
+        case 0xFD: abs_i_r(SBC, reg_x);
+        case 0xFE: abs_i_rmw(INC, reg_x);
+        case 0xFF: abs_i_rmw(ISC, reg_x);
     }
 }
 
-int ISA::NMI(CPU& cpu)
+// Interrupts
+
+void CPU::BRK() noexcept
 {
-    ubyte pch = static_cast<ubyte>((cpu.reg_pc & 0xFF00) >> 8);
-    ubyte pcl = static_cast<ubyte>(cpu.reg_pc & 0x00FF);
-
-    cpu.push(pch);
-    cpu.push(pcl);
-    cpu.push(cpu.reg_sr.reg & 0xEF); // Push SR with break flag clear
-    
-    cpu.reg_sr.i = true;
-    pcl = cpu.read(0xFFFA);
-    pch = cpu.read(0xFFFB);
-
-    cpu.reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
-    return 7;
+    switch (instr.cycle) 
+    {
+        case 2: nextByte(); break;
+        case 3: push(reg_pc >> 8); break;
+        case 4: push(reg_pc & 0x00FF); break;
+        // Interrupt hijacking comes into play here
+        case 5: push(reg_sr.reg | 0x30); reg_sr.i = true; break;
+        case 6: reg_pc &= 0xFF00; reg_pc |= read(0xFFFE); break;
+        case 7: reg_pc &= 0x00FF; reg_pc |= read(0xFFFF) << 8; instr.cycle = 0; break;
+    }
 }
 
-int ISA::executeOpcode(CPU& cpu, ubyte instr)
+void CPU::IRQ() noexcept
 {
-    // declare return values
-    uword address;
-    ubyte val;
-    int cycles;
-
-    switch (instr)
+    switch (instr.cycle)
     {
-        case 0x00: // BRK impl
-            return BRK(cpu);
-
-        case 0x01: // ORA X,ind
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_x, 1, true);
-            val = cpu.read(address);
-            cycles += 1;
-            return ORA(cpu, cycles, val);
-
-        // Unofficial
-        case 0x03: // SLO X,ind
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_x, 1, false);
-            cycles += 3;
-            return SLO(cpu, cycles, address);
-
-        // Unofficial
-        case 0x04: // NOP zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            return cycles;
-
-        case 0x05: // ORA zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            val = cpu.read(address);
-            return ORA(cpu, cycles, val);
-
-        case 0x06: // ASL zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            val = cpu.read(address);
-            cycles += 2;
-            return ASL(cpu, cycles, address, val, false);
-
-        // Unofficial
-        case 0x07: // SLO zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            cycles += 2;
-            return SLO(cpu, cycles, address);
-
-        case 0x08: // PHP impl
-            return PHP(cpu);
-
-        case 0x09: // ORA #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return ORA(cpu, cycles, val);
-
-        case 0x0A: // ASL A
-            return ASL(cpu, 2, 0, cpu.reg_a, true);
-
-        // Unofficial
-        case 0x0B: // ANC #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return ANC(cpu, cycles, val);
-
-        // Unofficial
-        case 0x0C: // NOP abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, true);
-            cycles += 1;
-            return cycles;
-
-        case 0x0D: // ORA abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return ORA(cpu, cycles, val);
-
-        case 0x0E: // ASL abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            cycles += 3;
-            val = cpu.read(address);
-            return ASL(cpu, cycles, address, val, false);
-
-        // Unofficial
-        case 0x0F: // SLO abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            cycles += 3;
-            return SLO(cpu, cycles, address);
-
-        case 0x10: // BPL rel
-            std::tie(address, cycles) = Mode::relative(cpu);
-            return BPL(cpu, cycles, address);
-
-        case 0x11: // ORA ind,Y
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_y, 2, true);
-            val = cpu.read(address);
-            return ORA(cpu, cycles, val);
-
-        // Unofficial
-        case 0x13: // SLO ind,Y
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_y, 2, false);
-            cycles += 3;
-            return SLO(cpu, cycles, address);
-
-        // Unofficial
-        case 0x14: // NOP zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 1;
-            return cycles;
-
-        case 0x15: // ORA zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 1;
-            val = cpu.read(address);
-            return ORA(cpu, cycles, val);
-
-        case 0x16: // ASL zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 3;
-            val = cpu.read(address);
-            return ASL(cpu, cycles, address, val, false);
-
-        // Unofficial
-        case 0x17: // SLO zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 3;
-            return SLO(cpu, cycles, address);
-
-        case 0x18: // CLC impl
-            return CLC(cpu);
-
-        case 0x19: // ORA abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return ORA(cpu, cycles, val);
-
-        // Unofficial
-        case 0x1A: // NOP impl
-            return 2;
-
-        // Unofficial
-        case 0x1B: // SLO abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, false);
-            cycles += 4;
-            return SLO(cpu, cycles, address);
-
-        // Unofficial
-        case 0x1C: // NOP abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, true);
-            cycles += 1;
-            return cycles;
-
-        case 0x1D: // ORA abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return ORA(cpu, cycles, val);
-        
-        case 0x1E: // ASL abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, false);
-            cycles += 4;
-            val = cpu.read(address);
-            return ASL(cpu, cycles, address, val, false);
-
-        // Unofficial
-        case 0x1F: // SLO abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, false);
-            cycles += 4;
-            return SLO(cpu, cycles, address);
-
-        case 0x20: // JSR abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            cycles += 3;
-            return JSR(cpu, address);
-
-        case 0x21: // AND X,ind
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_x, 1, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return AND(cpu, cycles, val);
-
-        // Unofficial
-        case 0x23: // RLA X,ind
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_x, 1, false);
-            cycles += 3;
-            return RLA(cpu, cycles, address);
-
-        case 0x24: // BIT zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            val = cpu.read(address);
-            return BIT(cpu, cycles, val);
-
-        case 0x25: // AND zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            val = cpu.read(address);
-            return AND(cpu, cycles, val);
-        
-        case 0x26: // ROL zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            cycles += 2;
-            val = cpu.read(address);
-            return ROL(cpu, cycles, address, val, false);
-
-        // Unofficial
-        case 0x27: // RLA zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            cycles += 2;
-            return RLA(cpu, cycles, address);
-
-        case 0x28: // PLP impl
-            return PLP(cpu);
-
-        case 0x29: // AND #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return AND(cpu, cycles, val);
-
-        case 0x2A: // ROL A
-            val = cpu.reg_a;
-            return ROL(cpu, 2, 0, val, true);
-
-        // Unofficial
-        case 0x2B: // ANC #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return ANC(cpu, cycles, val);
-
-        case 0x2C: // BIT abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return BIT(cpu, cycles, val);
-
-        case 0x2D: // AND abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return AND(cpu, cycles, val);
-
-        case 0x2E: // ROL abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            cycles += 3;
-            val = cpu.read(address);
-            return ROL(cpu, cycles, address, val, false);
-
-        // Unofficial
-        case 0x2F: // RLA abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            cycles += 3;
-            return RLA(cpu, cycles, address);
-
-        case 0x30: // BMI rel
-            std::tie(address, cycles) = Mode::relative(cpu);
-            return BMI(cpu, cycles, address);
-
-        case 0x31: // AND ind,Y
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_y, 2, true);
-            val = cpu.read(address);
-            return AND(cpu, cycles, val);
-
-        // Unofficial
-        case 0x33: // RLA ind,Y
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_y, 2, false);
-            cycles += 3;
-            return RLA(cpu, cycles, address);
-
-        // Unofficial
-        case 0x34: // NOP zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 1;
-            return cycles;
-
-        case 0x35: // AND zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            val = cpu.read(address);
-            cycles += 1;
-            return AND(cpu, cycles, val);
-
-        case 0x36: // ROL zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 3;
-            val = cpu.read(address);
-            return ROL(cpu, cycles, address, val, false);
-
-        // Unofficial
-        case 0x37: // RLA zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 3;
-            return RLA(cpu, cycles, address);
-
-        case 0x38: // SEC impl
-            return SEC(cpu);
-
-        case 0x39: // AND abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return AND(cpu, cycles, val);
-
-        // Unofficial
-        case 0x3A: // NOP impl
-            return 2;
-
-        // Unofficial
-        case 0x3B: // RLA abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, false);
-            cycles += 4;
-            return RLA(cpu, cycles, address);
-
-        // Unofficial
-        case 0x3C: // NOP abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, true);
-            cycles += 1;
-            return cycles;
-
-        case 0x3D: // AND abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return AND(cpu, cycles, val);
-
-        case 0x3E: // ROL abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, false);
-            cycles += 4;
-            val = cpu.read(address);
-            return ROL(cpu, cycles, address, val, false);
-
-        // Unofficial
-        case 0x3F: // RLA abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, false);
-            cycles += 4;
-            return RLA(cpu, cycles, address);
-
-        case 0x40: // RTI impl
-            return RTI(cpu);
-
-        case 0x41: // EOR X,ind
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_x, 1, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return EOR(cpu, cycles, val);
-
-        // Unofficial
-        case 0x43: // SRE X,ind
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_x, 1, false);
-            cycles += 3;
-            return SRE(cpu, cycles, address);
-
-        // Unofficial
-        case 0x44: // NOP zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            return cycles;
-
-        case 0x45: // EOR zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            val = cpu.read(address);
-            return EOR(cpu, cycles, val);
-
-        case 0x46: // LSR zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            cycles += 2;
-            val = cpu.read(address);
-            return LSR(cpu, cycles, address, val, false);
-
-        // Unofficial
-        case 0x47: // SRE zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            cycles += 2;
-            return SRE(cpu, cycles, address);
-
-        case 0x48: // PHA impl
-            return PHA(cpu);
-
-        case 0x49: // EOR #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return EOR(cpu, cycles, val);
-
-        case 0x4A: // LSR A
-            cycles = 2;
-            val = cpu.reg_a;
-            return LSR(cpu, cycles, 0, val, true);
-
-        // Unofficial
-        case 0x4B: // ALR #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return ALR(cpu, cycles, val);
-
-        case 0x4C: // JMP abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            return JMP(cpu, cycles, address);
-
-        case 0x4D: // EOR abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return EOR(cpu, cycles, val);
-
-        case 0x4E: // LSR abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            cycles += 3;
-            val = cpu.read(address);
-            return LSR(cpu, cycles, address, val, false);
-
-        // Unofficial
-        case 0x4F: // SRE abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            cycles += 3;
-            return SRE(cpu, cycles, address);
-
-        case 0x50: // BVC rel
-            std::tie(address, cycles) = Mode::relative(cpu);
-            return BVC(cpu, cycles, address);
-
-        case 0x51: // EOR ind,Y
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_y, 2, true);
-            val = cpu.read(address);
-            return EOR(cpu, cycles, val);
-
-        // Unofficial
-        case 0x53: // SRE ind,Y
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_y, 2, false);
-            cycles += 3;
-            return SRE(cpu, cycles, address);
-
-        // Unofficial
-        case 0x54: // NOP zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 1;
-            return cycles;
-
-        case 0x55: // EOR zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 1;
-            val = cpu.read(address);
-            return EOR(cpu, cycles, val);
-
-        case 0x56: // LSR zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 3;
-            val = cpu.read(address);
-            return LSR(cpu, cycles, address, val, false);
-
-        // Unofficial
-        case 0x57: // SRE zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 3;
-            return SRE(cpu, cycles, address);
-
-        case 0x58: // CLI impl
-            return CLI(cpu);
-
-        case 0x59: // EOR abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return EOR(cpu, cycles, val);
-
-        // Unofficial
-        case 0x5A: // NOP impl
-            return 2;
-
-        // Unofficial
-        case 0x5B: // SRE abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, false);
-            cycles += 4;
-            return SRE(cpu, cycles, address);
-
-        // Unofficial
-        case 0x5C: // NOP abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, true);
-            cycles += 1;
-            return cycles;
-
-        case 0x5D: // EOR abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return EOR(cpu, cycles, val);
-
-        case 0x5E: // LSR abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, false);
-            cycles += 4;
-            val = cpu.read(address);
-            return LSR(cpu, cycles, address, val, false);
-
-        // Unofficial
-        case 0x5F: // SRE abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, false);
-            cycles += 4;
-            return SRE(cpu, cycles, address);
-
-        case 0x60: // RTS impl
-            return RTS(cpu);
-
-        case 0x61: // ADC X,ind
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_x, 1, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return ADC(cpu, cycles, val);
-
-        // Unofficial
-        case 0x63: // RRA X,ind
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_x, 1, false);
-            cycles += 3;
-            return RRA(cpu, cycles, address);
-
-        // Unofficial
-        case 0x64: // NOP zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            return cycles;
-
-        case 0x65: // ADC zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            val = cpu.read(address);
-            return ADC(cpu, cycles, val);
-
-        case 0x66: // ROR zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            cycles += 2;
-            val = cpu.read(address);
-            return ROR(cpu, cycles, address, val, false);
-
-        // Unofficial
-        case 0x67: // RRA zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            cycles += 2;
-            return RRA(cpu, cycles, address);
-
-        case 0x68: // PLA impl
-            return PLA(cpu);
-
-        case 0x69: // ADC #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return ADC(cpu, cycles, val);
-
-        case 0x6A: // ROR A
-            cycles = 2;
-            val = cpu.reg_a;
-            return ROR(cpu, cycles, 0, val, true);
-
-        // Unofficial
-        case 0x6B: // ARR #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return ARR(cpu, cycles, val);
-
-        case 0x6C: // JMP ind
-            std::tie(address, cycles) = Mode::indirect(cpu, 0, 0, false);
-            return JMP(cpu, cycles, address);
-
-        case 0x6D: // ADC abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return ADC(cpu, cycles, val);
-
-        case 0x6E: // ROR abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            cycles += 3;
-            val = cpu.read(address);
-            return ROR(cpu, cycles, address, val, false);
-
-        // Unofficial
-        case 0x6F: // RRA abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            cycles += 3;
-            return RRA(cpu, cycles, address);
-
-        case 0x70: // BVS rel
-            std::tie(address, cycles) = Mode::relative(cpu);
-            return BVS(cpu, cycles, address);
-
-        case 0x71: // ADC ind,Y
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_y, 2, true);
-            val = cpu.read(address);
-            return ADC(cpu, cycles, val);
-
-        // Unofficial
-        case 0x73: // RRA ind,Y
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_y, 2, false);
-            cycles += 3;
-            return RRA(cpu, cycles, address);
-
-        // Unofficial
-        case 0x74: // NOP zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 1;
-            return cycles;
-
-        case 0x75: // ADC zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 1;
-            val = cpu.read(address);
-            return ADC(cpu, cycles, val);
-
-        case 0x76: // ROR zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 3;
-            val = cpu.read(address);
-            return ROR(cpu, cycles, address, val, false);
-
-        // Unofficial
-        case 0x77: // RRA zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 3;
-            return RRA(cpu, cycles, address);
-
-        case 0x78: // SEI impl
-            return SEI(cpu);
-
-        case 0x79: // ADC abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return ADC(cpu, cycles, val);
-
-        // Unofficial
-        case 0x7A: // NOP impl
-            return 2;
-
-        // Unofficial
-        case 0x7B: // RRA abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, false);
-            cycles += 4;
-            return RRA(cpu, cycles, address);
-
-        // Unofficial
-        case 0x7C: // NOP abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, true);
-            cycles += 1;
-            return cycles;
-
-        case 0x7D: // ADC abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return ADC(cpu, cycles, val);
-
-        case 0x7E: // ROR abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, false);
-            cycles += 4;
-            val = cpu.read(address);
-            return ROR(cpu, cycles, address, val, false);
-
-        // Unofficial
-        case 0x7F: // RRA abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, false);
-            cycles += 4;
-            return RRA(cpu, cycles, address);
-
-        // Unofficial
-        case 0x80: // NOP #
-            std::tie(address, cycles) = Mode::immediate(cpu);
-            return cycles;
-
-        case 0x81: // STA X,ind
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_x, 1, false);
-            cycles += 1;
-            return STA(cpu, cycles, address);
-
-        // Unofficial
-        case 0x82: // NOP #
-            std::tie(address, cycles) = Mode::immediate(cpu);
-            return cycles;
-
-        // Unofficial
-        case 0x83: // SAX X,ind
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_x, 1, false);
-            cycles += 1;
-            return SAX(cpu, cycles, address);
-
-        case 0x84: // STY zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            return STY(cpu, cycles, address);
-
-        case 0x85: // STA zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            return STA(cpu, cycles, address);
-
-        case 0x86: // STX zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            return STX(cpu, cycles, address);
-
-        // Unofficial
-        case 0x87: // SAX zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            return SAX(cpu, cycles, address);
-
-        case 0x88: // DEY impl
-            return DEY(cpu);
-
-        // Unofficial
-        case 0x89: // NOP #
-            std::tie(address, cycles) = Mode::immediate(cpu);
-            return cycles;
-
-        case 0x8A: // TXA impl
-            return TXA(cpu);
-
-        // Unstable
-        case 0x8B: // ANE #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return ANE(cpu, cycles, val);
-
-        case 0x8C: // STY abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            cycles += 1;
-            return STY(cpu, cycles, address);
-
-        case 0x8D: // STA abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            cycles += 1;
-            return STA(cpu, cycles, address);
-
-        case 0x8E: // STX abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            cycles += 1;
-            return STX(cpu, cycles, address);
-
-        // Unofficial
-        case 0x8F: // SAX abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            cycles += 1;
-            return SAX(cpu, cycles, address);
-        
-        case 0x90: // BCC rel
-            std::tie(address, cycles) = Mode::relative(cpu);
-            return BCC(cpu, cycles, address);
-
-        case 0x91: // STA ind,Y
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_y, 2, false);
-            cycles += 1;
-            return STA(cpu, cycles, address);
-
-        // Unofficial
-        case 0x93: // SHA ind,Y
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_y, 2, false);
-            cycles += 1;
-            return SHA(cpu, cycles, address);
-
-        case 0x94: // STY zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 1;
-            return STY(cpu, cycles, address);
-
-        case 0x95: // STA zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 1;
-            return STA(cpu, cycles, address);
-
-        case 0x96: // STX zpg,Y
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_y));
-            cycles += 1;
-            return STX(cpu, cycles, address);
-
-        // Unofficial
-        case 0x97: // SAX zpg,Y
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_y));
-            cycles += 1;
-            return SAX(cpu, cycles, address);
-
-        case 0x98: // TYA impl
-            return TYA(cpu);
-
-        case 0x99: // STA abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, false);
-            cycles += 2;
-            return STA(cpu, cycles, address);
-
-        case 0x9A: // TXS impl
-            return TXS(cpu);
-
-        // Unofficial
-        case 0x9B: // SHS abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, false);
-            cycles += 2;
-            return SHS(cpu, cycles, address);
-
-        // Unofficial
-        case 0x9C: // SHY abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, false);
-            cycles += 2;
-            return SHY(cpu, cycles, address);
-
-        case 0x9D: // STA abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, false);
-            cycles += 2;
-            return STA(cpu, cycles, address);
-
-        // Unofficial
-        case 0x9E: // SHX abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, false);
-            cycles += 2;
-            return SHX(cpu, cycles, address);
-
-        // Unofficial
-        case 0x9F: // SHA abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, false);
-            cycles += 2;
-            return SHA(cpu, cycles, address);
-
-        case 0xA0: // LDY #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return LDY(cpu, cycles, val);
-
-        case 0xA1: // LDA X,ind
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_x, 1, false);
-            cycles += 1;
-            val = cpu.read(address);
-            return LDA(cpu, cycles, val);
-
-        case 0xA2: // LDX #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return LDX(cpu, cycles, val);
-
-        // Unofficial
-        case 0xA3: // LAX X,ind
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_x, 1, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return LAX(cpu, cycles, val);
-
-        case 0xA4: // LDY zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            val = cpu.read(address);
-            return LDY(cpu, cycles, val);
-
-        case 0xA5: // LDA zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            val = cpu.read(address);
-            return LDA(cpu, cycles, val);
-
-        case 0xA6: // LDX zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            val = cpu.read(address);
-            return LDX(cpu, cycles, val);
-
-        // Unofficial
-        case 0xA7: // LAX zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            val = cpu.read(address);
-            return LAX(cpu, cycles, val);
-
-        case 0xA8: // TAY impl
-            return TAY(cpu);
-
-        case 0xA9: // LDA #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return LDA(cpu, cycles, val);
-
-        case 0xAA: // TAX impl
-            return TAX(cpu);
-
-        // Unofficial
-        case 0xAB: // LXA #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return LXA(cpu, cycles, val);
-
-        case 0xAC: // LDY abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return LDY(cpu, cycles, val);
-
-        case 0xAD: // LDA abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return LDA(cpu, cycles, val);
-
-        case 0xAE: // LDX abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return LDX(cpu, cycles, val);
-
-        // Unofficial
-        case 0xAF: // LAX abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return LAX(cpu, cycles, val);
-
-        case 0xB0: // BCS rel
-            std::tie(address, cycles) = Mode::relative(cpu);
-            return BCS(cpu, cycles, address);
-
-        case 0xB1: // LDA ind,Y
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_y, 2, true);
-            val = cpu.read(address);
-            return LDA(cpu, cycles, val);
-
-        // Unofficial
-        case 0xB3: // LAX ind,Y
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_y, 2, true);
-            val = cpu.read(address);
-            return LAX(cpu, cycles, val);
-
-        case 0xB4: // LDY zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 1;
-            val = cpu.read(address);
-            return LDY(cpu, cycles, val);
-
-        case 0xB5: // LDA zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 1;
-            val = cpu.read(address);
-            return LDA(cpu, cycles, val);
-
-        case 0xB6: // LDX zpg,Y
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_y));
-            cycles += 1;
-            val = cpu.read(address);
-            return LDX(cpu, cycles, val);
-
-        // Unofficial
-        case 0xB7: // LAX zpg,Y
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_y));
-            cycles += 1;
-            val = cpu.read(address);
-            return LAX(cpu, cycles, val);
-
-        case 0xB8: // CLV impl
-            return CLV(cpu);
-
-        case 0xB9: // LDA abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return LDA(cpu, cycles, val);
-
-        case 0xBA: // TSX impl
-            return TSX(cpu);
-
-        // Unofficial
-        case 0xBB: // LAS abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return LAS(cpu, cycles, val);
-
-        case 0xBC: // LDY abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return LDY(cpu, cycles, val);
-
-        case 0xBD: // LDA abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return LDA(cpu, cycles, val);
-
-        case 0xBE: // LDX abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return LDX(cpu, cycles, val);
-
-        // Unofficial
-        case 0xBF: // LAX abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return LAX(cpu, cycles, val);
-
-        case 0xC0: // CPY #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return CPY(cpu, cycles, val);
-
-        case 0xC1: // CMP X,ind
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_x, 1, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return CMP(cpu, cycles, val);
-
-        // Unofficial
-        case 0xC2: // NOP #
-            std::tie(address, cycles) = Mode::immediate(cpu);
-            return cycles;
-
-        // Unofficial
-        case 0xC3: // DCP X,ind
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_x, 1, false);
-            cycles += 3;
-            return DCP(cpu, cycles, address);
-
-        case 0xC4: // CPY zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            val = cpu.read(address);
-            return CPY(cpu, cycles, val);
-
-        case 0xC5: // CMP zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            val = cpu.read(address);
-            return CMP(cpu, cycles, val);
-
-        // Unofficial
-        case 0xC7: // DCP zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            cycles += 2;
-            return DCP(cpu, cycles, address);
-
-        case 0xC6: // DEC zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            cycles += 2;
-            return DEC(cpu, cycles, address);
-
-        case 0xC8: // INY impl
-            return INY(cpu);
-
-        case 0xC9: // CMP #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return CMP(cpu, cycles, val);
-
-        case 0xCA: // DEX impl
-            return DEX(cpu);
-
-        // Unofficial
-        case 0xCB: // AXS #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return AXS(cpu, cycles, val);
-
-        case 0xCC: // CPY abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return CPY(cpu, cycles, val);
-
-        case 0xCD: // CMP abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return CMP(cpu, cycles, val);
-
-        case 0xCE: // DEC abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            cycles += 3;
-            return DEC(cpu, cycles, address);
-
-        // Unofficial
-        case 0xCF: // DCP abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            cycles += 3;
-            return DCP(cpu, cycles, address);
-
-        case 0xD0: // BNE rel
-            std::tie(address, cycles) = Mode::relative(cpu);
-            return BNE(cpu, cycles, address);
-
-        case 0xD1: // CMP ind,Y
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_y, 2, true);
-            val = cpu.read(address);
-            return CMP(cpu, cycles, val);
-
-        // Unofficial
-        case 0xD3: // DCP ind,Y
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_y, 2, false);
-            cycles += 3;
-            return DCP(cpu, cycles, address);
-
-        // Unofficial
-        case 0xD4: // NOP zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 1;
-            return cycles;
-
-        case 0xD5: // CMP zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 1;
-            val = cpu.read(address);
-            return CMP(cpu, cycles, val);
-
-        case 0xD6: // DEC zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 3;
-            return DEC(cpu, cycles, address);
-
-        // Unofficial
-        case 0xD7: // DCP zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 3;
-            return DCP(cpu, cycles, address);
-
-        case 0xD8: // CLD impl
-            return CLD(cpu);
-
-        case 0xD9: // CMP abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return CMP(cpu, cycles, val);
-
-        // Unofficial
-        case 0xDA: // NOP impl
-            return 2;
-
-        // Unofficial
-        case 0xDB: // DCP abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, false);
-            cycles += 4;
-            return DCP(cpu, cycles, address);
-
-        // Unofficial
-        case 0xDC: // NOP abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, true);
-            cycles += 1;
-            return cycles;
-
-        case 0xDD: // CMP abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return CMP(cpu, cycles, val);
-
-        case 0xDE: // DEC abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, false);
-            cycles += 4;
-            return DEC(cpu, cycles, address);
-
-        // Unofficial
-        case 0xDF: // DCP abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, false);
-            cycles += 4;
-            return DCP(cpu, cycles, address);
-
-        case 0xE0: // CPX #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return CPX(cpu, cycles, val);
-
-        case 0xE1: // SBC X,ind
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_x, 1, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return SBC(cpu, cycles, val);
-
-        // Unofficial
-        case 0xE2: // NOP #
-            std::tie(address, cycles) = Mode::immediate(cpu);
-            return cycles;
-
-        // Unofficial
-        case 0xE3: // ISC X,ind
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_x, 1, false);
-            cycles += 3;
-            return ISC(cpu, cycles, address);
-
-        case 0xE4: // CPX zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            val = cpu.read(address);
-            return CPX(cpu, cycles, val);
-
-        case 0xE5: // SBC zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            val = cpu.read(address);
-            return SBC(cpu, cycles, val);
-
-        case 0xE6: // INC zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            cycles += 2;
-            return INC(cpu, cycles, address);
-
-        // Unofficial
-        case 0xE7: // ISC zpg
-            std::tie(address, cycles) = Mode::zeroPage(cpu, 0);
-            cycles += 2;
-            return ISC(cpu, cycles, address);
-
-        case 0xE8: // INX impl
-            return INX(cpu);
-
-        case 0xE9: // SBC #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return SBC(cpu, cycles, val);
-
-        case 0xEA: // NOP impl
-            return 2;
-
-        // Unofficial
-        case 0xEB: // SBC #
-            std::tie(val, cycles) = Mode::immediate(cpu);
-            return SBC(cpu, cycles, val);
-
-        case 0xEC: // CPX abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return CPX(cpu, cycles, val);
-
-        case 0xED: // SBC abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return SBC(cpu, cycles, val);
-
-        case 0xEE: // INC abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            cycles += 3;
-            return INC(cpu, cycles, address);
-
-        // Unofficial
-        case 0xEF: // ISC abs
-            std::tie(address, cycles) = Mode::absolute(cpu, {}, false);
-            cycles += 3;
-            return ISC(cpu, cycles, address);
-
-        case 0xF0: // BEQ rel
-            std::tie(address, cycles) = Mode::relative(cpu);
-            return BEQ(cpu, cycles, address);
-
-        case 0xF1: // SBC ind,Y
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_y, 2, true);
-            val = cpu.read(address);
-            return SBC(cpu, cycles, val);
-
-        // Unofficial
-        case 0xF3: // ISC ind,Y
-            std::tie(address, cycles) = Mode::indirect(cpu, cpu.reg_y, 2, false);
-            cycles += 3;
-            return ISC(cpu, cycles, address);
-
-        // Unofficial
-        case 0xF4: // NOP zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 1;
-            return cycles;
-
-        case 0xF5: // SBC zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 1;
-            val = cpu.read(address);
-            return SBC(cpu, cycles, val);
-
-        case 0xF6: // INC zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 3;
-            return INC(cpu, cycles, address);
-
-        // Unofficial
-        case 0xF7: // ISC zpg,X
-            std::tie(address, cycles) = Mode::zeroPage(cpu, static_cast<byte>(cpu.reg_x));
-            cycles += 3;
-            return ISC(cpu, cycles, address);
-
-        case 0xF8: // SED impl
-            return SED(cpu);
-
-        case 0xF9: // SBC abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return SBC(cpu, cycles, val);
-
-        // Unofficial
-        case 0xFA: // NOP impl
-            return 2;
-
-        // Unofficial
-        case 0xFB: // ISC abs,Y
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_y, false);
-            cycles += 4;
-            return ISC(cpu, cycles, address);
-
-        // Unofficial
-        case 0xFC: // NOP abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, true);
-            cycles += 1;
-            return cycles;
-
-        case 0xFD: // SBC abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, true);
-            cycles += 1;
-            val = cpu.read(address);
-            return SBC(cpu, cycles, val);
-
-        case 0xFE: // INC abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, false);
-            cycles += 4;
-            return INC(cpu, cycles, address);
-
-        // Unofficial
-        case 0xFF: // ISC abs,X
-            std::tie(address, cycles) = Mode::absolute(cpu, cpu.reg_x, false);
-            cycles += 4;
-            return ISC(cpu, cycles, address);
-
-        default:
-            std::cerr << "Error: invalid opcode " << hex(instr) << std::endl;
-            uword pc = cpu.reg_pc - 1;
-            std::cerr << "PC: " << hex(pc) << std::endl;
-            throw std::exception();
+        case 1: dummyNextByte(); instr.code = 0x00; break;
+        case 2: dummyNextByte(); break;
+        case 3: push(reg_pc >> 8); break;       // Push PCH
+        case 4: push(reg_pc & 0x00FF); break;   // Push PCL
+        // Interrupt hijacking comes into play here
+        case 5: push((reg_sr.reg & 0xCF) | 0x20); break;
+        case 6: instr.address = read(0xFFFE); reg_sr.i = true; break;
+        case 7: instr.address |= read(0xFFFF) << 8; instr.cycle = 0; break;
+    }
+}
+
+void CPU::NMI() noexcept
+{
+    switch (instr.cycle)
+    {
+        case 1: dummyNextByte(); instr.code = 0x00; break;
+        case 2: dummyNextByte(); break;
+        case 3: push(reg_pc >> 8); break;       // Push PCH
+        case 4: push(reg_pc & 0x00FF); break;   // Push PCL
+        // Interrupt hijacking comes into play here
+        case 5: push((reg_sr.reg & 0xCF) | 0x20); break;
+        case 6: instr.address = read(0xFFFA); reg_sr.i = true; break;
+        case 7: instr.address |= read(0xFFFB) << 8; instr.cycle = 0; break;
+    }
+}
+
+// Instructions accessing the stack
+
+void CPU::RTI() noexcept
+{
+    switch (instr.cycle) 
+    {
+        case 2: dummyNextByte(); break;
+        case 3: break; // SP increment would happen here, but NNES does it within pop()
+        case 4: reg_sr.reg = pop() & 0xCF; break; // Ignore bits 4 and 5
+        case 5: reg_pc &= 0xFF00; reg_pc |= pop(); break;
+        case 6: reg_pc &= 0x00FF; reg_pc |= (pop() << 8); instr.cycle = 0; break;
+    }
+}
+
+void CPU::RTS() noexcept
+{
+    switch (instr.cycle) 
+    {
+        case 2: dummyNextByte(); break;
+        case 3: break;
+        case 4: reg_pc &= 0xFF00; reg_pc |= pop(); break;
+        case 5: reg_pc &= 0x00FF; reg_pc |= (pop() << 8); break;
+        case 6: reg_pc++; instr.cycle = 0; break;
+    } 
+}
+
+void CPU::PHA() noexcept
+{
+    switch (instr.cycle) 
+    {
+        case 2: dummyNextByte(); break;
+        case 3: push(reg_a); instr.cycle = 0; break;
+    }
+}
+
+void CPU::PHP() noexcept
+{
+    switch (instr.cycle) 
+    {
+        case 2: dummyNextByte(); break;
+        case 3: push(reg_sr.reg | 0x30); instr.cycle = 0; break;
+    }
+}
+
+void CPU::PLA() noexcept
+{
+    switch (instr.cycle) 
+    {
+        case 2: dummyNextByte(); break;
+        case 3: break; // increment SP
+        case 4:
+            reg_a = pop();
+            reg_sr.z = reg_a == 0;
+            reg_sr.n = static_cast<bool>(reg_a & 0x80);
+            instr.cycle = 0; 
             break;
     }
 }
 
-int ISA::ADC(CPU& cpu, int cycles, ubyte val)
+void CPU::PLP() noexcept
 {
-    ubyte a = cpu.reg_a;
-    ubyte c = static_cast<ubyte>(cpu.reg_sr.c);
-    ubyte sum = a + val + c;
-
-    // 16-bit addition result (used to determine if carry flag is set)
-    uword big_sum = static_cast<uword>(a) 
-        + static_cast<uword>(val) + static_cast<uword>(c);
-
-    // Set accumulator
-    cpu.reg_a = sum;
-
-    // Set C flag if unsigned overflow to the next byte
-    cpu.reg_sr.c = static_cast<bool>(big_sum >> 8); // TODO simplify
-
-    // Set V flag if a and val are signed the same, but signed different from sum
-    cpu.reg_sr.v = static_cast<bool>((a ^ sum) & (val ^ sum) & 0x80);
-
-    cpu.reg_sr.z = (sum == 0);
-    cpu.reg_sr.n = (static_cast<byte>(sum) < 0);
-
-    return cycles;
-}
-
-int ISA::AND(CPU& cpu, int cycles, ubyte val)
-{
-    val &= cpu.reg_a;
-    cpu.reg_sr.z = (val == 0);
-    cpu.reg_sr.n = (static_cast<byte>(val) < 0);
-    cpu.reg_a = val;
-    return cycles;
-}
-
-int ISA::ASL(CPU& cpu, int cycles, uword address, ubyte val, bool flag_accumulator)
-{
-    // Set carry flag to true if left-most bit (bit 7) is 1, false if not
-    cpu.reg_sr.c = (static_cast<byte>(val) < 0);
-
-    // Shift left 1 bit
-    val = val << 1;
-
-    // Set zero flag to true if val is zero, false if not
-    cpu.reg_sr.z = (val == 0);
-
-    // Set negative flag to true if val is negative, false if not
-    cpu.reg_sr.n = (static_cast<byte>(val) < 0);
-
-    // Store val to accumulator or cpu
-    if (flag_accumulator)
-        cpu.reg_a = val;
-    else
-        cpu.write(address, val);
-    
-    return cycles;
-}
-
-int ISA::BCC(CPU& cpu, int cycles, uword address)
-{
-    if (!static_cast<bool>(cpu.reg_sr.c))
+    switch (instr.cycle) 
     {
-        cpu.reg_pc = address;
-        cycles += 1;
+        case 2: dummyNextByte(); break;
+        case 3: break; // increment SP
+        case 4: reg_sr.reg = pop() & 0xCF; instr.cycle = 0; break;
     }
-    else
+}
+
+void CPU::JSR() noexcept
+{
+    switch (instr.cycle) 
     {
-        cycles = 2;
+        case 2: instr.address = nextByte(); break;
+        case 3: break; // TODO internal operation? buffer addr low
+        case 4: push(reg_pc >> 8); break;
+        case 5: push(reg_pc & 0x00FF); break;
+        case 6: reg_pc = (nextByte() << 8) | instr.address; instr.cycle = 0; break;
     }
-
-    return cycles;
 }
 
-int ISA::BCS(CPU& cpu, int cycles, uword address)
-{    
-    if (static_cast<bool>(cpu.reg_sr.c))
+void CPU::JMP() noexcept
+{
+    switch (instr.cycle) 
     {
-        cpu.reg_pc = address;
-        cycles += 1;
+        case 2: instr.address = nextByte(); break;
+        case 3: reg_pc = (nextByte() << 8) | instr.address; instr.cycle = 0; break;
     }
-    else
+}
+
+void CPU::JMP_IND() noexcept
+{
+    switch (instr.cycle) 
     {
-        cycles = 2;
+        case 2: instr.address = nextByte(); break;
+        case 3: instr.address |= (nextByte() << 8); break;
+        case 4: instr.value = read(instr.address); break; // Using instr.value as a latch
+        case 5: // Page boundary crossing not handled
+            reg_pc = (read((instr.address & 0xFF00) | ((instr.address+1) & 0x00FF)) << 8) | instr.value; 
+            instr.cycle = 0; 
+            break;
     }
-
-    return cycles;
 }
 
-int ISA::BEQ(CPU& cpu, int cycles, uword address)
-{    
-    if (static_cast<bool>(cpu.reg_sr.z))
+// Branch instructions
+
+bool CPU::BCC() noexcept { return !reg_sr.c; }
+bool CPU::BCS() noexcept { return reg_sr.c; }
+bool CPU::BNE() noexcept { return !reg_sr.z; }
+bool CPU::BEQ() noexcept { return reg_sr.z; }
+bool CPU::BPL() noexcept { return !reg_sr.n; }
+bool CPU::BMI() noexcept { return reg_sr.n; }
+bool CPU::BVC() noexcept { return !reg_sr.v; }
+bool CPU::BVS() noexcept { return reg_sr.v; }
+
+// Read instructions
+
+// Credit for branchless ADC/SBC algorithm goes to: https://near.sh/articles/cpu/alu
+void CPU::ADC(ubyte value) noexcept
+{
+    ubyte result = value + reg_a + reg_sr.c;
+    ubyte carries = value ^ reg_a ^ result;
+    ubyte overflows = (value ^ result) & (reg_a ^ result);
+    reg_sr.c = static_cast<bool>((carries ^ overflows) & 0x80);
+    reg_sr.z = result == 0;
+    reg_sr.v = static_cast<bool>(overflows & 0x80);
+    reg_sr.n = static_cast<bool>(result & 0x80);
+    reg_a = result;
+}
+
+void CPU::ALR(ubyte value) noexcept
+{
+    ubyte result = reg_a & value;
+    reg_sr.c = static_cast<bool>(result & 1);
+    reg_a = LSR(result);
+}
+
+void CPU::ANC(ubyte value) noexcept
+{
+    AND(value);
+    reg_sr.c = reg_sr.n;
+}
+
+void CPU::AND(ubyte value) noexcept
+{
+    ubyte result = value & reg_a;
+    reg_sr.z = result == 0;
+    reg_sr.n = static_cast<bool>(result & 0x80);
+    reg_a = result;
+}
+
+void CPU::ANE(ubyte value) noexcept
+{
+    reg_x = (reg_a | MAGIC_CONST) & reg_x & value;
+    reg_a = reg_x;
+}
+
+void CPU::ARR(ubyte value) noexcept
+{
+    AND(value);
+    reg_a = ROR(reg_a);
+    reg_sr.c = static_cast<bool>(reg_a & 0x40);
+    reg_sr.v = reg_sr.c ^ static_cast<bool>(reg_a & 0x20);
+}
+
+void CPU::BIT(ubyte value) noexcept
+{
+    ubyte result = reg_a & value;
+    reg_sr.z = result == 0;
+    reg_sr.v = static_cast<bool>(value & 0x40);
+    reg_sr.n = static_cast<bool>(value & 0x80);
+}
+
+void CPU::CMP(ubyte value) noexcept
+{
+    reg_sr.c = reg_a >= value;
+    reg_sr.z = reg_a == value;
+    reg_sr.n = static_cast<bool>((reg_a - value) & 0x80);
+}
+
+void CPU::CPX(ubyte value) noexcept
+{
+    reg_sr.c = reg_x >= value;
+    reg_sr.z = reg_x == value;
+    reg_sr.n = static_cast<bool>((reg_x - value) & 0x80);
+}
+
+void CPU::CPY(ubyte value) noexcept
+{
+    reg_sr.c = reg_y >= value;
+    reg_sr.z = reg_y == value;
+    reg_sr.n = static_cast<bool>((reg_y - value) & 0x80);
+}
+
+void CPU::EOR(ubyte value) noexcept
+{
+    ubyte result = value ^ reg_a;
+    reg_sr.z = result == 0;
+    reg_sr.n = static_cast<bool>(result & 0x80);
+    reg_a = result;
+}
+
+void CPU::LAS(ubyte value) noexcept
+{
+    ubyte result = value & reg_sp;
+    reg_sr.z = result == 0;
+    reg_sr.n = static_cast<bool>(result & 0x80);
+    reg_a = result;
+    reg_x = result;
+    reg_sp = result;
+}
+
+void CPU::LAX(ubyte value) noexcept
+{
+    LDA(value);
+    LDX(value);
+}
+
+void CPU::LDA(ubyte value) noexcept
+{
+    reg_sr.z = value == 0;
+    reg_sr.n = static_cast<bool>(value & 0x80);
+    reg_a = value;
+}
+
+void CPU::LDX(ubyte value) noexcept
+{
+    reg_sr.z = value == 0;
+    reg_sr.n = static_cast<bool>(value & 0x80);
+    reg_x = value;
+}
+
+void CPU::LDY(ubyte value) noexcept
+{
+    reg_sr.z = value == 0;
+    reg_sr.n = static_cast<bool>(value & 0x80);
+    reg_y = value;
+}
+
+void CPU::LXA(ubyte value) noexcept
+{
+    reg_sr.z = reg_a == 0;
+    reg_sr.n = static_cast<bool>(reg_a & 0x80);
+    reg_a = (reg_a | MAGIC_CONST) & value;
+    reg_x = reg_a;
+}
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+void CPU::NOP(ubyte value) noexcept { return; }
+#pragma GCC diagnostic pop
+
+void CPU::ORA(ubyte value) noexcept
+{
+    ubyte result = value | reg_a;
+    reg_sr.z = result == 0;
+    reg_sr.n = static_cast<bool>(result & 0x80);
+    reg_a = result;
+}
+
+void CPU::SBC(ubyte value) noexcept { ADC(~value); }
+
+void CPU::SBX(ubyte value) noexcept
+{
+    ubyte result = reg_a & reg_x;
+    reg_sr.c = result >= value;
+    result -= value;
+    reg_sr.z = value == 0;
+    reg_sr.n = static_cast<bool>(value & 0x80);
+    reg_x = value;
+}
+
+// Write instructions
+
+ubyte CPU::SAX() noexcept { return reg_a & reg_x; }
+ubyte CPU::SHA() noexcept // TODO RDY line instability?
+{
+    if (instr.page_cross)
     {
-        cpu.reg_pc = address;
-        cycles += 1;
+        ubyte addr_high = instr.address >> 8;
+        instr.address &= 0x00FF;
+        instr.address |= (reg_a & reg_x & addr_high) << 8;
     }
-    else cycles = 2;
-
-    return cycles;
+    return reg_a & reg_x & ((instr.address >> 8) + 1);
 }
-
-int ISA::BIT(CPU& cpu, int cycles, ubyte val)
+ubyte CPU::SHX() noexcept // TODO RDY line instability?
 {
-    // Value that results from ANDing the cpu value and the accumulator value
-    ubyte result = cpu.reg_a & val;
-
-    // Z flag => true if result is 0, false if not
-    cpu.reg_sr.z = (result == 0);
-
-    // N flag => bit 7 of result
-    cpu.reg_sr.n = (static_cast<byte>(val) < 0);
-
-    // V flag => bit 6 of result
-    val <<= 1;
-    cpu.reg_sr.v = static_cast<byte>(val) < 0;
-
-    return cycles;
-}
-
-int ISA::BMI(CPU& cpu, int cycles, uword address)
-{    
-    if (static_cast<bool>(cpu.reg_sr.n))
+    if (instr.page_cross)
     {
-        cpu.reg_pc = address;
-        cycles += 1;
+        ubyte addr_high = instr.address >> 8;
+        instr.address &= 0x00FF;
+        instr.address |= (reg_x & addr_high) << 8;
     }
-    else cycles = 2;
-
-    return cycles;
+    return reg_x & ((instr.address >> 8) + 1);
 }
-
-int ISA::BNE(CPU& cpu, int cycles, uword address)
+ubyte CPU::SHY() noexcept // TODO RDY line instability?
 {
-    if (!static_cast<bool>(cpu.reg_sr.z))
+    if (instr.page_cross)
     {
-        cpu.reg_pc = address;
-        cycles += 1;
+        ubyte addr_high = instr.address >> 8;
+        instr.address &= 0x00FF;
+        instr.address |= (reg_y & addr_high) << 8;
     }
-    else cycles = 2;
-
-    return cycles;
+    return reg_y & ((instr.address >> 8) + 1);
 }
-
-int ISA::BPL(CPU& cpu, int cycles, uword address)
+ubyte CPU::STA() noexcept { return reg_a; }
+ubyte CPU::STX() noexcept { return reg_x; }
+ubyte CPU::STY() noexcept { return reg_y; }
+ubyte CPU::TAS() noexcept // TODO RDY line instability?
 {
-    if (!static_cast<bool>(cpu.reg_sr.n))
+    reg_sp = reg_a & reg_x;
+    if (instr.page_cross)
     {
-        cpu.reg_pc = address;
-        cycles += 1;
+        ubyte addr_high = instr.address >> 8;
+        instr.address &= 0x00FF;
+        instr.address |= (reg_a & reg_x & addr_high) << 8;
     }
-    else cycles = 2;
-
-    return cycles;
+    return reg_a & reg_x & ((instr.address >> 8) + 1);
 }
 
-int ISA::BRK(CPU& cpu)
+// Read-Modify-Write instructions
+
+ubyte CPU::ASL(ubyte value) noexcept
 {
-    // read and throw away the next byte
-    cpu.nextByte();
-
-    uword pc = cpu.reg_pc;
-    ubyte pcl = static_cast<ubyte>(pc & 0x00FF);
-    ubyte pch = static_cast<ubyte>((pc & 0xFF00) >> 8);
-
-    cpu.push(pch);
-    cpu.push(pcl);
-    cpu.push(cpu.reg_sr.reg | 0x10); // push SR w/ B flag set
-
-    cpu.reg_sr.i = true;
-
-    pcl = cpu.read(0xFFFE);
-    pch = cpu.read(0xFFFF);
-    cpu.reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
-    return 7;
+    ubyte result = value << 1;
+    reg_sr.c = static_cast<bool>(value & 0x80);
+    reg_sr.z = result == 0;
+    reg_sr.n = static_cast<bool>(result & 0x80);
+    return result;
 }
 
-int ISA::BVC(CPU& cpu, int cycles, uword address)
-{   
-    if (!static_cast<bool>(cpu.reg_sr.v))
-    {
-        cpu.reg_pc = address;
-        cycles += 1;
-    }
-    else cycles = 2;
-
-    return cycles;
-}
-
-int ISA::BVS(CPU& cpu, int cycles, uword address)
+ubyte CPU::DCP(ubyte value) noexcept
 {
-    if (static_cast<bool>(cpu.reg_sr.v))
-    {
-        cpu.reg_pc = address;
-        cycles += 1;
-    }
-    else cycles = 2;
-
-    return cycles;
+    ubyte result = DEC(value);
+    CMP(value);
+    return result;
 }
 
-int ISA::CLC(CPU& cpu)
+ubyte CPU::DEC(ubyte value) noexcept
 {
-    cpu.reg_sr.c = 0;
-    return 2;
+    value--;
+    reg_sr.z = value == 0;
+    reg_sr.n = static_cast<bool>(value & 0x80);
+    return value;
 }
 
-// Unsupported by 2A03
-int ISA::CLD(CPU& cpu)
+ubyte CPU::INC(ubyte value) noexcept
 {
-    cpu.reg_sr.d = 0;
-    return 2;
+    value++;
+    reg_sr.z = value == 0;
+    reg_sr.n = static_cast<bool>(value & 0x80);
+    return value;
 }
 
-int ISA::CLI(CPU& cpu)
-{    
-    cpu.reg_sr.i = (0);
-    return 2;
-}
-
-int ISA::CLV(CPU& cpu)
+ubyte CPU::ISC(ubyte value) noexcept
 {
-    cpu.reg_sr.v = 0;
-    return 2;
+    ubyte result = INC(value);
+    SBC(value);
+    return result;
 }
 
-int ISA::CMP(CPU& cpu, int cycles, ubyte val)
+ubyte CPU::LSR(ubyte value) noexcept
 {
-    ubyte a = cpu.reg_a;
-    byte result = a - val;
-    cpu.reg_sr.c = a >= val;
-    cpu.reg_sr.z = (result == 0);
-    cpu.reg_sr.n = (result < 0);
-
-    return cycles;
+    ubyte result = value >> 1;
+    assert(!(result & 0x80));
+    reg_sr.c = static_cast<bool>(value & 1);
+    reg_sr.z = result == 0;
+    reg_sr.n = false; // Result should never be negative
+    return result;
 }
 
-int ISA::CPX(CPU& cpu, int cycles, ubyte val)
+ubyte CPU::RLA(ubyte value) noexcept
 {
-    ubyte x = cpu.reg_x;
-    byte result = x - val;
-
-    // C flag => true if X >= M
-    cpu.reg_sr.c = x >= val;
-
-    // Z flag => true if X == M
-    cpu.reg_sr.z = x == val;
-
-    // N flag => true if result is negative
-    cpu.reg_sr.n = (result < 0);
-
-    return cycles;
+    ubyte result = ROL(value);
+    AND(value);
+    return result;
 }
 
-int ISA::CPY(CPU& cpu, int cycles, ubyte val)
+ubyte CPU::ROL(ubyte value) noexcept
 {
-    ubyte y = cpu.reg_y;
-    byte result = y - val;
-
-    // C flag => true if Y >= M
-    cpu.reg_sr.c = y >= val;
-
-    // Z flag => true if Y == M
-    cpu.reg_sr.z = y == val;
-
-    // N flag => true if result is negative
-    cpu.reg_sr.n = (result < 0);
-
-    return cycles;
+    ubyte result = value << 1;
+    result |= reg_sr.c;
+    reg_sr.c = static_cast<bool>(value & 0x80);
+    reg_sr.z = result == 0;
+    reg_sr.n = static_cast<bool>(result & 0x80);
+    return result;
 }
 
-int ISA::DEC(CPU& cpu, int cycles, uword address)
+ubyte CPU::ROR(ubyte value) noexcept
 {
-    // Decrement value in cpu
-    ubyte val = cpu.read(address);
-    val -= 1;
-    cpu.write(address, val);
-
-    // Z flag => true if the value is 0, false if not
-    cpu.reg_sr.z = val == 0;
-
-    // N flag => true if the value is negative, false if not
-    cpu.reg_sr.n = (static_cast<byte>(val) < 0);
-
-    return cycles;
+    ubyte result = value >> 1;
+    result |= reg_sr.c << 7;
+    reg_sr.c = static_cast<bool>(value & 1);
+    reg_sr.z = result == 0;
+    reg_sr.n = static_cast<bool>(result & 0x80);
+    return result;
 }
 
-int ISA::DEX(CPU& cpu)
+ubyte CPU::RRA(ubyte value) noexcept
 {
-    // Decrement X value
-    ubyte val = cpu.reg_x;
-    val -= 1;
-    cpu.reg_x = val;
-
-    // Z flag => true if the value is 0, false if not
-    cpu.reg_sr.z = val == 0;
-
-    // N flag => true if the value is negative, false if not
-    cpu.reg_sr.n = static_cast<byte>(val) < 0;
-
-    return 2;
+    ubyte result = ROR(value);
+    ADC(value);
+    return result;
 }
 
-int ISA::DEY(CPU& cpu)
+ubyte CPU::SLO(ubyte value) noexcept
 {
-    // Decrement Y value
-    ubyte val = cpu.reg_y;
-    val -= 1;
-    cpu.reg_y = val;
-
-    // Z flag => true if the value is 0, false if not
-    cpu.reg_sr.z = val == 0;
-
-    // N flag => true if the value is negative, false if not
-    cpu.reg_sr.n = static_cast<byte>(val) < 0;
-
-    return 2;
+    ubyte result = ASL(value);
+    ORA(value);
+    return result;
 }
 
-int ISA::EOR(CPU& cpu, int cycles, ubyte val)
+ubyte CPU::SRE(ubyte value) noexcept
 {
-    // A EOR M
-    ubyte result = cpu.reg_a ^ val;
-
-    // Z flag => true if the result is 0, false if not
-    cpu.reg_sr.z = result == 0;
-
-    // N flag => true if the result is negative, false if not
-    cpu.reg_sr.n = static_cast<byte>(result) < 0;
-
-    // Store result in accumulator
-    cpu.reg_a = result;
-
-    return cycles;
+    ubyte result = LSR(value);
+    EOR(value);
+    return result;
 }
 
-int ISA::INC(CPU& cpu, int cycles, uword address)
+// Other
+
+void CPU::CLC() noexcept { reg_sr.c = false; }
+void CPU::CLD() noexcept { reg_sr.d = false; }
+void CPU::CLI() noexcept { reg_sr.i = false; }
+void CPU::CLV() noexcept { reg_sr.v = false; }
+
+// TODO these might be faster than changing x/y and comparing them
+// b/c of code locality, but I should check
+void CPU::DEX() noexcept
 {
-    // Increment value in cpu
-    ubyte val = cpu.read(address);
-    val += 1;
-    cpu.write(address, val);
-
-    // Z flag => true if the value is 0
-    cpu.reg_sr.z = val == 0;
-
-    // N flag => true if the value is negative
-    cpu.reg_sr.n = static_cast<byte>(val) < 0;
-
-    return cycles;
+    ubyte result = reg_x - 1;
+    reg_sr.z = result == 0;
+    reg_sr.n = static_cast<bool>(result & 0x80);
+    reg_x = result;
 }
 
-int ISA::INX(CPU& cpu)
+void CPU::DEY() noexcept
 {
-    // Increment X value
-    ubyte val = cpu.reg_x;
-    val += 1;
-    cpu.reg_x = val;
-
-    // Z flag => true if the value is 0
-    cpu.reg_sr.z = val == 0;
-
-    // N flag => true if the value is negative
-    cpu.reg_sr.n = static_cast<byte>(val) < 0;
-
-    return 2;
+    ubyte result = reg_y - 1;
+    reg_sr.z = result == 0;
+    reg_sr.n = static_cast<bool>(result & 0x80);
+    reg_y = result;
 }
 
-int ISA::INY(CPU& cpu)
+void CPU::INX() noexcept
 {
-    // Increment Y value
-    ubyte val = cpu.reg_y;
-    val += 1;
-    cpu.reg_y = val;
-
-    // Z flag => true if the value is 0
-    cpu.reg_sr.z = val == 0;
-
-    // N flag => true if the value is negative
-    cpu.reg_sr.n = static_cast<byte>(val) < 0;
-
-    return 2;
+    ubyte result = reg_x + 1;
+    reg_sr.z = result == 0;
+    reg_sr.n = static_cast<bool>(result & 0x80);
+    reg_x = result;
 }
 
-int ISA::JMP(CPU& cpu, int cycles, uword address)
+void CPU::INY() noexcept
 {
-    cpu.reg_pc = address;
-    return cycles;
+    ubyte result = reg_y + 1;
+    reg_sr.z = result == 0;
+    reg_sr.n = static_cast<bool>(result & 0x80);
+    reg_y = result;
 }
 
-int ISA::JSR(CPU& cpu, uword address)
+void CPU::NOP() noexcept { return; }
+
+void CPU::SEC() noexcept { reg_sr.c = true; }
+void CPU::SED() noexcept { reg_sr.d = true; }
+void CPU::SEI() noexcept { reg_sr.i = true; }
+void CPU::SEV() noexcept { reg_sr.v = true; }
+
+void CPU::TAX() noexcept
 {
-    // Push PC's value between operand 1 and 2
-    uword pc = cpu.reg_pc - 1;
-    ubyte pcl = static_cast<ubyte>(pc & 0x00FF);
-    ubyte pch = static_cast<ubyte>((pc & 0xFF00) >> 8);
-    cpu.push(pch);
-    cpu.push(pcl);
-
-    cpu.reg_pc = address;
-
-    return 6;
+    reg_x = reg_a;
+    reg_sr.z = reg_x == 0;
+    reg_sr.n = static_cast<bool>(reg_x & 0x80);
 }
 
-int ISA::LDA(CPU& cpu, int cycles, ubyte val)
+void CPU::TAY() noexcept
 {
-    // Load Accumulator with value
-    cpu.reg_a = val;
-
-    // Z flag => true if the value is 0, false if not
-    cpu.reg_sr.z = (val == 0);
-
-    // N flag => true if the value is negative, false if not
-    cpu.reg_sr.n = (static_cast<byte>(val) < 0);
-
-    return cycles;
+    reg_y = reg_a;
+    reg_sr.z = reg_y == 0;
+    reg_sr.n = static_cast<bool>(reg_y & 0x80);
 }
 
-int ISA::LDX(CPU& cpu, int cycles, ubyte val)
+void CPU::TSX() noexcept
 {
-    // Load index X with value
-    cpu.reg_x = val;
-
-    // Z flag => true if the value is 0, false if not
-    cpu.reg_sr.z = val == 0;
-
-    // N flag => true if the value is negative, false if not
-    cpu.reg_sr.n = static_cast<byte>(val) < 0;
-
-    return cycles;
+    reg_x = reg_sp;
+    reg_sr.z = reg_x == 0;
+    reg_sr.n = static_cast<bool>(reg_x & 0x80);
 }
 
-int ISA::LDY(CPU& cpu, int cycles, ubyte val)
+void CPU::TXA() noexcept
 {
-    // Load index Y with value
-    cpu.reg_y = val;
-
-    // Z flag => true if the value is 0, false if not
-    cpu.reg_sr.z = val == 0;
-
-    // N flag => true if the value is negative, false if not
-    cpu.reg_sr.n = static_cast<byte>(val) < 0;
-
-    return cycles;
+    reg_a = reg_x;
+    reg_sr.z = reg_a == 0;
+    reg_sr.n = static_cast<bool>(reg_a & 0x80);
 }
 
-int ISA::LSR(CPU& cpu, int cycles, uword address, ubyte val, bool flag_accumulator)
+void CPU::TXS() noexcept
 {
-    // Set carry flag if right-most bit (bit 0) is 1
-    cpu.reg_sr.c = static_cast<bool>(val & 1);
-
-    // Arithmetic shift right one bit
-    val >>= 1;
-
-    // Convert to logical shift right (set bit 7 to 0)
-    val &= 0x7F;
-
-    cpu.reg_sr.z = val == 0;
-
-    // N flag = false
-    cpu.reg_sr.n = false;
-
-    // Store value in cpu or accumulator
-    if (flag_accumulator) cpu.reg_a = val;
-    else cpu.write(address, val);
-
-    return cycles;
+    reg_sp = reg_x;
 }
 
-int ISA::ORA(CPU& cpu, int cycles, ubyte val)
+void CPU::TYA() noexcept
 {
-    // A OR M
-    val = cpu.reg_a | val;
-
-    // Z flag = true if val is 0, false otherwise
-    cpu.reg_sr.z = val == 0;
-
-    // N flag = true if val is negative, false otherwise
-    cpu.reg_sr.n = static_cast<byte>(val) < 0;
-
-    // Store value to accumulator
-    cpu.reg_a = val;
-
-    return cycles;
+    reg_a = reg_y;
+    reg_sr.z = reg_a == 0;
+    reg_sr.n = static_cast<bool>(reg_a & 0x80);
 }
 
-int ISA::PHA(CPU& cpu)
+void CPU::STP()
 {
-    // Push accumulator to stack
-    cpu.push(cpu.reg_a);
-
-    return 3;
-}
-
-int ISA::PHP(CPU& cpu)
-{
-    // Push processor status to stack with bits 4 and 5 set
-    cpu.push(cpu.reg_sr.reg | 0x30);
-    return 3;
-}
-
-int ISA::PLA(CPU& cpu)
-{
-    // Pull accumulator from stack
-    ubyte a = cpu.pop();
-    cpu.reg_a = a;
-
-    // Z flag => true if accumulator is zero
-    cpu.reg_sr.z = a == 0;
-
-    // N flag => true if accumulator is negative
-    cpu.reg_sr.n = static_cast<byte>(a) < 0;
-
-    return 4;
-}
-
-int ISA::PLP(CPU& cpu)
-{
-    // Pull processor status from stack, set bits 5 and 4 to 1 and 0
-    cpu.reg_sr.reg = cpu.pop();
-    cpu.reg_sr.u = true;
-    cpu.reg_sr.b = false;
-
-    return 4;
-}
-
-int ISA::ROL(CPU& cpu, int cycles, uword address, ubyte val, bool flag_accumulator)
-{
-    // Rotate one bit left
-
-    // Step 1/3: set new carry flag to bit 7
-    bool carry_flag = 0;
-    if (static_cast<byte>(val) < 0) carry_flag = 1;
-
-    // Step 2/3: shift left 1 bit
-    val <<= 1;
-
-    // Step 3/3: set bit 0 to old carry flag
-    val += cpu.reg_sr.c;
-
-    // C flag
-    cpu.reg_sr.c = carry_flag;
-
-    // Z flag => true if val is zero
-    cpu.reg_sr.z = val == 0;
-
-    // N flag = true if val is negative
-    cpu.reg_sr.n = static_cast<byte>(val) < 0;
-
-    // Store to cpu/accumulator
-    if (flag_accumulator) cpu.reg_a = val;
-    else cpu.write(address, val);
-
-    return cycles;
-}
-
-int ISA::ROR(CPU& cpu, int cycles, uword address, ubyte val, bool flag_accumulator)
-{
-    // Rotate one bit right
-
-    // Step 1/3: set new carry flag to bit 0
-    bool carry_flag = static_cast<bool>(val & 1);
-
-    // Step 2/3: shift right 1 bit
-    val = val >> 1;
-    val &= 0x7F;
-
-    // Step 3/3: set bit 7 to old carry flag
-    val += static_cast<ubyte>(cpu.reg_sr.c) << 7;
-
-    // C flag
-    cpu.reg_sr.c = carry_flag;
-
-    // Z flag => true if the value is zero
-    cpu.reg_sr.z = val == 0;
-
-    // N flag => true if the value is negative
-    cpu.reg_sr.n = static_cast<byte>(val) < 0;
-
-    // Store to cpu/accumulator
-    if (flag_accumulator) cpu.reg_a = val;
-    else cpu.write(address, val);
-
-    return cycles;
-}
-
-int ISA::RTI(CPU& cpu)
-{
-    // Read next byte and throw away
-    cpu.nextByte();
-    
-    // Pull SR, set bits 5 and 4 to 1 and 0
-    cpu.reg_sr.reg = cpu.pop();
-    cpu.reg_sr.u = true;
-    cpu.reg_sr.b = false;
-
-    // Pull PC
-    ubyte pcl = cpu.pop();
-    ubyte pch = cpu.pop();
-    cpu.reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl);
-
-    return 6;
-}
-
-int ISA::RTS(CPU& cpu)
-{
-    // Dummy CPU read
-    cpu.nextByte();
-
-    // Pull PC and increment
-    ubyte pcl = cpu.pop();
-    ubyte pch = cpu.pop();
-    cpu.reg_pc = (static_cast<uword>(pch) << 8) + static_cast<uword>(pcl) + 1;
-
-    return 6;
-}
-
-int ISA::SBC(CPU& cpu, int cycles, ubyte val)
-{
-    return ADC(cpu, cycles, ~val);
-}
-
-int ISA::SEC(CPU& cpu)
-{
-    cpu.reg_sr.c = 1;
-    return 2;
-}
-
-// Not supported on 2A03
-int ISA::SED(CPU& cpu)
-{
-    cpu.reg_sr.d = 1;
-    return 2;
-}
-
-int ISA::SEI(CPU& cpu)
-{
-    cpu.reg_sr.i = 1;
-    return 2;
-}
-
-int ISA::STA(CPU& cpu, int cycles, uword address)
-{
-    cpu.write(address, cpu.reg_a);
-    return cycles;
-}
-
-int ISA::STX(CPU& cpu, int cycles, uword address)
-{
-    cpu.write(address, cpu.reg_x);
-    return cycles;
-}
-
-int ISA::STY(CPU& cpu, int cycles, uword address)
-{
-    cpu.write(address, cpu.reg_y);
-    return cycles;
-}
-
-int ISA::TAX(CPU& cpu)
-{
-    ubyte val = cpu.reg_a;
-    cpu.reg_sr.z = val == 0;
-    cpu.reg_sr.n = static_cast<byte>(val) < 0;
-    cpu.reg_x = val;
-
-    return 2;
-}
-
-int ISA::TAY(CPU& cpu)
-{
-    ubyte val = cpu.reg_a;
-    cpu.reg_sr.z = val == 0;
-    cpu.reg_sr.n = static_cast<byte>(val) < 0;
-    cpu.reg_y = val;
-
-    return 2;
-}
-
-int ISA::TSX(CPU& cpu)
-{
-    ubyte val = cpu.reg_sp;
-    cpu.reg_sr.z = val == 0;
-    cpu.reg_sr.n = static_cast<byte>(val) < 0;
-    cpu.reg_x = val;
-
-    return 2;
-}
-
-int ISA::TXA(CPU& cpu)
-{
-    ubyte val = cpu.reg_x;
-    cpu.reg_sr.z = val == 0;
-    cpu.reg_sr.n = static_cast<byte>(val) < 0;
-    cpu.reg_a = val;
-
-    return 2;
-}
-
-int ISA::TXS(CPU& cpu)
-{
-    ubyte val = cpu.reg_x;
-    cpu.reg_sp = val;
-
-    return 2;
-}
-
-int ISA::TYA(CPU& cpu)
-{
-    ubyte val = cpu.reg_y;
-    cpu.reg_sr.z = val == 0;
-    cpu.reg_sr.n = static_cast<byte>(val) < 0;
-    cpu.reg_a = val;
-
-    return 2;
-}
-
-// Unofficial instructions
-
-int ISA::ALR(CPU& cpu, int cycles, ubyte val)
-{
-    AND(cpu, 0, val);
-    LSR(cpu, 0, 0, cpu.reg_a, true);
-    return cycles;
-}
-
-int ISA::ANC(CPU& cpu, int cycles, ubyte val)
-{
-    AND(cpu, 0, val);
-    ubyte a = cpu.reg_a;
-    cpu.reg_sr.c = static_cast<byte>(a) < 0;
-    return cycles;
-}
-
-int ISA::ARR(CPU& cpu, int cycles, ubyte val)
-{
-    AND(cpu, 0, val);
-    ROR(cpu, 0, 0, cpu.reg_a, true);
-    ubyte a = cpu.reg_a;
-    bool bit6 = static_cast<bool>(a & 0x40);
-    bool bit5 = static_cast<bool>(a & 0x20);
-    cpu.reg_sr.c = bit6;
-    cpu.reg_sr.v = bit6 ^ bit5;
-    return cycles;
-}
-
-int ISA::AXS(CPU& cpu, int cycles, ubyte val)
-{
-    ubyte result = cpu.reg_a & cpu.reg_x;
-    cpu.reg_sr.c = result >= val;
-    result -= val;
-    cpu.reg_sr.z = result == 0;
-    cpu.reg_sr.n = static_cast<byte>(result) < 0;
-    cpu.reg_x = result;
-    return cycles;
-}
-
-int ISA::DCP(CPU& cpu, int cycles, uword address)
-{
-    DEC(cpu, 0, address);
-    ubyte val = cpu.read(address);
-    CMP(cpu, 0, val);
-    return cycles;
-}
-
-int ISA::ISC(CPU& cpu, int cycles, uword address)
-{
-    INC(cpu, 0, address);
-    ubyte val = cpu.read(address);
-    SBC(cpu, 0, val);
-    return cycles;
-}
-
-int ISA::LAS(CPU& cpu, int cycles, ubyte val)
-{
-    val &= cpu.reg_sp;
-    cpu.reg_a = val;
-    cpu.reg_x = val;
-    cpu.reg_sp = val;
-    cpu.reg_sr.z = (val == 0);
-    cpu.reg_sr.n = (val & 0x80);
-    return cycles;
-}
-
-int ISA::LAX(CPU& cpu, int cycles, ubyte val)
-{
-    LDA(cpu, 0, val);
-    TAX(cpu);
-    return cycles;
-}
-
-int ISA::RLA(CPU& cpu, int cycles, uword address)
-{
-    ubyte val = cpu.read(address);
-    ROL(cpu, 0, address, val, false);
-    val = cpu.read(address);
-    AND(cpu, 0, val);
-    return cycles;
-}
-
-int ISA::RRA(CPU& cpu, int cycles, uword address)
-{
-    ubyte val = cpu.read(address);
-    ROR(cpu, 0, address, val, false);
-    val = cpu.read(address);
-    ADC(cpu, 0, val);
-    return cycles;
-}
-
-int ISA::SAX(CPU& cpu, int cycles, uword address)
-{
-    ubyte result = cpu.reg_a & cpu.reg_x;
-    cpu.write(address, result);
-    return cycles;
-}
-
-int ISA::SHA(CPU& cpu, int cycles, uword address)
-{
-    ubyte a = cpu.reg_a;
-    ubyte x = cpu.reg_x;
-    ubyte addr_high = address >> 8;
-    ubyte addr_low = address & 0x00FF;
-    if (cpu.reg_y > addr_low) // Weird page-cross behavior
-    {
-        addr_high &= (a & x);
-        address = (addr_high << 8) | addr_low;
-    }
-    ubyte result = a & x & (addr_high + 1);
-    cpu.write(address, result);
-    return cycles;
-}
-
-int ISA::SHS(CPU& cpu, int cycles, uword address)
-{
-    ubyte a = cpu.reg_a;
-    ubyte x = cpu.reg_x;
-    cpu.reg_sp = a & x;
-    ubyte addr_high = address >> 8;
-    ubyte addr_low = address & 0x00FF;
-    if (cpu.reg_y > addr_low) // Weird page-cross behavior
-    {
-        addr_high &= (a & x);
-        address = (addr_high << 8) | addr_low;
-    }
-    ubyte result = a & x & (addr_high + 1);
-    cpu.write(address, result);
-    return cycles;
-}
-
-int ISA::SHX(CPU& cpu, int cycles, uword address)
-{
-    ubyte x = cpu.reg_x;
-    ubyte addr_high = address >> 8;
-    ubyte addr_low = address & 0x00FF;
-    if (cpu.reg_y > addr_low) // Weird page-cross behavior
-    {
-        addr_high &= x;
-        address = (addr_high << 8) | addr_low;
-    }
-    ubyte result = x & (addr_high + 1);
-    cpu.write(address, result);
-    return cycles;
-}
-
-int ISA::SHY(CPU& cpu, int cycles, uword address)
-{
-    ubyte y = cpu.reg_y;
-    ubyte addr_high = address >> 8;
-    ubyte addr_low = address & 0x00FF;
-    if (cpu.reg_y > addr_low) // Weird page-cross behavior
-    {
-        addr_high &= y;
-        address = (addr_high << 8) | addr_low;
-    }
-    ubyte result = y & (addr_high + 1);
-    cpu.write(address, result);
-    return cycles;
-}
-
-int ISA::SLO(CPU& cpu, int cycles, uword address)
-{
-    ubyte val = cpu.read(address);
-    ASL(cpu, 0, address, val, false);
-    val = cpu.read(address);
-    ORA(cpu, 0, val);
-    return cycles;
-}
-
-int ISA::SRE(CPU& cpu, int cycles, uword address)
-{
-    ubyte val = cpu.read(address);
-    LSR(cpu, 0, address, val, false);
-    val = cpu.read(address);
-    EOR(cpu, 0, val);
-    return cycles;
-}
-
-// Unstable
-int ISA::ANE(CPU& cpu, int cycles, ubyte val)
-{
-    ubyte accu = cpu.reg_a;
-    cpu.reg_sr.z = (accu == 0);
-    cpu.reg_sr.n = (accu & 0x80);
-    cpu.reg_a = (accu | MAGIC_CONST) & cpu.reg_x & val;
-    return cycles;
-}
-
-//  TODO I changed this to LAX behavior for compatibility with
-// blargg's instruction test v5, but behavior is documented to be
-// noticeably different in the 6510 undocumented opcode PDF.
-//  According to http://forums.nesdev.com/viewtopic.php?f=2&t=19891&p=253713,
-// it also doesn't behave like an LAX instruction on a Famicom
-int ISA::LXA(CPU& cpu, int cycles, ubyte val)
-{
-    // ubyte accu = cpu.reg_a;
-    // cpu.reg_sr.z = (accu == 0);
-    // cpu.reg_sr.n = (accu & 0x80);
-    // cpu.reg_a = (accu | MAGIC_CONST) & val;
-    // cpu.reg_x = cpu.reg_a;
-    LAX(cpu, cycles, val);
-    return cycles;
+    std::cerr << "Error: invalid opcode " << hex(instr.code) << std::endl;
+    throw std::exception();
 }

@@ -71,47 +71,52 @@ ubyte CPU::nextByte()
     // This is a bit of a misnomer because it could also be an operand
     ubyte instruction = nes.mem->cpuRead(reg_pc);
     reg_pc++;
+    // TODO
+    nes.log_buffer.byte_queue.push(instruction);
     return instruction;
 }
 
-int CPU::executeInstruction()
-{
-    // Step 1: get next instruction
-    ubyte instruction = nextByte();
-
-    // Step 2: process opcode
-    return ISA::executeOpcode(*this, instruction);
-}
-
-bool CPU::ready()
-{
-    return cycle == 0;
-}
+void CPU::dummyNextByte() { nes.mem->cpuRead(reg_pc); }
 
 void CPU::tick()
 {
-    if (cycle == 0)
+    assert(instr.cycle > 0);
+    if (!nes.ppu->oamWrite(odd_cycle))
     {
-        if (!nes.ppu->oamWrite(odd_cycle)) 
+        if (instr.cycle == 1)
         {
-            step();
+            clearInterrupt();
+            serviceInterrupt();
+            instr.address = 0;
+            instr.value = 0;
+            instr.page_cross = false;
+            instr.branch_taken = false;
         }
+        else if (instr.cycle == 5 && instr.code == 0)
+        {
+            // Interrupt hijacking for BRK, IRQ, NMI
+            serviceInterrupt();
+        }
+        if (serviced_interrupt != Interrupt::NONE)
+        {
+            if (serviced_interrupt == Interrupt::IRQ) IRQ();
+            else if (serviced_interrupt == Interrupt::NMI) NMI();
+        }
+        else
+        {
+            if (instr.cycle == 1) 
+            {
+                // TODO
+                if (!nes.log_buffer.byte_queue.empty())
+                    nes.log();
+                nes.log_buffer.pc = reg_pc;
+                instr.code = nextByte();
+            }
+            else executeInstruction();
+        }
+        instr.cycle++;
     }
-    if (cycle > 0) cycle--;
     odd_cycle = !odd_cycle;
-}
-
-void CPU::step()
-{
-    // Check for interrupts
-    if (InterruptType i = nes.mem->getInterrupt())
-    {
-        cycle += handleInterrupt(i);
-        nes.mem->clearInterrupt();
-    }
-    
-    if (cycle == 0)
-        cycle += executeInstruction();
 }
 
 void CPU::start()
@@ -120,6 +125,8 @@ void CPU::start()
     ubyte pch = nes.mem->cpuRead(0xFFFD);
     reg_pc = (pch << 8) | pcl;
     cycle = 7;
+    // TODO
+    // reg_pc = 0xC000;
 }
 
 void CPU::reset()
@@ -130,6 +137,7 @@ void CPU::reset()
     reg_sp -= 3;
     reg_sr.i = true;
     cycle = 7;
+    instr.cycle = 1;
 }
 
 void CPU::save(Savestate& savestate)
@@ -156,27 +164,21 @@ void CPU::load(Savestate& savestate)
     odd_cycle = savestate.cpu_odd_cycle;
 }
 
-void CPU::addInterrupt(InterruptType interrupt)
+void CPU::queueInterrupt(Interrupt interrupt)
 {
-    nes.mem->addInterrupt(interrupt);
+    if (interrupt > queued_interrupt) queued_interrupt = interrupt;
 }
 
-// TODO emulate interrupt hijacking
-int CPU::handleInterrupt(InterruptType type)
+void CPU::serviceInterrupt()
 {
-    assert(type != NO_INTERRUPT);
+    if (queued_interrupt == Interrupt::IRQ && reg_sr.i)
+        queued_interrupt = Interrupt::NONE;
+    if (queued_interrupt > serviced_interrupt)
+        serviced_interrupt = queued_interrupt;
+    queued_interrupt = Interrupt::NONE;
+}
 
-    switch (type)
-    {
-        case IRQ:
-            return ISA::IRQ(*this);
-        case NMI:
-            return ISA::NMI(*this);
-        case RESET:
-            reset();
-            break;
-        default:
-            break;
-    }
-    return 0;
+void CPU::clearInterrupt()
+{
+    serviced_interrupt = Interrupt::NONE;
 }

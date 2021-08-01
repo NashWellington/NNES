@@ -130,7 +130,7 @@ void PPU::write(uword address, ubyte data)
             {
                 // Changing NMI flag from 0 to 1 during vblank generates an NMI
                 if (reg_status.vblank && !reg_ctrl.vblank_nmi && (data & 0x80))
-                    nes.mem->addInterrupt(NMI);
+                    nes.cpu->queueInterrupt(CPU::Interrupt::NMI);
                 reg_ctrl.reg = data;
                 ppu_io_open_bus = data;
                 tmp_vram_addr.nametable = reg_ctrl.nn;
@@ -718,7 +718,7 @@ void PPU::tick()
     else if (scanline == vblank_start && cycle == 1)
     {
         reg_status.vblank = true;
-        if (reg_ctrl.vblank_nmi) nes.mem->addInterrupt(NMI);
+        if (reg_ctrl.vblank_nmi) nes.cpu->queueInterrupt(CPU::Interrupt::NMI);
     }
     // Skip 1 cycle every other frame
     if (scanline == -1 && cycle == 340) incrCycle();

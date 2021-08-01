@@ -214,7 +214,7 @@ std::optional<ubyte> Mapper004::ppuRead(uword address)
                 // TODO differentiate between MMC3 rev A or rev B
                 if (irq_counter == 0 && irq_enable)
                 {
-                    nes.mem->addInterrupt(InterruptType::IRQ);
+                    nes.cpu->queueInterrupt(CPU::Interrupt::IRQ);
                 }
             }
             a12 = 1;

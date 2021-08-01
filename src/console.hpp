@@ -31,6 +31,8 @@ public:
     std::vector<std::shared_ptr<Controller>> controllers;
     //Scheduler scheduler;
     std::unique_ptr<Config> config;
+
+    void log(std::vector<std::string_view> disassembled);
     
     bool paused = false;
     uint frame = 0;
@@ -46,6 +48,13 @@ public:
     void run(Scheduler::Length length);
     // Called at the end of Input polling (not NES software input polling)
     void processInputs();
+
+    void log();
+    struct
+    {
+        uword pc = 0;
+        std::queue<ubyte> byte_queue = {};
+    } log_buffer = {};
     
     std::shared_ptr<CPU> cpu;
     std::shared_ptr<PPU> ppu;

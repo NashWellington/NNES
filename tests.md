@@ -18,13 +18,13 @@ At this point, CPU tests that fail depend on:
 | Test | Author | Status | Details |
 | :--- | :----: | :----: | :------ |
 | Branch Timing Tests | blargg | Pass | |
-| CPU Dummy Reads | blargg | 0/1 | LDA abs,X fails #3 |
-| CPU Dummy Writes | bisqwit | 0/2 | <l><li>OAM test fails #2 (OAM reads not reliable)</li> <li>PPU test fails #9 (42 opcodes fail)</li></l> | 
-| CPU Exec Space | bisqwit | 1/2 | <l><li>APU test fails #2 ($3F16 error). This could mean reading from $4015 is unreliable (likely, considering the APU isn't completely correct). This could also mean reading from $4016 after not polling is unreliable.</li> <li>PPU test passes</li></l> |
+| CPU Dummy Reads | blargg | Pass | |
+| CPU Dummy Writes | bisqwit | 0/2 | <l><li>OAM test fails #2 (OAM reads not reliable)</li> <li>PPU test fails #10 (open bus behavior wrong for $2007?)</li></l> | 
+| CPU Exec Space | bisqwit | 1/2 | <l><li>APU test fails #2 ($4014 error)</li> <li>PPU test passes</li></l> |
 | CPU Flag Concurrency | bisqwit | Pass? | Flags and APU IRQ timing work as intended |
 | CPU Reset | blargg | Pass | |
 | CPU Timing Test v6 | Zepper | Pass | |
-| Instruction Behavior Misc Tests | blargg | 2/4 | <l><li>Tests 1 and 2 pass</li> <li>Test 3 fails #3 (LDA abs,X)</li> <li>Test 4: a long list of opcodes fail #2</li> <li>Note: tests 3 and 4 probably won't pass until I make the CPU cycle-accurate</li></l> |
+| Instruction Behavior Misc Tests | blargg | Pass | |
 | Instruction Test v5 | blargg | Pass | |
 | Instruction Timing Tests | blargg | Pass | |
 | Interrupt Test v2 | blargg | 0/5 | <l><li>Test 1 fails #4</li> <li>Tests 2-5 fail with no error code</li> <li>Note: tests 2-4 are likely failing beccause interrupt hijacking isn't emulated</li></l> |
@@ -135,11 +135,19 @@ None yet
 * Keyboard input seems to only take 1 key press at a time
 
 ## Misc
-* Open bus behavior unemulated: http://wiki.nesdev.com/w/index.php/Open_bus_behavior
 
 # Regressions
 
 ## CPU
+* Branch timing tests halt on gray screen
+* nestest has no sprite display/no change in nametable
+* CPU flag concurrency halts on "verifying basic CPU flag operations work properly"
+* CPU reset register tests fails (but RAM test passes)
+* Most unintended opcodes fail instruction test v5
+* CPU timing test halts
+* interrupt test 1 (CLI) fails because APU doesn't generate IRQ correctly
+* interrupt tests 2-4 crash (all relating to NMIs)
+* interrupt test 5 halts
 
 ## PPU
 

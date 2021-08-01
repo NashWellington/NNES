@@ -29,6 +29,15 @@ int main(int argc, char ** argv)
         throw std::exception();
     }
     std::cerr.rdbuf(error_stream.rdbuf());
+
+    // Set up clog
+    std::ofstream log_stream("./log/nestest.log");
+    if (!log_stream.is_open())
+    {
+        std::cout << "Error: could not open ./log/nestest.log" << std::endl;
+        throw std::exception();
+    }
+    std::clog.rdbuf(log_stream.rdbuf());
     #endif
 
     // Argument parsing

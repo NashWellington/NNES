@@ -7,7 +7,6 @@ class NES;
 #include "globals.hpp"
 #include "processor.hpp"
 #include "mem.hpp"
-#include "isa.hpp"
 #include "savestate.hpp"
 
 class CPU : public Processor
@@ -26,23 +25,10 @@ public:
     */
     ubyte nextByte();
 
-    /* Call nextByte() and execute that byte as an instruction
-    */
-    int executeInstruction();
-
-    // Returns true if CPU is ready to execute another instruction
-    bool ready();
+    // Read the next byte, but don't increment PC
+    void dummyNextByte();
 
     void tick();
-
-    /* Execute 1 instruction or handle 1 interrupt
-    */
-    void step();
-
-    /* Create a new interrupt
-    * For use by isa.h
-    */
-    void addInterrupt(InterruptType interrupt);
 
     /* Set PC to the value located in the reset vector
     */
@@ -132,8 +118,135 @@ public:
         ubyte reg;
     } reg_sr = { .reg = 0x34 };
 
+    enum class Interrupt
+    {
+        NONE = 0,
+        IRQ  = 1,
+        NMI  = 2
+    };
+
+    /* Add a new interrupt to the queue
+    */
+    void queueInterrupt(Interrupt interrupt);
+
 private:
     bool odd_cycle = false;
 
-    int handleInterrupt(InterruptType type);
+// Interrupts
+    Interrupt serviced_interrupt = Interrupt::NONE;
+    Interrupt queued_interrupt = Interrupt::NONE;
+
+    void serviceInterrupt();
+    void clearInterrupt();
+
+    void BRK() noexcept;
+    void IRQ() noexcept;
+    void NMI() noexcept;
+
+// Instructions
+
+    struct
+    {
+        ubyte code = 0;
+        uint cycle = 1;     // Cycle within the instruction
+        uword address = 0;  // Address to read from/write to
+        ubyte value = 0;    // Value to be written to the address in a RMW instruction
+        bool page_cross = false;
+        bool branch_taken = false;
+    } instr = {};
+
+    /* Call nextByte() and execute that byte as an instruction
+    */
+    void executeInstruction();
+
+// Instructions accessing the stack
+    void RTI() noexcept;
+    void RTS() noexcept;
+    void PHA() noexcept;
+    void PHP() noexcept;
+    void PLA() noexcept;
+    void PLP() noexcept;
+    void JSR() noexcept;
+    void JMP() noexcept;
+    void JMP_IND() noexcept;
+
+// Branch instructions
+    bool BCC() noexcept;
+    bool BCS() noexcept;
+    bool BNE() noexcept;
+    bool BEQ() noexcept;
+    bool BPL() noexcept;
+    bool BMI() noexcept;
+    bool BVC() noexcept;
+    bool BVS() noexcept;
+
+// Read instructions
+    void ADC(ubyte value) noexcept;
+    void ALR(ubyte value) noexcept; // (aka ASR) unintended op
+    void ANC(ubyte value) noexcept; // (aka ANC2, ANA, ANB) unintended op
+    void AND(ubyte value) noexcept;
+    void ANE(ubyte value) noexcept; // (aka XAA, AXM) unstable/magic const op
+    void ARR(ubyte value) noexcept; // unintended op
+    void BIT(ubyte value) noexcept;
+    void CMP(ubyte value) noexcept;
+    void CPX(ubyte value) noexcept;
+    void CPY(ubyte value) noexcept;
+    void EOR(ubyte value) noexcept;
+    void LAS(ubyte value) noexcept; // (aka LAR) unstable op
+    void LAX(ubyte value) noexcept; // unstable op
+    void LDA(ubyte value) noexcept;
+    void LDX(ubyte value) noexcept;
+    void LDY(ubyte value) noexcept;
+    void LXA(ubyte value) noexcept; // (aka LAX #imm, ATX, OAL, ANX) unstable/magic const op
+    void NOP(ubyte value) noexcept;
+    void ORA(ubyte value) noexcept;
+    void SBC(ubyte value) noexcept;
+    void SBX(ubyte value) noexcept; // (aka AXS, SAX, XMA) unintended op
+
+// Write instructions
+    [[nodiscard]] ubyte SAX() noexcept; // (aka AXS, AAX) unintended op
+    [[nodiscard]] ubyte SHA() noexcept; // (aka AXA, AHX, TEA) unstable op
+    [[nodiscard]] ubyte SHX() noexcept; // (aka A11, SXA, XAS, TEX) unstable op
+    [[nodiscard]] ubyte SHY() noexcept; // (aka A11, SYA, SAY, TEY) unstable op
+    [[nodiscard]] ubyte STA() noexcept;
+    [[nodiscard]] ubyte STX() noexcept;
+    [[nodiscard]] ubyte STY() noexcept;
+    [[nodiscard]] ubyte TAS() noexcept; // (aka XAS, SHS) unstable op
+
+// Read-Modify-Write instructions
+    [[nodiscard]] ubyte ASL(ubyte value) noexcept;
+    [[nodiscard]] ubyte DCP(ubyte value) noexcept; // (aka DCM) unintended op
+    [[nodiscard]] ubyte DEC(ubyte value) noexcept;
+    [[nodiscard]] ubyte INC(ubyte value) noexcept;
+    [[nodiscard]] ubyte ISC(ubyte value) noexcept; // (aka ISB, INS) unintended op
+    [[nodiscard]] ubyte LSR(ubyte value) noexcept;
+    [[nodiscard]] ubyte RLA(ubyte value) noexcept; // (aka RLN) unintended op
+    [[nodiscard]] ubyte ROL(ubyte value) noexcept;
+    [[nodiscard]] ubyte ROR(ubyte value) noexcept;
+    [[nodiscard]] ubyte RRA(ubyte value) noexcept; // (aka RRD) unintended op
+    [[nodiscard]] ubyte SLO(ubyte value) noexcept; // (aka ASO) unintended op
+    [[nodiscard]] ubyte SRE(ubyte value) noexcept; // (aka LSE) unintended op
+
+// Other (mostly paired with implied/no addressing mode)
+    void CLC() noexcept;
+    void CLD() noexcept;
+    void CLI() noexcept;
+    void CLV() noexcept;
+    void DEX() noexcept;
+    void DEY() noexcept;
+    void INX() noexcept;
+    void INY() noexcept;
+    void NOP() noexcept;
+    void SEC() noexcept;
+    void SED() noexcept;
+    void SEI() noexcept;
+    void SEV() noexcept;
+    void TAX() noexcept;
+    void TAY() noexcept;
+    void TSX() noexcept;
+    void TXA() noexcept;
+    void TXS() noexcept;
+    void TYA() noexcept;
+
+    void STP(); // aka KIL, JAM
 };

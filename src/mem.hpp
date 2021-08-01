@@ -66,14 +66,9 @@ public:
     void save(Savestate& savestate);
     void load(Savestate& savestate);
 
-    // Interrupts
-    InterruptType getInterrupt();
-    void addInterrupt(InterruptType interrupt);
-    void clearInterrupt();
 
 private:
     NES& nes;
-    InterruptType current_interrupt = NO_INTERRUPT;
 
 // CPU memory arrays
     /* Zero Page

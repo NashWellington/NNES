@@ -184,26 +184,6 @@ void Memory::load(Savestate& savestate)
 }
 */
 
-InterruptType Memory::getInterrupt()
-{
-    // FIXME adding APU interrupts caused major CPU test result regressions
-    if (current_interrupt == InterruptType::NO_INTERRUPT 
-        && (nes.apu->frame_interrupt || nes.apu->dmc.interrupt))
-        addInterrupt(IRQ);
-    return current_interrupt;
-}
-
-// TODO NMI/Reset priority?
-void Memory::addInterrupt(InterruptType interrupt)
-{
-    current_interrupt = interrupt;
-}
-
-void Memory::clearInterrupt()
-{
-    current_interrupt = NO_INTERRUPT;
-}
-
 // Some games rely on random RAM contents to seed RNG
 // TODO option to set all to $00, $FF, or random
 void Memory::start()
