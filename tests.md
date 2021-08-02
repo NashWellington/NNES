@@ -11,7 +11,6 @@ Note: some tests (notably mapper/input tests by rainwarrior) are missing because
 ## CPU Tests
 
 At this point, CPU tests that fail depend on:
-* cycle accurate CPU (including dummy reads/writes, interrupt hijacking)
 * open bus behavior
 * APU/PPU registers working correctly
 
@@ -139,8 +138,6 @@ None yet
 # Regressions
 
 ## CPU
-* nestest fails DCP, ISB, SLO, RLA, SRE, RRA
-* Most unintended opcodes fail instruction test v5
 
 ## PPU
 

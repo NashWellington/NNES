@@ -775,10 +775,10 @@ void CPU::LDY(ubyte value) noexcept
 
 void CPU::LXA(ubyte value) noexcept
 {
-    reg_sr.z = reg_a == 0;
-    reg_sr.n = static_cast<bool>(reg_a & 0x80);
     reg_a = (reg_a | MAGIC_CONST) & value;
     reg_x = reg_a;
+    reg_sr.z = reg_a == 0;
+    reg_sr.n = static_cast<bool>(reg_a & 0x80);
 }
 
 #pragma GCC diagnostic push
@@ -801,9 +801,9 @@ void CPU::SBX(ubyte value) noexcept
     ubyte result = reg_a & reg_x;
     reg_sr.c = result >= value;
     result -= value;
-    reg_sr.z = value == 0;
-    reg_sr.n = static_cast<bool>(value & 0x80);
-    reg_x = value;
+    reg_sr.z = result == 0;
+    reg_sr.n = static_cast<bool>(result & 0x80);
+    reg_x = result;
 }
 
 // Write instructions
@@ -868,7 +868,7 @@ ubyte CPU::ASL(ubyte value) noexcept
 ubyte CPU::DCP(ubyte value) noexcept
 {
     ubyte result = DEC(value);
-    CMP(value);
+    CMP(result);
     return result;
 }
 
@@ -891,7 +891,7 @@ ubyte CPU::INC(ubyte value) noexcept
 ubyte CPU::ISC(ubyte value) noexcept
 {
     ubyte result = INC(value);
-    SBC(value);
+    SBC(result);
     return result;
 }
 
@@ -908,7 +908,7 @@ ubyte CPU::LSR(ubyte value) noexcept
 ubyte CPU::RLA(ubyte value) noexcept
 {
     ubyte result = ROL(value);
-    AND(value);
+    AND(result);
     return result;
 }
 
@@ -935,21 +935,21 @@ ubyte CPU::ROR(ubyte value) noexcept
 ubyte CPU::RRA(ubyte value) noexcept
 {
     ubyte result = ROR(value);
-    ADC(value);
+    ADC(result);
     return result;
 }
 
 ubyte CPU::SLO(ubyte value) noexcept
 {
     ubyte result = ASL(value);
-    ORA(value);
+    ORA(result);
     return result;
 }
 
 ubyte CPU::SRE(ubyte value) noexcept
 {
     ubyte result = LSR(value);
-    EOR(value);
+    EOR(result);
     return result;
 }
 
