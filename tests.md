@@ -19,15 +19,15 @@ At this point, CPU tests that fail depend on:
 | :--- | :----: | :----: | :------ |
 | Branch Timing Tests | blargg | Pass | |
 | CPU Dummy Reads | blargg | Pass | |
-| CPU Dummy Writes | bisqwit | 0/2 | <l><li>OAM test fails #2 (OAM reads not reliable)</li> <li>PPU test fails #10 (open bus behavior wrong for $2007?)</li></l> | 
-| CPU Exec Space | bisqwit | 1/2 | <l><li>APU test fails #2 ($4014 error)</li> <li>PPU test passes</li></l> |
+| CPU Dummy Writes | bisqwit | 1/2 | OAM test fails #2 (OAM reads not reliable) | 
+| CPU Exec Space | bisqwit | 1/2 | APU test fails #2 ($4014 error) |
 | CPU Flag Concurrency | bisqwit | Pass? | Flags and APU IRQ timing work as intended |
 | CPU Reset | blargg | Pass | |
 | CPU Timing Test v6 | Zepper | Pass | |
 | Instruction Behavior Misc Tests | blargg | Pass | |
 | Instruction Test v5 | blargg | Pass | |
 | Instruction Timing Tests | blargg | Pass | |
-| Interrupt Test v2 | blargg | 0/5 | <l><li>Test 1 fails #4</li> <li>Tests 2-5 fail with no error code</li> <li>Note: tests 2-4 are likely failing beccause interrupt hijacking isn't emulated</li></l> |
+| Interrupt Test v2 | blargg | 0/5 | <l><li>Test 1 fails #4</li> <li>Tests 2-5 fail with no error code</li></l> |
 | nestest | kevtris | Pass | |
 | RAM Retention Test | rainwarrior | | ROM unavailable; this might be the same as the one included in blargg's CPU Reset test folder |
 | XAA Test | Aureus | | |
@@ -36,15 +36,15 @@ At this point, CPU tests that fail depend on:
 
 | Test | Author | Status | Details |
 | :--- | :----: | :----: | :------ |
-| 240p Test Suite | tepples | 0/? | Mapper 2 is supported, but this is probably not worth testing until I make an attempt at color emphasis and a few other things |
+| 240p Test Suite | tepples | 0/? | Probably not worth testing until I make an attempt at color emphasis and a few other things |
 | Color Test | rainwarrior | 0/1 | Emphasis/chroma/luma not implemented yet |
 | Full Palette Test | blargg | 0/3 | <l><li>full_palette and full_palette_smooth show four different shades of blue (i.e. not correct but a step in the right direction)</li> <li>flowing_palette crashes because it has PRG-RAM size set to $C4,000 (I need to check boot.cpp for this)</li></l> |
 | Misc PPU Tests | blargg | 1/4 | <l><li>palette_ram passes</li> <li>power_up_palette is ignored because palette values are undefined on startup</li> <li>sprite_ram fails #4</li> <li>vbl_clear_time fails #3 (vbl flag cleared too late)</li> <li>vram_access fails #6</li></l> |
 | NMI Sync Test | blargg | ? | Not sure what a passing result is supposed to look like |
 | NTSC Torture Test | rainwarrior | ? | D-pad scrolls but select doesn't seem to do anything |
-| OAM Read Test | blargg | 0/1 | |
+| OAM Read Test | blargg | Pass | |
 | OAM Stress Test | blargg | 0/1 | |
-| OAM Test 3 | lidnariq | 0/1 | Looks to be somewhat working. I'll check this test out more later. |
+| OAM Test 3 | lidnariq | Pass | |
 | Palette Test | rainwarrior | 0/1 | Same as color test |
 | PPU Open Bus Test | blargg | 0/1 | Fails #3 (Note: I probably won't be fixing this for a while. It seems to test obscure VRAM decay behavior) |
 | PPU Read Buffer Test | bisqwit | 0/1 | Doesn't display any results. Attempts to write three times to pattern tables despite not having CHR-RAM. Forcing CHR-RAM doesn't seem to help. |
@@ -52,7 +52,7 @@ At this point, CPU tests that fail depend on:
 | Sprite DMA and DMC DMA Tests | blargg | 0/2 | Flashes some text for a few frames and displays a black screen |
 | Sprite Hit Tests | blargg | Pass | |
 | Sprite Overflow Tests | blargg | 2/5 | <l><li>Test 1 passes</li> <li>Test 2 fails #9</li> <li>Test 3 fails #12</li> <li>Test 4 fails #5</li> <li>Test 5 passes</li></l> |
-| VBL NMI Tests | blargg | 0/10 | <l><li>Test 1 fails #7 (vbl period too short w/ bg off)</li> <li>Test 4 fails #5</li> <li>Tests 9 and 10 fail #2 (clock skipped too soon relative to enabling bg)</li> <li>All other tests have complex error messages that wouldn't make sense to type out in this table</li> <li>Note: it seems vblank flags are being set 2-3 frames early (relative to the CPU's clock)</li></l> |
+| VBL NMI Tests | blargg | 0/10 | <l><li>Test 1 fails #7 (vbl period too short w/ bg off)</li> <li>Test 4 fails #11</li> <li>Tests 9 fails #2 (pattern ----- should not skip clocks)</li> <li>Test 10 fails #2 (clock skipped too soon relative to enabling bg)</li> <li>All other tests have complex error messages that wouldn't make sense to type out in this table</li> <li>Note: it seems vblank flags are being set 2-3 frames early (relative to the CPU's clock)</li></l> |
 
 ## APU Tests
 

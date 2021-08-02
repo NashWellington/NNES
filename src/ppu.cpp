@@ -111,6 +111,7 @@ ubyte PPU::read(uword address)
             }
             // else reg_ctrl.incr ? incrVertV() : incrHoriV();
             else vram_addr.addr += reg_ctrl.incr ? 32 : 1;
+            ppu_io_open_bus = data;
             return data;
         case 0x4014: // OAM DMA
             return ppu_io_open_bus;
