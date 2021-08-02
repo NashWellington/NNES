@@ -11,7 +11,7 @@ Note: some tests (notably mapper/input tests by rainwarrior) are missing because
 ## CPU Tests
 
 At this point, CPU tests that fail depend on:
-* open bus behavior
+* CPU/PPU synchronization
 * APU/PPU registers working correctly
 
 | Test | Author | Status | Details |

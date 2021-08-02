@@ -71,8 +71,6 @@ ubyte CPU::nextByte()
     // This is a bit of a misnomer because it could also be an operand
     ubyte instruction = nes.mem->cpuRead(reg_pc);
     reg_pc++;
-    // TODO
-    nes.log_buffer.byte_queue.push(instruction);
     return instruction;
 }
 
@@ -106,10 +104,6 @@ void CPU::tick()
         {
             if (instr.cycle == 1) 
             {
-                // TODO
-                if (!nes.log_buffer.byte_queue.empty())
-                    nes.log();
-                nes.log_buffer.pc = reg_pc;
                 instr.code = nextByte();
             }
             else executeInstruction();
@@ -125,8 +119,6 @@ void CPU::start()
     ubyte pch = nes.mem->cpuRead(0xFFFD);
     reg_pc = (pch << 8) | pcl;
     cycle = 7;
-    // TODO
-    // reg_pc = 0xC000;
 }
 
 void CPU::reset()
