@@ -1,4 +1,6 @@
 .vscode/*
+build/*.txt
+build/*.out
 build/log/*
 build/NNES*
 build/saves/*

@@ -1,6 +1,6 @@
 objects =  nnes.o boot.o cart.o  config.o console.o cpu.o ppu.o apu.o mem.o 
 objects += $(mapper_objects) 
-objects += isa.o mode.o scheduler.o savestate.o video.o audio.o input.o 
+objects += isa.o scheduler.o savestate.o video.o audio.o input.o 
 objects += controller.o util.o 
 objects += imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
 
@@ -8,12 +8,16 @@ mapper_objects = mapper.o mapper000.o mapper001.o mapper002.o mapper003.o mapper
 
 compiler = g++
 
-optimizations = -march=native
-# Comment out if debugging
-optimizations += -O3 -flto
+optimizations = -march=native -O3 -flto
+debug = -g 
+profiler = -pg 
+leak_check = -fsanitize=address
 
-flags = -std=c++17 #-g -fsanitize=address
+flags = -std=c++17
 flags += $(optimizations)
+#flags += $(debug)
+#flags += $(leak_check)
+#flags += $(profiler)
 flags += -Wall -Werror -Wextra
 flags += -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align
 flags += -Wunused -Woverloaded-virtual -Wconversion -Wsign-conversion
@@ -45,7 +49,7 @@ console.o : console.hpp globals.hpp scheduler.hpp cpu.hpp ppu.hpp apu.hpp mem.hp
 processor.o : processor.hpp globals.hpp savestate.hpp
 		$(compiler) $(flags) -c processor.cpp
 
-cpu.o : cpu.hpp globals.hpp processor.hpp isa.hpp mem.hpp savestate.hpp
+cpu.o : cpu.hpp globals.hpp processor.hpp mem.hpp savestate.hpp
 		$(compiler) $(flags) -c cpu.cpp
 
 ppu.o : ppu.hpp globals.hpp processor.hpp mem.hpp video.hpp savestate.hpp util.hpp
@@ -54,11 +58,8 @@ ppu.o : ppu.hpp globals.hpp processor.hpp mem.hpp video.hpp savestate.hpp util.h
 apu.o : apu.hpp globals.hpp processor.hpp audio.hpp mem.hpp
 		$(compiler) $(flags) -c apu.cpp
 
-isa.o : isa.hpp globals.hpp mode.hpp cpu.hpp
+isa.o : cpu.hpp globals.hpp
 		$(compiler) $(flags) -c isa.cpp
-
-mode.o : mode.hpp globals.hpp cpu.hpp
-		$(compiler) $(flags) -c mode.cpp
 
 mem.o : mem.hpp globals.hpp console.hpp savestate.hpp
 		$(compiler) $(flags) -c mem.cpp
