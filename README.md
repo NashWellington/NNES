@@ -4,11 +4,10 @@ NNES is a NES emulator built in Modern C++
 ## Roadmap
 This is a rough order of features I am planning to implement or change. Features I am currently working on are *italicized*:
 * *Improved accuracy across the board*
-* CPU rewrite (to make cycle-accurate)
 * Mapper 5 support (used for Castlevania III and some other games)
-* Multithreading between CPU, PPU, and APU (if feasible)
+* Cooperative threading mode for the scheduler (and other optimizations)
 * Automated testing
-* Other QoL features (savestates, cheats, more debug features, etc.)
+* Other QoL features (savestates, cheats, etc.)
 * Cross-platform support
 * Mapper 11 support (used for Bible Adventures and other incredible games)
 * Support for other mappers
