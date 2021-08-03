@@ -10,13 +10,6 @@
 //#define NDEBUG
 //#endif
 
-// Comment this out if building as NNES
-// Uncomment this out if building as NNES - debugger
-// TODO cmake argument
-#ifndef DEBUGGER
-//#define DEBUGGER
-#endif
-
 #include <iostream>         // Used for logging errors etc.
 #include <stdexcept>        
 #include <assert.h>         
@@ -34,7 +27,7 @@
 typedef uint8_t ubyte;
 
 /* 1-byte signed integer
-* Used mostly for signed addition or for setting/clearing zero flag
+* Used for casting to word with sign extension
 */
 typedef int8_t byte;
 
@@ -44,7 +37,7 @@ typedef int8_t byte;
 typedef uint16_t uword;
 
 /* 2-byte signed integer
-* Never or almost never used
+* Used for sign extending bytes
 */
 typedef int16_t word;
 

@@ -56,10 +56,6 @@ void Input::loadBinds(std::string config)
     emu_binds.insert({SDLK_r, 
         [this]() { reset(); }
     });
-
-    #ifdef DEBUGGER
-    // TODO debugger controls
-    #endif
     
     // Game Input controls
     std::vector<std::shared_ptr<Controller>> controllers = console.controllers;
@@ -137,15 +133,6 @@ void Input::pollKeyboard(SDL_Event& event)
         if (emu_bind_iter != emu_binds.end()) 
             emu_bind_iter->second();
 
-        #ifdef DEBUGGER
-        auto debug_bind_iter = debug_binds.find(key);
-        while (debug_bind_iter != debug_binds.end())
-        {
-            debug_bind_iter->second());
-            debug_bind_iter++;
-        }
-        #endif
-
         auto key_bind_iter = key_binds.find(key);
         if (key_bind_iter != key_binds.end())
             key_bind_iter->second.press(true, true);
@@ -165,107 +152,11 @@ void Input::pollKeyboard(SDL_Event& event)
     }
 }
 
-// TODO this is all old code. Port this to loadBinds()
-#ifdef DEBUGGER
-void pollDebug(RunFlags& run_flags, SDL_Event& event)
-{
-    if (event.type == SDL_KEYDOWN)
-    {
-        switch (event.key.keysym.sym)
-        {
-            case SDLK_p:
-                display.palette_selected += 1;
-                display.palette_selected %= 8;
-                break;
-            case SDLK_f:
-                run_flags.paused = false;
-                run_flags.frame = true;
-                break;
-            case SDLK_t:
-                run_flags.paused = false;
-                run_flags.tick = true;
-                break;
-            case SDLK_g:
-                run_flags.paused = false;
-                run_flags.steps += 1;
-                break;
-            case SDLK_8: // Execute 2^8 instructions
-                run_flags.paused = false;
-                run_flags.steps += 0x0100;
-                break;
-            // TODO make these only work if Memory window is hovered/selected
-            case SDLK_UP:
-                display.mem_addrs.addrs[display.mem_addrs.device] -= 16;
-                break;
-            case SDLK_DOWN:
-                display.mem_addrs.addrs[display.mem_addrs.device] += 16;
-                break;
-            case SDLK_LEFT:
-                display.mem_addrs.addrs[display.mem_addrs.device]--;
-                break;
-            case SDLK_RIGHT:
-                display.mem_addrs.addrs[display.mem_addrs.device]++;
-                break;
-            case SDLK_PAGEUP:
-                display.mem_addrs.addrs[display.mem_addrs.device] -= 16 * 16;
-                break;
-            case SDLK_PAGEDOWN:
-                display.mem_addrs.addrs[display.mem_addrs.device] += 16 * 16;
-                break;
-        }
-    }
-
-    // Make sure memory display address isn't out of bounds
-    uint device = display.mem_addrs.device;
-    assert (device <= 4);
-    switch (device)
-    {
-    case 0: // Zero Page
-        if (display.mem_addrs.addrs[device] >= 0x0100)
-            display.mem_addrs.addrs[device] %= 0x0100;
-        break;
-    case 1: // Stack
-        if (display.mem_addrs.addrs[device] < 0x0100)
-            display.mem_addrs.addrs[device] += 0x0100;
-        else if (display.mem_addrs.addrs[device] >= 0x0200)
-            display.mem_addrs.addrs[device] %= 0x0100;
-        break;
-    case 2: // RAM
-        if (display.mem_addrs.addrs[device] < 0x0200)
-            display.mem_addrs.addrs[device] += 0x0400;
-        else if (display.mem_addrs.addrs[device] >= 0x0800)
-        {
-            display.mem_addrs.addrs[device] -= 0x0200;
-            display.mem_addrs.addrs[device] %= 0x0600;
-            display.mem_addrs.addrs[device] += 0x0200;
-        }
-        break;
-    case 3: // PRG RAM
-        if (display.mem_addrs.addrs[device] < 0x6000 
-            || display.mem_addrs.addrs[device] >= 0x8000)
-        {
-            display.mem_addrs.addrs[device] %= 0x2000;
-            display.mem_addrs.addrs[device] += 0x6000;
-        }
-        break;
-    case 4: // PRG ROM
-        if (display.mem_addrs.addrs[device] < 0x8000)
-            display.mem_addrs.addrs[device] += 0x8000;
-        break;
-    default:
-        break;
-    }
-}
-#endif
-
 bool Input::poll()
 {
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
-        #ifdef DEBUGGER
-        ImGui_ImplSDL2_ProcessEvent(&event);
-        #endif
         pollKeyboard(event);
     }
     pollControllers();

@@ -11,7 +11,7 @@ ubyte NESStandardController::read()
     if (poll_i == -1 || poll_i > 7) return 1;
     else
     {
-        ubyte data = value & (1 << poll_i) != 0;
+        ubyte data = (value & (1 << poll_i)) != 0;
         poll_i++;
         return data;
     }

@@ -47,15 +47,11 @@ private:
     bool running = true;
 
     Console& console;
-    // TODO shared_ptr to debugger object
     Audio& audio;
     Video& video;
 
     // ifdef SDL
     std::map<SDL_Keycode,std::function<void()>> emu_binds = {};
-    #ifdef DEBUGGER
-    std::multimap<SDL_Keycode,std::function<void()>> debug_binds = {};
-    #endif
     std::map<SDL_Keycode,Bind> key_binds = {};
     std::map<std::pair<SDL_GameControllerButton,uint>,Bind> joypad_binds = {};
     // endif

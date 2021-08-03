@@ -124,7 +124,7 @@ private:
         ubyte peekBit(uint bit)
         {
             uint bit_i = sizeof(T)*8 - (bit+1);
-            return reg & (1 << bit_i) != 0; 
+            return (reg & (1 << bit_i)) != 0; 
         }
         ubyte peekByte(uint byte_i)
         {

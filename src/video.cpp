@@ -301,22 +301,6 @@ Video::Video()
         std::cerr << "Failed to initialize GLEW" << std::endl;
         throw std::exception();
     }
-    
-    #ifdef DEBUGGER
-    // Setup ImGui
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    (void)io;
-    io.IniFilename = "./cfg/imgui.ini";
-    //io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    //io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-    ImGui::StyleColorsDark();                                    // Dark theme
-
-    // Setup backends
-    ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
-    ImGui_ImplOpenGL3_Init("#version 330");
-    #endif
 
     // TODO fonts?
 
@@ -355,22 +339,10 @@ Video::Video()
     text_shader.addAttribute("texCoord", 2);
 
     frame_tex = Texture(256, 240, GL_NEAREST);
-#ifdef DEBUGGER
-    for (int i = 0; i < 2; i++) pt_tex[i]  = Texture(128, 128, GL_NEAREST);
-    for (int i = 0; i < 4; i++) nt_tex[i]  = Texture(256, 240, GL_NEAREST);
-    for (int i = 0; i < 8; i++) pal_tex[i] = Texture(4, 1, GL_NEAREST);
-    spr_tex = Texture(64, 64, GL_NEAREST);
-#endif
 }
 
 Video::~Video()
 {
-    #ifdef DEBUGGER
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
-    ImGui::DestroyContext();
-    #endif
-
     // TODO destroy textures?
 
     SDL_GL_DeleteContext(gl_context);
@@ -379,238 +351,6 @@ Video::~Video()
 
 void Video::displayFrame()
 {
-#ifdef DEBUGGER
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplSDL2_NewFrame(window);
-    ImGui::NewFrame();
-
-    ImGuiIO& io = ImGui::GetIO();
-
-    IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context");
-
-    //ImGuiWindowFlags wf = 0;
-    //wf |= ImGuiWindowFlags_NoScrollbar;
-    //wf |= ImGuiWindowFlags_NoMove;
-    //wf |= ImGuiWindowFlags_NoResize;
-
-    // Palettes
-    {
-        ImGui::Begin("Palettes");
-        ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Image vals
-        ImVec2 uv_max = ImVec2(1.0f, 1.0f);
-        ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-        ImVec4 border_unselected = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
-        ImVec4 border_selected = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-        ImVec2 size = ImVec2(58.0f, 14.5f);
-        for (uint i = 0; i < 8; i++)
-        {
-            if (i == palette_selected)
-                ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(pal_tex[i].texture)), size, uv_min, uv_max, tint, border_selected);
-            else
-                ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(pal_tex[i].texture)), size, uv_min, uv_max, tint, border_unselected);
-            ImGui::SameLine();
-        }
-        ImGui::End();
-    }
-    // Pattern Tables
-    {
-        ImGui::Begin("Pattern Tables");
-        ImVec2 pos = ImGui::GetCursorScreenPos();
-        ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Image vals
-        ImVec2 uv_max = ImVec2(1.0f, 1.0f);
-        ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-        ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
-        for (uint i = 0; i < 2; i++)
-        {
-            float width = static_cast<float>(2 * pt_tex[i].width);
-            float height = static_cast<float>(2 * pt_tex[i].height);
-            ImVec2 size = ImVec2(width, height);
-            ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(pt_tex[i].texture)), size, uv_min, uv_max, tint, border);
-            if (ImGui::IsItemHovered())
-            {
-                ImGui::BeginTooltip();
-                float region_sz = 64.0f;
-                float region_x = io.MousePos.x - pos.x - region_sz * 0.5f - width*i - 10.0f * i; // TODO find better val than 10
-                float region_y = io.MousePos.y - pos.y - region_sz * 0.5f;
-                float zoom = 2.0f;
-                if (region_x < 0.0f) region_x = 0.0f;
-                else if (region_x > width - region_sz) region_x = width - region_sz;
-                if (region_y < 0.0f) region_y = 0.0f;
-                else if (region_y > height - region_sz) region_y = height - region_sz;
-                ImVec2 uv0 = ImVec2((region_x) / width, (region_y) / height);
-                ImVec2 uv1 = ImVec2((region_x + region_sz) / width, (region_y + region_sz) / height);
-                ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(pt_tex[i].texture)), ImVec2(region_sz * zoom, region_sz * zoom), uv0, uv1, tint, border);
-                ImGui::EndTooltip();
-            }
-            ImGui::SameLine();
-        }
-        ImGui::End();
-    }
-    // Nametables
-    {
-        ImGui::Begin("Nametables");
-        ImVec2 pos = ImGui::GetCursorScreenPos();
-        ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Image vals
-        ImVec2 uv_max = ImVec2(1.0f, 1.0f);
-        ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-        ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
-        for (uint i = 0; i < 4; i++)
-        {
-            float width = static_cast<float>(nt_tex[i].width);
-            float height = static_cast<float>(nt_tex[i].height);
-            ImVec2 size = ImVec2(width, height);
-            ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(nt_tex[i].texture)), size, uv_min, uv_max, tint, border);
-            if (ImGui::IsItemHovered())
-            {
-                ImGui::BeginTooltip();
-                float region_sz = 64.0f;
-                float region_x = io.MousePos.x - pos.x - region_sz * 0.5f - width*(i%2) - 10.0f * (i%2);
-                float region_y = io.MousePos.y - pos.y - region_sz * 0.5f - height*(i/2) - 10.0f * (i/2);
-                float zoom = 2.0f;
-                if (region_x < 0.0f) region_x = 0.0f;
-                else if (region_x > width - region_sz) region_x = width - region_sz;
-                if (region_y < 0.0f) region_y = 0.0f;
-                else if (region_y > height - region_sz) region_y = height - region_sz;
-                ImVec2 uv0 = ImVec2((region_x) / width, (region_y) / height);
-                ImVec2 uv1 = ImVec2((region_x + region_sz) / width, (region_y + region_sz) / height);
-                ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(nt_tex[i].texture)), ImVec2(region_sz * zoom, region_sz * zoom), uv0, uv1, tint, border);
-                ImGui::EndTooltip();
-            }
-            if (i%2 == 0) ImGui::SameLine();
-        }
-        ImGui::End();
-    }
-    // Sprites
-    {
-        ImGui::Begin("Sprites");
-        ImVec2 uv_min = ImVec2(0.0f, 0.0f);
-        ImVec2 uv_max = ImVec2(1.0f, 1.0f);
-        ImVec4 tint = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-        ImVec4 border = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
-        ImVec2 size = ImVec2(static_cast<float>(4 * spr_tex.width), static_cast<float>(4 * spr_tex.height)); // TODO
-        ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(spr_tex.texture)), size, uv_min, uv_max, tint, border);
-        ImGui::End();
-    }
-    // Registers
-    {
-        ImGui::Begin("Registers");
-        ImGui::Text("Program Counter: %s", hex(debug_state.registers.reg_pc).c_str());
-        ImGui::Text("Stack Pointer:     %s", hex(debug_state.registers.reg_sp).c_str());
-        ImGui::Text("Accumulator:       %s", hex(debug_state.registers.reg_a).c_str());
-        ImGui::Text("Register X:        %s", hex(debug_state.registers.reg_x).c_str());
-        ImGui::Text("Register Y:        %s", hex(debug_state.registers.reg_y).c_str());
-        ImGui::Text("Status Register:   %s", hex(debug_state.registers.reg_sr).c_str());
-        ImGui::Text("NV BDIZC");
-        ImGui::Text("%s", binary<ubyte>(debug_state.registers.reg_sr).c_str());
-        ImGui::End();
-    }
-    // Disassembler
-    {
-        ImGui::Begin("Disassembler");
-        if (ImGui::Button("Program Counter")) disassemble_mode = FOLLOW_PC;
-        ImGui::SameLine();
-        if (ImGui::Button("Select Address")) disassemble_mode = SELECT_ADDRESS;
-        uword addr = 0; 
-        if (disassemble_mode == FOLLOW_PC) addr = debug_state.registers.reg_pc;
-        else if (disassemble_mode == SELECT_ADDRESS) addr = mem_addrs.addrs[mem_addrs.device];
-        uint lines = 10;
-        std::optional<std::string> line;
-        for (uint i = 0; i < lines; i++)
-        {
-            line = disassemble(addr);
-            if (line)
-            {
-                if (i == 0) ImGui::Text("%-20s %s", line.value().c_str(), "<---");
-                else ImGui::Text("%-20s", line.value().c_str());
-            }
-            else i = lines;
-        }
-        ImGui::Text("CPU cycle: %6i", debug_state.ppu_cycle/3);
-        ImGui::Text("PPU cycle: %6i", debug_state.ppu_cycle);
-        ImGui::Text("Pixel:     %6i", debug_state.pixel);
-        ImGui::Text("Scanline:  %6i", debug_state.scanline);
-    ImGui::End();
-    }
-    // Memory
-    {
-        ImGui::Begin("Memory");
-        if (ImGui::Button("Zero Page")) mem_addrs.device = 0;
-        ImGui::SameLine();
-        if (ImGui::Button("Stack")) mem_addrs.device = 1;
-        ImGui::SameLine();
-        if (ImGui::Button("RAM")) mem_addrs.device = 2;
-        ImGui::SameLine();
-        if (ImGui::Button("PRG RAM")) mem_addrs.device = 3;
-        ImGui::SameLine();
-        if (ImGui::Button("PRG ROM")) mem_addrs.device = 4;
-        uword addr = (mem_addrs.addrs[mem_addrs.device] & 0xFFF0) - 8 * 16;
-        for (uint i = 0; i < 16; i++) // Display 9 lines
-        {
-            bool show = true;
-            switch (mem_addrs.device)
-            {
-                case 0: // zpg
-                    if (addr >= 0x0100) 
-                    {
-                        ImGui::Text(" ");
-                        show = false;
-                    }
-                    break;
-                case 1: // stack
-                    if (addr < 0x0100 || addr >= 0x0200) 
-                    {
-                        ImGui::Text(" ");
-                        show = false;
-                    }
-                    break;
-                case 2: // RAM
-                    if (addr < 0x0200 || addr >= 0x0800) 
-                    {
-                        ImGui::Text(" ");
-                        show = false;
-                    }
-                    break;
-                case 3: // PRG RAM
-                    if (addr < 0x6000 || addr >= 0x8000)
-                    {
-                        ImGui::Text(" ");
-                        show = false;
-                    }
-                    break;
-                case 4: // PRG ROM
-                    if (addr < 0x8000) 
-                    {
-                        ImGui::Text(" ");
-                        show = false;
-                    }
-                    break;
-                default:
-                    break;
-            }
-            if (show) ImGui::Text("%s", peekMem(addr).c_str());
-            addr += 16;
-        }
-        ImGui::End();
-    }
-    // ROM Info
-    {
-        ImGui::Begin("ROM Info");
-        ImGui::Text("Filename: %s", debug_state.filename.c_str());
-        ImGui::Text("Header: %8s", debug_state.header_type.c_str());
-        ImGui::Text("Mapper:      %3i", debug_state.mapper);
-        ImGui::Text("Submapper:   %3i", debug_state.submapper);
-        ImGui::Text("PRG-ROM:     %3li KiB", debug_state.prg_rom_size/1024);
-        ImGui::Text("PRG-RAM:     %3li KiB", debug_state.prg_ram_size/1024);
-        if (debug_state.chr_rom_size != 0)
-            ImGui::Text("CHR-ROM:     %3li KiB", debug_state.chr_rom_size/1024);
-        if (debug_state.chr_ram_size != 0)
-            ImGui::Text("CHR-RAM:     %3li KiB", debug_state.chr_ram_size/1024);
-        ImGui::End();
-    }
-
-    // Render
-    ImGui::Render();
-#endif
     int window_w, window_h = 0;
     SDL_GetWindowSize(window, &window_w, &window_h);
     glViewport(0, 0, window_w, window_h);
@@ -622,10 +362,6 @@ void Video::displayFrame()
     glm::mat4 trans = glm::mat4(1.0f);
     float frame_w = static_cast<float>(window_h) * 256.0f / 240.0f;
     float x_scale = frame_w / static_cast<float>(window_w);
-#ifdef DEBUGGER
-    float x_trans = (frame_w - static_cast<float>(window_w)) / (static_cast<float>(window_w));
-    trans = glm::translate(trans, glm::vec3(x_trans, 0.0f, 0.0f));
-#endif
     trans = glm::scale(trans, glm::vec3(x_scale, 1.0f, 0.0f));
     frame_shader.transform("transformation", &trans);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -633,15 +369,10 @@ void Video::displayFrame()
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
 
-   if (paused)
-   {
-       roboto_black.renderText(text_shader, {"PAUSED"}, static_cast<float>(window_w), static_cast<float>(window_h), static_cast<float>(window_w), static_cast<float>(window_h), static_cast<float>(window_h)/1000.0f, false);
-       frame_shader.use();
-   }
-
-    // Draw ImGui elements
-#ifdef DEBUGGER
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-#endif
+    if (paused)
+    {
+        roboto_black.renderText(text_shader, {"PAUSED"}, static_cast<float>(window_w), static_cast<float>(window_h), static_cast<float>(window_w), static_cast<float>(window_h), static_cast<float>(window_h)/1000.0f, false);
+        frame_shader.use();
+    }
     SDL_GL_SwapWindow(window);
 }

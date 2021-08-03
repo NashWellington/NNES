@@ -4,12 +4,6 @@
 #include "savestate.hpp"
 #include "util.hpp"
 
-#ifdef DEBUGGER
-#include "libs/imgui/imgui.h"
-#include "libs/imgui/imgui_impl_sdl.h"
-#include "libs/imgui/imgui_impl_opengl3.h"
-#endif
-
 #include <GL/glew.h>
 #include <freetype2/ft2build.h>
 #include FT_FREETYPE_H
@@ -66,6 +60,19 @@ private:
     GLuint font_vbo = 0;
 };
 
+enum class Alignment
+{
+    LEFT,
+    RIGHT,
+    CENTER,
+    TOP,
+    BOTTOM,
+    TOP_LEFT,
+    TOP_RIGHT,
+    BOTTOM_RIGHT,
+    BOTTOM_LEFT
+};
+
 class Video
 {
 public:
@@ -74,33 +81,6 @@ public:
 
     void displayFrame();
 
-#ifdef DEBUGGER
-    uint palette_selected = 0;
-    struct
-    {
-        std::array<uword, 5> addrs = 
-        {
-            0x0000,     // Zero Page
-            0x0100,     // Stack
-            0x0200,     // RAM
-            0x6000,     // PRG RAM
-            0x8000      // PRG ROM
-        };
-
-        uint device = 4; // 
-    } mem_addrs = {};
-    enum
-    {
-        FOLLOW_PC,              // Starts at the address pointed to by the Program Counter
-        SELECT_ADDRESS          // Starts at the address selected in the Memory window
-    } disassemble_mode = FOLLOW_PC;
-
-// OGL textures
-    Texture pt_tex[2];   // pattern table textures
-    Texture nt_tex[4];   // nametable textures
-    Texture pal_tex[8];  // Palette textures
-    Texture spr_tex;     // Sprite textures
-#endif
     Texture frame_tex;
 
     bool paused = false;
