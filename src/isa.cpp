@@ -806,6 +806,7 @@ void CPU::SBX(ubyte value) noexcept
 // Write instructions
 
 ubyte CPU::SAX() noexcept { return reg_a & reg_x; }
+
 ubyte CPU::SHA() noexcept // TODO RDY line instability?
 {
     if (instr.page_cross)
@@ -816,6 +817,7 @@ ubyte CPU::SHA() noexcept // TODO RDY line instability?
     }
     return reg_a & reg_x & ((instr.address >> 8) + 1);
 }
+
 ubyte CPU::SHX() noexcept // TODO RDY line instability?
 {
     if (instr.page_cross)
@@ -826,6 +828,7 @@ ubyte CPU::SHX() noexcept // TODO RDY line instability?
     }
     return reg_x & ((instr.address >> 8) + 1);
 }
+
 ubyte CPU::SHY() noexcept // TODO RDY line instability?
 {
     if (instr.page_cross)
@@ -836,9 +839,11 @@ ubyte CPU::SHY() noexcept // TODO RDY line instability?
     }
     return reg_y & ((instr.address >> 8) + 1);
 }
+
 ubyte CPU::STA() noexcept { return reg_a; }
 ubyte CPU::STX() noexcept { return reg_x; }
 ubyte CPU::STY() noexcept { return reg_y; }
+
 ubyte CPU::TAS() noexcept // TODO RDY line instability?
 {
     reg_sp = reg_a & reg_x;
@@ -957,38 +962,32 @@ void CPU::CLD() noexcept { reg_sr.d = false; }
 void CPU::CLI() noexcept { reg_sr.i = false; }
 void CPU::CLV() noexcept { reg_sr.v = false; }
 
-// TODO these might be faster than changing x/y and comparing them
-// b/c of code locality, but I should check
 void CPU::DEX() noexcept
 {
-    ubyte result = reg_x - 1;
-    reg_sr.z = result == 0;
-    reg_sr.n = static_cast<bool>(result & 0x80);
-    reg_x = result;
+    reg_x--;
+    reg_sr.z = reg_x == 0;
+    reg_sr.n = static_cast<bool>(reg_x & 0x80);
 }
 
 void CPU::DEY() noexcept
 {
-    ubyte result = reg_y - 1;
-    reg_sr.z = result == 0;
-    reg_sr.n = static_cast<bool>(result & 0x80);
-    reg_y = result;
+    reg_y--;
+    reg_sr.z = reg_y == 0;
+    reg_sr.n = static_cast<bool>(reg_y & 0x80);
 }
 
 void CPU::INX() noexcept
 {
-    ubyte result = reg_x + 1;
-    reg_sr.z = result == 0;
-    reg_sr.n = static_cast<bool>(result & 0x80);
-    reg_x = result;
+    reg_x++;
+    reg_sr.z = reg_x == 0;
+    reg_sr.n = static_cast<bool>(reg_x & 0x80);
 }
 
 void CPU::INY() noexcept
 {
-    ubyte result = reg_y + 1;
-    reg_sr.z = result == 0;
-    reg_sr.n = static_cast<bool>(result & 0x80);
-    reg_y = result;
+    reg_y++;
+    reg_sr.z = reg_y == 0;
+    reg_sr.n = static_cast<bool>(reg_y & 0x80);
 }
 
 void CPU::NOP() noexcept { return; }
