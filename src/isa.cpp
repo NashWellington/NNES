@@ -781,10 +781,7 @@ void CPU::LXA(ubyte value) noexcept
     reg_sr.n = static_cast<bool>(reg_a & 0x80);
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-void CPU::NOP(ubyte value) noexcept { return; }
-#pragma GCC diagnostic pop
+void CPU::NOP([[maybe_unused]] ubyte value) noexcept { return; }
 
 void CPU::ORA(ubyte value) noexcept
 {
