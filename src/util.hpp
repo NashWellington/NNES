@@ -15,5 +15,8 @@ std::vector<std::string_view> disassemble(std::queue<ubyte>& byte_queue) noexcep
 // Reverse the order of bits in a byte
 ubyte reverseByte(ubyte b) noexcept;
 
+// Returns true if the command line option is present
+bool hasOpt(std::vector<std::string_view> args, std::string_view option) noexcept;
+
 // Returns the value for a command line option, if it exists
 std::optional<std::string_view> getOpt(std::vector<std::string_view> args, std::string_view option) noexcept;

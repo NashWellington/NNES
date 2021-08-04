@@ -9,17 +9,20 @@
 #define ERROR_LOG_FILENAME "./log/error.log"
 #endif
 
-#define LICENSE_STRING "NNES Copyright (C) 2021 Nash Wellington"
+#define LICENSE_STRING "NNES Copyright (C) 2021 Nash Wellington\n"
+#define USAGE_STRING \
+"Usage:\n"\
+"   -h,--help                   display help/options menu (you are here)\n"\
+"   -f,-r <ROM file name>       open <ROM file name> at startup\n"\
+"   -p                          start paused\n"\
+"   -m                          start muted\n"
+// TODO -l for dumping state information to log after every instruction
+//      (make sure it's possible (necessary?) to pipe to txt file)
+// TODO -d for dumping ROM info (hex values, header info, etc.)
 
-/* Args:
-* -f,-r : ROM filename
-* -d    : Dump state log to file specified // TODO
-* -p    : start paused                     // TODO
-*/
+
 int main(int argc, char ** argv)
 {
-    std::cout << LICENSE_STRING << std::endl;
-
     #ifndef NDEBUG
     // Set up error log
     std::ofstream error_stream(ERROR_LOG_FILENAME);
@@ -30,6 +33,7 @@ int main(int argc, char ** argv)
     }
     std::cerr.rdbuf(error_stream.rdbuf());
 
+    // TODO rework this into -l and -d
     // Set up clog
     std::ofstream log_stream("./log/nestest.log");
     if (!log_stream.is_open())
@@ -44,6 +48,13 @@ int main(int argc, char ** argv)
     std::vector<std::string_view> args = {};
     args.resize(argc);
     for(int i = 0; i < argc; i++) args[i] = argv[i];
+
+    // Print program info for -h or --help
+    if (hasOpt(args, "-h") || hasOpt(args, "--help"))
+    {
+        std::cout << LICENSE_STRING << USAGE_STRING;
+        exit(EXIT_SUCCESS);
+    }
 
     // Open ROM file
     std::optional<std::string> rom_filename;
@@ -77,6 +88,10 @@ int main(int argc, char ** argv)
     // This is because controllers don't get initialized until after ROM loading
     // TODO handle binds after Input is initialized and/or initialize controllers at console initialization
     std::unique_ptr<Input> input = std::make_unique<Input>(*nes, *audio, *video);
+
+    // Command line args for emulation startup behavior
+    if (hasOpt(args, "-p")) input->pause();
+    if (hasOpt(args, "-m")) input->mute();
 
     // Timing
     uint64_t frame_count = 0;

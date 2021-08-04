@@ -180,9 +180,15 @@ ubyte reverseByte(ubyte b) noexcept
     return b;
 }
 
+bool hasOpt(std::vector<std::string_view> args, std::string_view option) noexcept
+{
+    auto iter = std::find(args.begin(), args.end(), option);
+    return !(iter == args.end());
+}
+
 std::optional<std::string_view> getOpt(std::vector<std::string_view> args, std::string_view option) noexcept
 {
     auto iter = std::find(args.begin(), args.end(), option);
-    if (iter == args.end()) return {};
+    if (iter == args.end() || iter == args.end()-1) return {};
     else return *(++iter);
 }
