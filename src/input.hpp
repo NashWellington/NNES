@@ -32,7 +32,7 @@ public:
     ~Input();
     bool poll();
 
-// Emulator/Debug control methods
+// Emulator control methods
     void quit();
     void pause();
     void mute();
@@ -49,6 +49,7 @@ private:
     Console& console;
     Audio& audio;
     Video& video;
+    //Config& config;
 
     // ifdef SDL
     std::map<SDL_Keycode,std::function<void()>> emu_binds = {};

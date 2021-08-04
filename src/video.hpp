@@ -38,6 +38,19 @@ public:
     GLuint texture = 0;
 };
 
+enum class Alignment
+{
+    LEFT,
+    RIGHT,
+    CENTER,
+    TOP,
+    BOTTOM,
+    TOP_LEFT,
+    TOP_RIGHT,
+    BOTTOM_RIGHT,
+    BOTTOM_LEFT
+};
+
 struct Font
 {
 public:
@@ -45,7 +58,7 @@ public:
     Font(FT_Library* ft, std::string family, std::string style);
     void renderText(Shader& shader, std::string text, 
         float window_w, float window_h, float x, float y, float scale, 
-        bool align_left = true);
+        Alignment alignment);
 
 private:
     struct Character
@@ -60,19 +73,6 @@ private:
     GLuint font_vbo = 0;
 };
 
-enum class Alignment
-{
-    LEFT,
-    RIGHT,
-    CENTER,
-    TOP,
-    BOTTOM,
-    TOP_LEFT,
-    TOP_RIGHT,
-    BOTTOM_RIGHT,
-    BOTTOM_LEFT
-};
-
 class Video
 {
 public:
@@ -84,6 +84,7 @@ public:
     Texture frame_tex;
 
     bool paused = false;
+    bool muted = false;
 private:
 // OGL variables
     float clear_color[4] = {0.0f, 0.0f, 0.0f, 1.0f};

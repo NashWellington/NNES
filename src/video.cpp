@@ -131,13 +131,22 @@ Font::Font(FT_Library* ft, std::string family, std::string style)
     FT_Done_Face(face);
 }
 
-void Font::renderText(Shader& shader, std::string text, float window_w, float window_h, float x, float y, float scale, bool align_left)
+void Font::renderText(
+    Shader& shader, 
+    std::string text, 
+    float window_w, 
+    float window_h, 
+    float x, 
+    float y, 
+    float scale, 
+    Alignment alignment)
 {
+    assert(alignment == Alignment::TOP_LEFT || alignment == Alignment::TOP_RIGHT);
     shader.use();
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     y -= characters[text[0]].advance.y / 2.0f;
-    if (align_left)
+    if (alignment == Alignment::TOP_LEFT)
     {
         for (auto iter = text.begin(); iter != text.end(); iter++)
         {
@@ -369,10 +378,36 @@ void Video::displayFrame()
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
 
+    // Render text
+    float y_offset = 0.0f; // Offset from the top (increments for each line of text)
     if (paused)
     {
-        roboto_black.renderText(text_shader, {"PAUSED"}, static_cast<float>(window_w), static_cast<float>(window_h), static_cast<float>(window_w), static_cast<float>(window_h), static_cast<float>(window_h)/1000.0f, false);
+        roboto_black.renderText(
+            text_shader, 
+            {"PAUSED"}, 
+            static_cast<float>(window_w), 
+            static_cast<float>(window_h), 
+            static_cast<float>(window_w), 
+            static_cast<float>(window_h)-y_offset, 
+            static_cast<float>(window_h)/1500.0f, 
+            Alignment::TOP_RIGHT);
+        frame_shader.use();
+        y_offset += static_cast<float>(window_h)/20.0f;
+    }
+    if (muted)
+    {
+        roboto_black.renderText(
+            text_shader, 
+            {"MUTED"}, 
+            static_cast<float>(window_w), 
+            static_cast<float>(window_h), 
+            static_cast<float>(window_w), 
+            static_cast<float>(window_h)-y_offset, 
+            static_cast<float>(window_h)/1500.0f, 
+            Alignment::TOP_RIGHT);
         frame_shader.use();
     }
+
+    // Render window
     SDL_GL_SwapWindow(window);
 }

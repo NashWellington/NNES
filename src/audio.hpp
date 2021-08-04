@@ -17,6 +17,7 @@ struct AudioBuffer
     bool empty();
     uint size();
     bool finished = false;
+    bool muted = false;
     std::unique_ptr<std::mutex> mtx;
     std::unique_ptr<std::condition_variable> cv;
     std::array<float,4096> buffer = {};

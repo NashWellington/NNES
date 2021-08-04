@@ -97,7 +97,8 @@ void Input::pause()
 
 void Input::mute()
 {
-
+    audio.audio_buffer.muted = !audio.audio_buffer.muted;
+    video.muted = !video.muted;
 }
 
 void Input::reset()

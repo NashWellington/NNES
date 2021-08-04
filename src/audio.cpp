@@ -14,7 +14,6 @@ Audio::Audio()
 
     SDL_AudioSpec desired;
     desired.freq = sample_rate;
-    // TODO switch to byte or ubyte or something
     desired.format = AUDIO_F32SYS; // We want a float so we don't have to do type conversions
     desired.channels = 1;
     desired.samples = 1024; // buffer size
@@ -30,7 +29,6 @@ Audio::Audio()
     }
     if (desired.format != spec.format)
     {
-        // TODO save the used format so we can do type conversions
         std::cerr << "Error: format isn't 32-bit float" << std::endl;
         throw std::exception();
     }
@@ -60,7 +58,6 @@ void Audio::callback(void* data, uint8_t* stream, int bytes)
 
 void Audio::pushSample(float sample)
 {
-    // TODO type conversions if needed
     audio_buffer.push(sample);
 
     SDL_AudioStatus status = SDL_GetAudioDeviceStatus(id);
@@ -100,7 +97,7 @@ float AudioBuffer::pull()
         if (finished) return 0.0;
         cv->wait(lk);
     }
-    float sample = buffer[tail];
+    float sample = muted ? 0.0f : buffer[tail];
     tail++;
     tail %= 4096;
     cv->notify_one();
