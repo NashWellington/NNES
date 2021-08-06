@@ -155,7 +155,7 @@ void Font::renderText(
             Character c = characters[*iter];
 
             float c_x = x + (c.size.x/2.0f + c.bearing.x) * scale;
-            float c_y = y - (c.size.y/2.0f + c.height) * scale;
+            float c_y = y - (2.0f*c.height - c.size.y/2.0f) * scale;
 
             float c_w = c.size.x * scale;
             float c_h = c.size.y * scale;
@@ -178,7 +178,7 @@ void Font::renderText(
             
             x -= c.advance.x * scale;
             float c_x = x + (c.size.x/2.0f + c.bearing.x) * scale;
-            float c_y = y - (c.size.y/2.0f + c.height) * scale;
+            float c_y = y - (2.0f*c.height - c.size.y/2.0f) * scale;
 
             float c_w = c.size.x * scale;
             float c_h = c.size.y * scale;

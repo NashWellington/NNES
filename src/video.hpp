@@ -59,8 +59,14 @@ struct Font
 public:
     Font() {}
     Font(FT_Library* ft, std::string family, std::string style);
-    void renderText(Shader& shader, std::string text, 
-        float window_w, float window_h, float x, float y, float scale, 
+    void renderText(
+        Shader& shader,
+        std::string text,
+        float window_w,
+        float window_h,
+        float x,
+        float y,
+        float scale,
         Alignment alignment);
 
 private:
