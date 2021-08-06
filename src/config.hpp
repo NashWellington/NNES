@@ -6,10 +6,15 @@
 class Config
 {
 public:
-    Config();
-    Config(std::string cfg_file);
+    // Config();
 
+    void   serialize(std::ofstream& cfg);
+    void deserialize(std::ifstream& cfg);
+
+// NES config values
     // https://wiki.nesdev.com/w/index.php/Overscan#For_emulator_developers
-    // TODO double check to see if I'm implementing this right
     bool HIDE_OVERSCAN = false;
+
+// Input config
+
 };

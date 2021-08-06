@@ -52,7 +52,12 @@ void Input::loadBinds(std::string config)
     emu_binds.insert({SDLK_m,
         [this]() { mute(); }
     });
-
+    emu_binds.insert({SDLK_n,
+        [this]() { toggle_fps(); }
+    });
+    emu_binds.insert({SDLK_b,
+        [this]() { toggle_render_time(); }
+    });
     emu_binds.insert({SDLK_r, 
         [this]() { reset(); }
     });
@@ -99,6 +104,21 @@ void Input::mute()
 {
     audio.audio_buffer.muted = !audio.audio_buffer.muted;
     video.muted = !video.muted;
+}
+
+void Input::toggle_fps()
+{
+    video.show_framerate = !video.show_framerate;
+}
+
+void Input::toggle_render_time()
+{
+    if (video.show_render_time == Video::RenderTimeDisplay::NO)
+        video.show_render_time = Video::RenderTimeDisplay::MS;
+    else if (video.show_render_time == Video::RenderTimeDisplay::MS)
+        video.show_render_time = Video::RenderTimeDisplay::PERCENT;
+    else if (video.show_render_time == Video::RenderTimeDisplay::PERCENT)
+        video.show_render_time = Video::RenderTimeDisplay::NO;
 }
 
 void Input::reset()

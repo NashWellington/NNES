@@ -1,16 +1,15 @@
-objects =  nnes.o boot.o cart.o  config.o console.o cpu.o ppu.o apu.o mem.o 
+objects =  nnes.o boot.o cart.o config.o console.o cpu.o ppu.o apu.o mem.o 
 objects += $(mapper_objects) 
 objects += isa.o scheduler.o savestate.o video.o audio.o input.o 
 objects += controller.o util.o 
-objects += imgui.o imgui_draw.o imgui_tables.o imgui_widgets.o imgui_impl_sdl.o imgui_impl_opengl3.o
 
 mapper_objects = mapper.o mapper000.o mapper001.o mapper002.o mapper003.o mapper004.o mapper007.o mapper009.o
 
 compiler = g++
 
 optimizations = -march=native -O3 -flto
-debug = -g 
-profiler = -pg 
+debug = -g #-Og
+profiler = -pg
 leak_check = -fsanitize=address
 
 flags = -std=c++17
@@ -26,7 +25,7 @@ flags += -Wlogical-op -Wnull-dereference -Wlogical-op -Wnull-dereference
 flags += -Wuseless-cast -Wdouble-promotion -Wformat=2
 flags += -I/usr/include/SDL2 -I/usr/include/freetype2
 
-libs = -lGLEW -lGL -lGLU -lSDL2 -lfreetype -lpthread
+libs = -lGLEW -lGL -lGLU -lSDL2 -lfreetype -lpthread -lfmt
 
 target = NNES
 
@@ -91,7 +90,7 @@ mapper007.o : mappers/mapper.hpp globals.hpp savestate.hpp console.hpp
 mapper009.o : mappers/mapper.hpp globals.hpp savestate.hpp console.hpp
 		$(compiler) $(flags) -c mappers/mapper009.cpp
 
-video.o : video.hpp globals.hpp util.hpp savestate.hpp libs/imgui/imgui.h libs/imgui/imgui_impl_sdl.h libs/imgui/imgui_impl_opengl3.h
+video.o : video.hpp globals.hpp util.hpp savestate.hpp
 		$(compiler) $(flags) -c video.cpp
 
 audio.o : audio.hpp globals.hpp
@@ -111,25 +110,6 @@ savestate.o : savestate.hpp globals.hpp mappers/mapper.hpp
 
 util.o : util.hpp globals.hpp mem.hpp
 		$(compiler) $(flags) -c util.cpp
-
-# external libs
-imgui.o : libs/imgui/imgui.h libs/imgui/imconfig.h libs/imgui/imgui_internal.h
-		$(compiler) $(flags) -c libs/imgui/imgui.cpp
-
-imgui_draw.o : libs/imgui/imgui.h libs/imgui/imgui_internal.h libs/imgui/imstb_rectpack.h libs/imgui/imstb_truetype.h
-		$(compiler) $(flags) -c libs/imgui/imgui_draw.cpp
-
-imgui_tables.o : libs/imgui/imgui.h libs/imgui/imgui_internal.h
-		$(compiler) $(flags) -c libs/imgui/imgui_tables.cpp
-
-imgui_widgets.o : libs/imgui/imgui.h libs/imgui/imgui_internal.h libs/imgui/imstb_textedit.h
-		$(compiler) $(flags) -c libs/imgui/imgui_widgets.cpp
-
-imgui_impl_sdl.o : libs/imgui/imgui_impl_sdl.h libs/imgui/imgui.h
-		$(compiler) $(flags) -c libs/imgui/imgui_impl_sdl.cpp
-
-imgui_impl_opengl3.o : libs/imgui/imgui_impl_opengl3.h libs/imgui/imgui.h
-		$(compiler) $(flags) -c libs/imgui/imgui_impl_opengl3.cpp
 
 clean : 
 		rm *.o

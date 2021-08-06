@@ -4,6 +4,9 @@
 #include "savestate.hpp"
 #include "util.hpp"
 
+#include <numeric>
+#include <sstream>
+
 #include <GL/glew.h>
 #include <freetype2/ft2build.h>
 #include FT_FREETYPE_H
@@ -67,6 +70,8 @@ private:
         glm::fvec2 size = {};
         glm::fvec2 bearing = {};
         glm::fvec2 advance = {};
+        float height = 0.0f;
+        bool has_vertical = true;
     };
 
     std::array<Character, 128> characters = {};
@@ -80,11 +85,20 @@ public:
     ~Video();
 
     void displayFrame();
+    void updateFramerate(float time);
+    void updateRenderTime(float time);
 
     Texture frame_tex;
 
     bool paused = false;
     bool muted = false;
+    bool show_framerate = false;
+    enum class RenderTimeDisplay
+    {
+        NO,
+        MS,
+        PERCENT
+    } show_render_time = RenderTimeDisplay::NO;
 private:
 // OGL variables
     float clear_color[4] = {0.0f, 0.0f, 0.0f, 1.0f};
@@ -101,4 +115,14 @@ private:
 
 // FreeType variables
     Font roboto_black;
+
+// Other
+    float framerate = 60.0f;
+
+    /* Either:
+    * - The time in ms it takes for the emulator to run for a frame
+    * or
+    * - The percentage of a frame that the emulator is run
+    */
+    float render_time = 0.0f;
 };

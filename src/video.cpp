@@ -122,7 +122,9 @@ Font::Font(FT_Library* ft, std::string family, std::string style)
             texture,
             glm::fvec2(static_cast<float>(face->glyph->bitmap.width),   static_cast<float>(face->glyph->bitmap.rows)),
             glm::fvec2(static_cast<float>(face->glyph->bitmap_left),    static_cast<float>(face->glyph->bitmap_top)),
-            glm::fvec2(static_cast<float>(face->glyph->advance.x >> 6), static_cast<float>(face->glyph->advance.y >> 6))
+            glm::fvec2(static_cast<float>(face->glyph->advance.x >> 6), static_cast<float>(face->glyph->advance.y >> 6)),
+            static_cast<float>(face->height >> 6),
+            static_cast<bool>(FT_HAS_VERTICAL(face))
         };
         characters[c] = character;
 
@@ -153,7 +155,7 @@ void Font::renderText(
             Character c = characters[*iter];
 
             float c_x = x + (c.size.x/2.0f + c.bearing.x) * scale;
-            float c_y = y - (c.size.y/2.0f + (c.size.y - c.bearing.y)) * scale;
+            float c_y = y - (c.size.y/2.0f + c.height) * scale;
 
             float c_w = c.size.x * scale;
             float c_h = c.size.y * scale;
@@ -176,7 +178,7 @@ void Font::renderText(
             
             x -= c.advance.x * scale;
             float c_x = x + (c.size.x/2.0f + c.bearing.x) * scale;
-            float c_y = y - (c.size.y/2.0f + (c.size.y - c.bearing.y)) * scale;
+            float c_y = y - (c.size.y/2.0f + c.height) * scale;
 
             float c_w = c.size.x * scale;
             float c_h = c.size.y * scale;
@@ -311,10 +313,6 @@ Video::Video()
         throw std::exception();
     }
 
-    // TODO fonts?
-
-    // TODO Stats?
-
     // Setup OpenGL
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -394,6 +392,47 @@ void Video::displayFrame()
         frame_shader.use();
         y_offset += static_cast<float>(window_h)/20.0f;
     }
+    else
+    {
+        if (show_framerate)
+        {
+            roboto_black.renderText(
+                text_shader,
+                fmt::format("{:.2f} FPS", framerate),
+                static_cast<float>(window_w),
+                static_cast<float>(window_h),
+                static_cast<float>(window_w),
+                static_cast<float>(window_h)-y_offset,
+                static_cast<float>(window_h)/1500.0f,
+                Alignment::TOP_RIGHT);
+            frame_shader.use();
+            y_offset += static_cast<float>(window_h)/20.0f;
+        }
+        if (show_render_time != RenderTimeDisplay::NO)
+        {
+            std::string rt_fmt_str;
+            if (show_render_time == RenderTimeDisplay::MS)
+            {
+                rt_fmt_str = "{:.2f} ms";
+                render_time /= 1'000'000.0f;
+            }
+            else
+            {
+                rt_fmt_str = "{:.2f}  %";
+            }
+            roboto_black.renderText(
+                text_shader,
+                fmt::format(rt_fmt_str, render_time),
+                static_cast<float>(window_w),
+                static_cast<float>(window_h),
+                static_cast<float>(window_w),
+                static_cast<float>(window_h)-y_offset,
+                static_cast<float>(window_h)/1500.0f,
+                Alignment::TOP_RIGHT);
+            frame_shader.use();
+            y_offset += static_cast<float>(window_h)/20.0f;
+        }
+    }
     if (muted)
     {
         roboto_black.renderText(
@@ -410,4 +449,22 @@ void Video::displayFrame()
 
     // Render window
     SDL_GL_SwapWindow(window);
+}
+
+void Video::updateFramerate(float time)
+{
+    framerate = 60.0f * std::chrono::duration_cast<std::chrono::nanoseconds>(frame(1)).count() / time;
+}
+
+void Video::updateRenderTime(float time)
+{
+    using namespace std::chrono;
+    if (show_render_time == RenderTimeDisplay::PERCENT)
+    {
+        render_time = time / static_cast<float>(duration_cast<nanoseconds>(frame(1)).count());
+    }
+    else
+    {
+        render_time = time;
+    }
 }

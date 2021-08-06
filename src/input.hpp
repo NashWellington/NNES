@@ -36,6 +36,8 @@ public:
     void quit();
     void pause();
     void mute();
+    void toggle_fps();
+    void toggle_render_time();
     void reset();
     
 private:

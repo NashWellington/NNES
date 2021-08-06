@@ -29,7 +29,7 @@ public:
     std::string revision = {};
     std::string region = {};
     std::vector<std::shared_ptr<Controller>> controllers;
-    //Scheduler scheduler;
+    // Scheduler scheduler;
     std::unique_ptr<Config> config;
 
     void log(std::vector<std::string_view> disassembled);

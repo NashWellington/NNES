@@ -134,6 +134,7 @@ None yet
 * Keyboard input seems to only take 1 key press at a time
 
 ## Misc
+* Text display to window doesn't vertically shift periods or lowercase characters correctly (maybe use the difference between face height and glyph bearing?)
 
 # Regressions
 

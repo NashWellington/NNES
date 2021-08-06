@@ -10,16 +10,18 @@
 //#define NDEBUG
 //#endif
 
-#include <iostream>         // Used for logging errors etc.
-#include <stdexcept>        
-#include <assert.h>         
-#include <fstream>          
-#include <chrono>           
-#include <memory>           // Needed for shared_ptr
-#include <vector>           
-#include <optional>         
+#include <iostream>
+#include <stdexcept>
+#include <assert.h>
+#include <fstream>
+#include <chrono>
+#include <memory>
+#include <vector>
+#include <optional>
 #include <queue>
 #include <thread>
+#include <fmt/core.h>
+#include <fmt/format.h>
 
 /* 1-byte unsigned integer
 * Used by default (as opposed to byte)
@@ -46,7 +48,7 @@ typedef int16_t word;
 * // TODO actual exact value
 * // TODO PAL/Dendy vals
 */
-typedef std::chrono::duration<int64_t,std::ratio<1,60>> frame;
+typedef std::chrono::duration<uint64_t,std::ratio<1,60>> frame;
 
 enum class HeaderType
 {

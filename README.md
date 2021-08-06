@@ -22,6 +22,7 @@ NNES requires a C++17 compiler, as well as the following dependencies:
 * GLEW      (Debian package: libglew-dev)
 * SDL2      (Debian package: libsdl2-dev)
 * FreeType2 (Debian package: libfreetype-dev)
+* {fmt}     (Debian package: libfmt-dev)
 
 To compile, navigate to the src/ directory and run "make". The executable will be compiled as "NNES" in the build/ directory.
 

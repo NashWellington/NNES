@@ -14,8 +14,10 @@
 "Usage:\n"\
 "   -h,--help                   display help/options menu (you are here)\n"\
 "   -f,-r <ROM file name>       open <ROM file name> at startup\n"\
-"   -p                          start paused\n"\
-"   -m                          start muted\n"
+"   -p,--pause                  start paused\n"\
+"   -m,--mute                   start muted\n"\
+"   --showfps                   start with the framerate counter enabled\n"\
+"   --rendertime=[ms|percent]   start showing the time in ms or percentage of a frame it takes to render a frame\n"
 // TODO -l for dumping state information to log after every instruction
 //      (make sure it's possible (necessary?) to pipe to txt file)
 // TODO -d for dumping ROM info (hex values, header info, etc.)
@@ -90,8 +92,11 @@ int main(int argc, char ** argv)
     std::unique_ptr<Input> input = std::make_unique<Input>(*nes, *audio, *video);
 
     // Command line args for emulation startup behavior
-    if (hasOpt(args, "-p")) input->pause();
-    if (hasOpt(args, "-m")) input->mute();
+    if (hasOpt(args, "-p") || hasOpt(args, "--pause")) video->paused = true;
+    if (hasOpt(args, "-m") || hasOpt(args, "--mute"))  video->muted = true;
+    if (hasOpt(args, "--showfps")) video->show_framerate = true;
+    if (hasOpt(args, "--rendertime=ms")) video->show_render_time = Video::RenderTimeDisplay::MS;
+    if (hasOpt(args, "--rendertime=percent")) video->show_render_time = Video::RenderTimeDisplay::PERCENT;
 
     // Timing
     uint64_t frame_count = 0;
@@ -104,7 +109,22 @@ int main(int argc, char ** argv)
         running = input->poll();
         nes->run(Scheduler::FRAME);
         video->displayFrame();
-        std::this_thread::sleep_until(start_time + ++frame_count * frame(1));
+
+        // Framerate/timing
+        frame_count++;
+        auto now = std::chrono::steady_clock::now();
+        auto render_time = duration_cast<nanoseconds>(now - start_time);
+        if (now - start_time > frame(1))
+        {
+            video->updateFramerate(static_cast<float>(duration_cast<nanoseconds>(now - start_time).count()));
+        }
+        else
+        {
+            std::this_thread::sleep_until(start_time + frame(1));
+            video->updateFramerate(duration_cast<nanoseconds>(frame(1)).count());
+        }
+        video->updateRenderTime(static_cast<float>(duration_cast<nanoseconds>(render_time).count()));
+        start_time = std::chrono::steady_clock::now();
     }
     // Call destructors so SDL subsystems quit before SDL_Quit()
     nes.reset();
