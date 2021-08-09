@@ -1,12 +1,12 @@
 #include "console.hpp"
 
-NES::NES(Audio& audio, Video& video)
+NES::NES(Audio& audio, Video& video, std::shared_ptr<Config> _config)
 {
     cpu = std::make_shared<CPU>(*this);
     apu = std::make_shared<APU>(*this, audio);
     ppu = std::make_shared<PPU>(*this, video);
     mem = std::make_unique<Memory>(*this);
-    config = std::make_unique<Config>();
+    config = _config;
 }
 
 void NES::reset()

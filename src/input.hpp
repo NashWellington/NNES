@@ -28,7 +28,7 @@ struct Bind
 class Input
 {
 public:
-    Input(Console& _console, Audio&_audio, Video& _video);
+    Input(Console& _console, Audio&_audio, Video& _video, std::shared_ptr<Config> _config);
     ~Input();
     bool poll();
 
@@ -41,7 +41,7 @@ public:
     void reset();
     
 private:
-    void loadBinds(std::string config);
+    void loadBinds();
 // Input polling methods
     void pollKeyboard(SDL_Event& event);
     void pollControllers();
@@ -51,7 +51,7 @@ private:
     Console& console;
     Audio& audio;
     Video& video;
-    //Config& config;
+    std::shared_ptr<Config> config;
 
     // ifdef SDL
     std::map<SDL_Keycode,std::function<void()>> emu_binds = {};

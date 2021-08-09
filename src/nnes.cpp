@@ -83,13 +83,14 @@ int main(int argc, char ** argv)
     // Setup console and frontends
     std::unique_ptr<Audio> audio = std::make_unique<Audio>();
     std::unique_ptr<Video> video = std::make_unique<Video>();
-    std::unique_ptr<NES> nes = std::make_unique<NES>(*audio, *video);
+    std::shared_ptr<Config> config = std::make_shared<Config>();
+    std::unique_ptr<NES> nes = std::make_unique<NES>(*audio, *video, config);
 
     nes->insertROM(rom, rom_filename.value());
     // For now, input has to be initialized after a ROM is loaded
     // This is because controllers don't get initialized until after ROM loading
     // TODO handle binds after Input is initialized and/or initialize controllers at console initialization
-    std::unique_ptr<Input> input = std::make_unique<Input>(*nes, *audio, *video);
+    std::unique_ptr<Input> input = std::make_unique<Input>(*nes, *audio, *video, config);
 
     // Command line args for emulation startup behavior
     if (hasOpt(args, "-p") || hasOpt(args, "--pause")) video->paused = true;

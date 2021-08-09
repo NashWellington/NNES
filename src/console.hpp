@@ -30,7 +30,7 @@ public:
     std::string region = {};
     std::vector<std::shared_ptr<Controller>> controllers;
     // Scheduler scheduler;
-    std::unique_ptr<Config> config;
+    std::shared_ptr<Config> config;
 
     void log(std::vector<std::string_view> disassembled);
     
@@ -42,7 +42,7 @@ public:
 class NES : public Console
 {
 public:
-    NES(Audio& audio, Video& video);
+    NES(Audio& audio, Video& video, std::shared_ptr<Config> _config);
     void reset();
     void insertROM(std::ifstream& rom, std::string filename);
     void run(Scheduler::Length length);

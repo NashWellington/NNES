@@ -1,9 +1,7 @@
 #include "input.hpp"
 
-#define CONTROL_CONFIG "./cfg/controls.cfg"
-
-Input::Input(Console& _console, Audio&_audio, Video& _video)
-    : console(_console), audio(_audio), video(_video)
+Input::Input(Console& _console, Audio&_audio, Video& _video, std::shared_ptr<Config> _config)
+    : console(_console), audio(_audio), video(_video), config(_config)
 {
     if (SDL_Init(SDL_INIT_GAMECONTROLLER) != 0)
     {
@@ -21,7 +19,7 @@ Input::Input(Console& _console, Audio&_audio, Video& _video)
         }
     }
 
-    loadBinds(CONTROL_CONFIG);
+    loadBinds();
 }
 
 Input::~Input()
@@ -33,60 +31,190 @@ Input::~Input()
     }
 }
 
-void Input::loadBinds(std::string config)
+void Input::loadBinds()
 {
-    std::ifstream config_file(config);
-    //if(!config_file.is_open())
-    //{
-    //    std::cerr << "Config file not found: " << config << std::endl;
-    //    throw std::exception();
-    //}
-    // TODO actually load these from a file
-    // Emulation controls
-    emu_binds.insert({SDLK_ESCAPE,
-        [this](){ quit(); }
-    });
-    emu_binds.insert({SDLK_SPACE,
-        [this]() { pause(); }
-    });
-    emu_binds.insert({SDLK_m,
-        [this]() { mute(); }
-    });
-    emu_binds.insert({SDLK_n,
-        [this]() { toggle_fps(); }
-    });
-    emu_binds.insert({SDLK_b,
-        [this]() { toggle_render_time(); }
-    });
-    emu_binds.insert({SDLK_r, 
-        [this]() { reset(); }
-    });
-    
-    // Game Input controls
-    std::vector<std::shared_ptr<Controller>> controllers = console.controllers;
-    assert(controllers.size() > 0);
-    key_binds.insert({SDLK_v, Bind(0, controllers[0])}); // V -> A
-    key_binds.insert({SDLK_c, Bind(1, controllers[0])}); // C -> B
-    key_binds.insert({SDLK_z, Bind(2, controllers[0])}); // Z -> Select
-    key_binds.insert({SDLK_x, Bind(3, controllers[0])}); // X -> Start
-    key_binds.insert({SDLK_w, Bind(4, controllers[0])}); // W -> Up
-    key_binds.insert({SDLK_s, Bind(5, controllers[0])}); // S -> Down
-    key_binds.insert({SDLK_a, Bind(6, controllers[0])}); // A -> Left
-    key_binds.insert({SDLK_d, Bind(7, controllers[0])}); // D -> Right
-
-    
-    for (uint i = 0; i < joypads.size() && i < controllers.size(); i++)
+    // Emulator binds
+    // For now, only controller 1 can map to emulator binds
+    config->findSection("/// NNES emulator binds");
+    config->findNext("quit");
+    for (auto keycode : config->getKeys())
     {
-        joypad_binds.insert({{SDL_CONTROLLER_BUTTON_B, i},          Bind(0, controllers[i])}); // X-input B = right button  -> A
-        joypad_binds.insert({{SDL_CONTROLLER_BUTTON_A, i},          Bind(1, controllers[i])}); // X-input A = bottom button -> B
-        joypad_binds.insert({{SDL_CONTROLLER_BUTTON_BACK, i},       Bind(2, controllers[i])}); // X-input Back -> Select
-        joypad_binds.insert({{SDL_CONTROLLER_BUTTON_START, i},      Bind(3, controllers[i])});
-        joypad_binds.insert({{SDL_CONTROLLER_BUTTON_DPAD_UP, i},    Bind(4, controllers[i])});
-        joypad_binds.insert({{SDL_CONTROLLER_BUTTON_DPAD_DOWN, i},  Bind(5, controllers[i])});
-        joypad_binds.insert({{SDL_CONTROLLER_BUTTON_DPAD_LEFT, i},  Bind(6, controllers[i])});
-        joypad_binds.insert({{SDL_CONTROLLER_BUTTON_DPAD_RIGHT, i}, Bind(7, controllers[i])});
+        emu_binds.insert({keycode,
+            [this]() { quit(); }
+        });
     }
-    config_file.close();
+
+    config->findNext("pause");
+    for (auto keycode : config->getKeys())
+    {
+        emu_binds.insert({keycode,
+            [this]() { pause(); }
+        });
+    }
+
+    config->findNext("mute");
+    for (auto keycode : config->getKeys())
+    {
+        emu_binds.insert({keycode,
+            [this]() { mute(); }
+        });
+    }
+    
+    config->findNext("toggle fps");
+    for (auto keycode : config->getKeys())
+    {
+        emu_binds.insert({keycode,
+            [this]() { toggle_fps(); }
+        });
+    }
+
+    config->findNext("toggle render time");
+    for (auto keycode : config->getKeys())
+    {
+        emu_binds.insert({keycode,
+            [this]() { toggle_render_time(); }
+        });
+    }
+
+    config->findNext("reset");
+    for (auto keycode : config->getKeys())
+    {
+        emu_binds.insert({keycode,
+            [this]() { reset(); }
+        });
+    }
+
+    // Game Input binds
+    std::vector<std::shared_ptr<Controller>> controllers = console.controllers;
+
+    config->findSection("/// NES Standard Controller binds");
+    // TODO support for more controllers
+    for (int i = 0; i < 2; i++)
+    {
+        std::string port_string = "/// Port ";
+        port_string += static_cast<char>(i+1 + 48);
+        config->findNext(port_string);
+
+        config->findNext("button-a");
+        for (auto keycode : config->getKeys())
+        {
+            key_binds.insert({keycode,
+                Bind(0, controllers[i])});
+        }
+        for (auto button_code : config->getButtons())
+        {
+            joypad_binds.insert(
+            {
+                {static_cast<SDL_GameControllerButton>(button_code), i},
+                Bind(0, controllers[i])
+            });
+        }
+
+        config->findNext("button-b");
+        for (auto keycode : config->getKeys())
+        {
+            key_binds.insert({keycode,
+                Bind(1, controllers[i])});
+        }
+        for (auto button_code : config->getButtons())
+        {
+            joypad_binds.insert(
+            {
+                {static_cast<SDL_GameControllerButton>(button_code), i},
+                Bind(1, controllers[i])
+            });
+        }
+
+        config->findNext("button-select");
+        for (auto keycode : config->getKeys())
+        {
+            key_binds.insert({keycode,
+                Bind(2, controllers[i])});
+        }
+        for (auto button_code : config->getButtons())
+        {
+            joypad_binds.insert(
+            {
+                {static_cast<SDL_GameControllerButton>(button_code), i},
+                Bind(2, controllers[i])
+            });
+        }
+
+        config->findNext("button-start");
+        for (auto keycode : config->getKeys())
+        {
+            key_binds.insert({keycode,
+                Bind(3, controllers[i])});
+        }
+        for (auto button_code : config->getButtons())
+        {
+            joypad_binds.insert(
+            {
+                {static_cast<SDL_GameControllerButton>(button_code), i},
+                Bind(3, controllers[i])
+            });
+        }
+
+        config->findNext("dpad-up");
+        for (auto keycode : config->getKeys())
+        {
+            key_binds.insert({keycode,
+                Bind(4, controllers[i])});
+        }
+        for (auto button_code : config->getButtons())
+        {
+            joypad_binds.insert(
+            {
+                {static_cast<SDL_GameControllerButton>(button_code), i},
+                Bind(4, controllers[i])
+            });
+        }
+
+        config->findNext("dpad-down");
+        for (auto keycode : config->getKeys())
+        {
+            key_binds.insert({keycode,
+                Bind(5, controllers[i])});
+        }
+        for (auto button_code : config->getButtons())
+        {
+            joypad_binds.insert(
+            {
+                {static_cast<SDL_GameControllerButton>(button_code), i},
+                Bind(5, controllers[i])
+            });
+        }
+
+        config->findNext("dpad-left");
+        for (auto keycode : config->getKeys())
+        {
+            key_binds.insert({keycode,
+                Bind(6, controllers[i])});
+        }
+        for (auto button_code : config->getButtons())
+        {
+            joypad_binds.insert(
+            {
+                {static_cast<SDL_GameControllerButton>(button_code), i},
+                Bind(6, controllers[i])
+            });
+        }
+
+        config->findNext("dpad-right");
+        for (auto keycode : config->getKeys())
+        {
+            key_binds.insert({keycode,
+                Bind(7, controllers[i])});
+        }
+        for (auto button_code : config->getButtons())
+        {
+            joypad_binds.insert(
+            {
+                {static_cast<SDL_GameControllerButton>(button_code), i},
+                Bind(7, controllers[i])
+            });
+        }
+    }
 }
 
 void Input::quit()
