@@ -4,6 +4,7 @@
 #include "video.hpp"
 #include "input.hpp"
 #include "savestate.hpp"
+#include "cmd.hpp"
 
 #ifndef NDEBUG
 #define ERROR_LOG_FILENAME "./log/error.log"
@@ -70,7 +71,7 @@ int main(int argc, char ** argv)
         {
             std::cout << "Enter ROM filename:" << std::endl;
             rom_filename = "";
-            std::cin >> rom_filename.value();
+            getline(std::cin, rom_filename.value());
         }
         rom = std::ifstream(rom_filename.value(), std::ios::binary);
         if (!rom.is_open())
@@ -90,29 +91,28 @@ int main(int argc, char ** argv)
     // For now, input has to be initialized after a ROM is loaded
     // This is because controllers don't get initialized until after ROM loading
     // TODO handle binds after Input is initialized and/or initialize controllers at console initialization
-    std::unique_ptr<Input> input = std::make_unique<Input>(*nes, *audio, *video, config);
+    std::shared_ptr<Input> input = std::make_shared<Input>(*nes, *audio, *video, config);
 
     // Command line args for emulation startup behavior
-    if (hasOpt(args, "-p") || hasOpt(args, "--pause")) video->paused = true;
-    if (hasOpt(args, "-m") || hasOpt(args, "--mute"))  video->muted = true;
-    if (hasOpt(args, "--showfps")) video->show_framerate = true;
-    if (hasOpt(args, "--rendertime=ms")) video->show_render_time = Video::RenderTimeDisplay::MS;
-    if (hasOpt(args, "--rendertime=percent")) video->show_render_time = Video::RenderTimeDisplay::PERCENT;
+    if (hasOpt(args, "-p") || hasOpt(args, "--pause")) input->pause();
+    if (hasOpt(args, "-m") || hasOpt(args, "--mute"))  input->mute();
+    if (hasOpt(args, "--showfps")) input->toggle_fps(true);
+    if (hasOpt(args, "--rendertime=ms")) input->toggle_render_time(Video::RenderTimeDisplay::MS);
+    if (hasOpt(args, "--rendertime=percent")) input->toggle_render_time(Video::RenderTimeDisplay::PERCENT);
 
-    // Timing
-    uint64_t frame_count = 0;
-    std::chrono::time_point start_time = std::chrono::steady_clock::now();
+    std::thread cmd_in_thread = std::thread(CMD::cmdLoop, input);
 
     bool running = true;
     while (running)
     {
         using namespace std::chrono;
+        time_point start_time = std::chrono::steady_clock::now();
+
         running = input->poll();
         nes->run(Scheduler::FRAME);
         video->displayFrame();
 
         // Framerate/timing
-        frame_count++;
         auto now = std::chrono::steady_clock::now();
         auto render_time = duration_cast<nanoseconds>(now - start_time);
         if (now - start_time > frame(1))
@@ -125,8 +125,9 @@ int main(int argc, char ** argv)
             video->updateFramerate(duration_cast<nanoseconds>(frame(1)).count());
         }
         video->updateRenderTime(static_cast<float>(duration_cast<nanoseconds>(render_time).count()));
-        start_time = std::chrono::steady_clock::now();
     }
+    cmd_in_thread.detach(); // Thread not joinable if blocked by cin
+
     // Call destructors so SDL subsystems quit before SDL_Quit()
     nes.reset();
     audio.reset();

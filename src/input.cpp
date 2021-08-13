@@ -219,39 +219,113 @@ void Input::loadBinds()
 
 void Input::quit()
 {
+    std::unique_lock<std::mutex> lk(mtx);
+    cv.wait(lk, [this]{return ready();});
     running = false;
+    lk.unlock();
+    cv.notify_one();
 }
 
-void Input::pause()
+bool Input::pause()
 {
+    std::unique_lock<std::mutex> lk(mtx);
+    cv.wait(lk, [this]{return ready();});
     console.paused = !console.paused;
     video.paused = !video.paused;
+    bool p = video.paused;
+    lk.unlock();
+    cv.notify_one();
+    return p;
 }
 
-void Input::mute()
+bool Input::mute()
 {
+    std::unique_lock<std::mutex> lk(mtx);
+    cv.wait(lk, [this]{return ready();});
     audio.audio_buffer.muted = !audio.audio_buffer.muted;
     video.muted = !video.muted;
+    bool m = video.muted;
+    lk.unlock();
+    cv.notify_one();
+    return m;
 }
 
 void Input::toggle_fps()
 {
+    std::unique_lock<std::mutex> lk(mtx);
+    cv.wait(lk, [this]{return ready();});
     video.show_framerate = !video.show_framerate;
+    lk.unlock();
+    cv.notify_one();
+}
+
+void Input::toggle_fps(bool show)
+{
+    std::unique_lock<std::mutex> lk(mtx);
+    cv.wait(lk, [this]{return ready();});
+    video.show_framerate = show;
+    lk.unlock();
+    cv.notify_one();
 }
 
 void Input::toggle_render_time()
 {
+    std::unique_lock<std::mutex> lk(mtx);
+    cv.wait(lk, [this]{return ready();});
     if (video.show_render_time == Video::RenderTimeDisplay::NO)
         video.show_render_time = Video::RenderTimeDisplay::MS;
     else if (video.show_render_time == Video::RenderTimeDisplay::MS)
         video.show_render_time = Video::RenderTimeDisplay::PERCENT;
     else if (video.show_render_time == Video::RenderTimeDisplay::PERCENT)
         video.show_render_time = Video::RenderTimeDisplay::NO;
+    lk.unlock();
+    cv.notify_one();
+}
+
+void Input::toggle_render_time(bool show)
+{
+    std::unique_lock<std::mutex> lk(mtx);
+    cv.wait(lk, [this]{return ready();});
+    if (!show)
+        video.show_render_time = Video::RenderTimeDisplay::NO;
+    else
+    {
+        if (video.show_render_time == Video::RenderTimeDisplay::MS)
+            video.show_render_time = Video::RenderTimeDisplay::PERCENT;
+        else video.show_render_time = Video::RenderTimeDisplay::MS;
+    }
+    lk.unlock();
+    cv.notify_one();
+}
+
+void Input::toggle_render_time(Video::RenderTimeDisplay opt)
+{
+    std::unique_lock<std::mutex> lk(mtx);
+    cv.wait(lk, [this]{return ready();});
+    video.show_render_time = opt;
+    lk.unlock();
+    cv.notify_one();
 }
 
 void Input::reset()
 {
+    std::unique_lock<std::mutex> lk(mtx);
+    cv.wait(lk, [this]{return ready();});
     console.reset();
+    lk.unlock();
+    cv.notify_one();
+}
+
+bool Input::ready()
+{
+    std::unique_lock<std::mutex> lk(mtx_2);
+    return is_ready;
+}
+
+void Input::ready(bool r)
+{
+    std::unique_lock<std::mutex> lk(mtx_2);
+    is_ready = r;
 }
 
 void Input::pollControllers()
@@ -303,6 +377,9 @@ void Input::pollKeyboard(SDL_Event& event)
 
 bool Input::poll()
 {
+    // TODO lock this one too?
+    ready(true);
+    cv.notify_one();
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
@@ -310,5 +387,7 @@ bool Input::poll()
     }
     pollControllers();
     console.processInputs();
+    // TODO
+    ready(false);
     return running;
 }

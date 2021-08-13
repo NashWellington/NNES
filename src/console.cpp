@@ -31,6 +31,9 @@ void NES::insertROM(std::ifstream& rom, std::string filename)
     // TODO support for non-ROM carts
     cart = std::make_unique<Cartridge>(*this, header, rom);
     cpu->start();
+    // TODO
+    // ppu->start();
+    // apu->start();
     mem->start();
     // TODO have master cycle/frame vals depend on region
     std::vector<std::shared_ptr<Processor>> processors = {cpu, apu, ppu};

@@ -9,6 +9,9 @@
 #include <map>
 #include <algorithm>
 
+// For multithreading w/ the cin thread
+#include <mutex>
+#include <condition_variable>
 
 // Used to bind a key press/joypad button press to a console input
 struct Bind
@@ -34,19 +37,27 @@ public:
 
 // Emulator control methods
     void quit();
-    void pause();
-    void mute();
+    bool pause();   // Return true if paused
+    bool mute();    // Return true if muted
     void toggle_fps();
+    void toggle_fps(bool show);
     void toggle_render_time();
+    void toggle_render_time(bool show);
+    void toggle_render_time(Video::RenderTimeDisplay opt);
     void reset();
-    
+
+    bool running = true;
+    bool ready();
+    void ready(bool r);
+    bool is_ready = false; // Prevents cmdLoop from doing things when it shouldn't
+    std::mutex mtx;     // Used for emulator control methods
+    std::mutex mtx_2;   // Used to set/clear/read is_ready
+    std::condition_variable cv;
 private:
     void loadBinds();
 // Input polling methods
     void pollKeyboard(SDL_Event& event);
     void pollControllers();
-
-    bool running = true;
 
     Console& console;
     Audio& audio;

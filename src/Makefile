@@ -1,7 +1,7 @@
 objects =  nnes.o boot.o cart.o config.o console.o cpu.o ppu.o apu.o mem.o 
 objects += $(mapper_objects) 
 objects += isa.o scheduler.o savestate.o video.o audio.o input.o 
-objects += controller.o util.o 
+objects += cmd.o controller.o util.o 
 
 mapper_objects = mapper.o mapper000.o mapper001.o mapper002.o mapper003.o mapper004.o mapper007.o mapper009.o
 
@@ -33,7 +33,7 @@ $(target) : $(objects)
 		$(compiler) $(flags) $(objects) -o ../build/$(target) $(libs)
 		rm $(objects)
 
-nnes.o : nnes.cpp globals.hpp boot.hpp console.hpp audio.hpp video.hpp input.hpp savestate.hpp
+nnes.o : nnes.cpp globals.hpp boot.hpp console.hpp audio.hpp video.hpp input.hpp savestate.hpp cmd.hpp
 		$(compiler) $(flags) -c nnes.cpp
 
 boot.o : boot.hpp globals.hpp mappers/mapper.hpp
@@ -95,6 +95,9 @@ video.o : video.hpp globals.hpp util.hpp savestate.hpp
 
 audio.o : audio.hpp globals.hpp
 		$(compiler) $(flags) -c audio.cpp
+
+cmd.o 	: cmd.cpp globals.hpp input.hpp
+		$(compiler) $(flags) -c cmd.cpp
 
 input.o : input.hpp globals.hpp console.hpp audio.hpp video.hpp peripheral.hpp
 		$(compiler) $(flags) -c input.cpp
