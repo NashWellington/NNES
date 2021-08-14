@@ -47,12 +47,7 @@ public:
     void reset();
 
     bool running = true;
-    bool ready();
-    void ready(bool r);
-    bool is_ready = false; // Prevents cmdLoop from doing things when it shouldn't
     std::mutex mtx;     // Used for emulator control methods
-    std::mutex mtx_2;   // Used to set/clear/read is_ready
-    std::condition_variable cv;
 private:
     void loadBinds();
 // Input polling methods
