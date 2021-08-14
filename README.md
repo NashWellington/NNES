@@ -1,30 +1,32 @@
 # NNES
-NNES is a NES emulator built in Modern C++
+NNES is a cycle-accurate NES emulator for Linux
+
+## Demo Video:
+[![NNES demo video](http://img.youtube.com/vi/1g9pW5pqyn4/0.jpg)](http://www.youtube.com/watch?v=1g9pW5pqyn4)
 
 ## Roadmap
-This is a rough order of features I am planning to implement or change. Features I am currently working on are *italicized*:
-* *Improved accuracy across the board*
-* Mapper 5 support (used for Castlevania III and some other games)
+This is a rough order of features I am planning to add:
+* MMC5 support (used for Castlevania III and some other games)
 * Cooperative threading mode for the scheduler (and other optimizations)
 * Automated testing
 * Other QoL features (savestates, cheats, etc.)
 * Cross-platform support
-* Mapper 11 support (used for Bible Adventures and other incredible games)
+* Mapper 11 support (used for incredible games by Color Dreams including Bible Adventures)
 * Support for other mappers
 
-## Testing and Compatibility
-Test roms are located in the roms/tests/ directory. All test results should be added to [tests.md](tests.md). Testing is not yet automated.
-
-Game compatibility notes can be found in [compatibility.md](compatibility.md).
-
 ## Compiling
-NNES requires a C++17 compiler, as well as the following dependencies:
+NNES requires an x64 system running Linux, a C++17 compiler, and the following dependencies:
 * GLEW      (Debian package: libglew-dev)
 * SDL2      (Debian package: libsdl2-dev)
 * FreeType2 (Debian package: libfreetype-dev)
 * {fmt}     (Debian package: libfmt-dev)
 
 To compile, navigate to the src/ directory and run "make". The executable will be compiled as "NNES" in the build/ directory.
+
+## Testing and Compatibility
+Test roms are located in the roms/tests/ directory. All test results should be added to [tests.md](tests.md). Testing is not yet automated.
+
+Game compatibility notes can be found in [compatibility.md](compatibility.md).
 
 ## License
 
