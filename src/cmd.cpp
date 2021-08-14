@@ -88,7 +88,7 @@ void CMD::cmdLoop(std::shared_ptr<Input> input)
         }
         else if (cmd_tokens[0] == "render" || (cmd_tokens.size() >= 2 && cmd_tokens[1] == "render"))
         {
-            Video::RenderTimeDisplay mode;
+            auto mode = Video::RenderTimeDisplay::NO;
             if (cmd_tokens.size() == 1) // "render"
                 mode = input->toggle_render_time();
             else if (cmd_tokens.size() == 2)

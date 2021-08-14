@@ -127,6 +127,7 @@ int main(int argc, char ** argv)
         video->updateRenderTime(static_cast<float>(duration_cast<nanoseconds>(render_time).count()));
     }
     cmd_in_thread.detach(); // Thread not joinable if blocked by cin
+    std::cout << std::endl;
 
     // Call destructors so SDL subsystems quit before SDL_Quit()
     nes.reset();
