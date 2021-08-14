@@ -118,7 +118,7 @@ int main(int argc, char ** argv)
         if (render_time > frame(1))
         {
             video->updateFramerate(static_cast<float>(render_time.count()));
-            if (render_time - frame(1) > frame(1)) // If we're more than a full frame behind, just give up
+            if (render_time - frame(1) > frame(2)) // If we're more than two frames behind, just give up
                 start_time = std::chrono::steady_clock::now();
             else
                 start_time += duration_cast<steady_clock::duration>(frame(1));
