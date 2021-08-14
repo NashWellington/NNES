@@ -577,7 +577,7 @@ Pixel PPU::getColor(ubyte palette, ubyte pal_i)
     uint system_palette_i;
     if (nes.config->HIDE_OVERSCAN && (scanline <= 8 || scanline > (post_render_start - 8)))
     {
-        system_palette_i = nes.mem->ppuRead(0x3F00);
+        return {0,0,0};
     }
     else if (pal_i == 0) system_palette_i = nes.mem->ppuRead(0x3F00);
     else system_palette_i = nes.mem->ppuRead(0x3F00 + 4*palette + pal_i);
@@ -604,6 +604,7 @@ void PPU::cacheColor(uint index, ubyte value)
 {
     uint system_palette_i = value % 0x40;
     system_palette_i *= 3;
+    // TODO switch statement in case of non-ntsc
     palette_colors[index] = {ntsc_palette[system_palette_i],
                              ntsc_palette[system_palette_i + 1],
                              ntsc_palette[system_palette_i + 2]};
@@ -616,8 +617,17 @@ void PPU::cacheColor(uint index, ubyte value)
 Pixel PPU::getCachedColor(ubyte palette, ubyte pal_i)
 {
     uint index = palette * 4 + pal_i;
-    if (reg_mask.greyscale) return greyscale_palette_colors[index];
-    else return palette_colors[index];
+    if ((scanline <= 8 || scanline > (post_render_start - 8)) && nes.config->HIDE_OVERSCAN)
+    {
+        return {0, 0, 0};
+    }
+    else if (pal_i == 0)
+    {
+        index = 0;
+    }
+
+    if (!reg_mask.greyscale) return palette_colors[index];
+    else return greyscale_palette_colors[index];
 }
 
 void PPU::pushPixel(Pixel p)
