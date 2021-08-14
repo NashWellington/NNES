@@ -73,7 +73,7 @@ ubyte Memory::ppuRead(uword address)
         address %= 0x1000;
         return name_tables[address / 0x0400][address % 0x0400];
     }
-    else
+    else // Palette RAM
     {
         address -= 0x3F00;
         address %= 0x0020;
@@ -100,12 +100,13 @@ void Memory::ppuWrite(uword address, ubyte data)
 
         name_tables[address / 0x0400][address % 0x0400] = data;
     }
-    else
+    else // Palette RAM
     {
         address -= 0x3F00;
         address %= 0x0020;
         if ((address/16 > 0) && (address%4 == 0)) address -= 0x0010;
         palette_ram[address] = data;
+        nes.ppu->cacheColor(address, data);
     }
 }
 

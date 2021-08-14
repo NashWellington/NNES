@@ -11,11 +11,14 @@ class Video;
 #include "savestate.hpp"
 #include "util.hpp"
 
+#include <unordered_map>
+
 class PPU : public Processor
 {
 public:
     PPU(NES& _nes, Video& _video);
     void setRegion(Region _region);
+    void start();
     void reset();
     // void save(Savestate& savestate) { return; }
     // void load(Savestate& savestate) { return; }
@@ -31,18 +34,23 @@ public:
 
     bool oamWrite(bool odd_cycle);
 
+    void cacheColor(uint index, ubyte value);
+    std::array<Pixel,0x20> palette_colors = {};
+    std::array<Pixel,0x20> greyscale_palette_colors = {};
+    // TODO emphasis
+
     enum Revision
     {
         REV_2C02, REV_2C03, REV_2C04,
         REV_2C05, REV_2C07, UMC 
     } revision = REV_2C02;
-
 private:
     /* Returns one Pixel
     * palette - one of eight palettes to be used
     * pal_i   - the index within that palette (one of four)
     */
     inline Pixel getColor(ubyte palette, ubyte pal_i);
+    inline Pixel getCachedColor(ubyte palette, ubyte pal_i);
     inline ubyte getNTByte();
     inline ubyte getAttribute();
     inline ubyte getPTByte(uint table, uint tile, uint bit_plane, uint fine_y);

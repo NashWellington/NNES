@@ -13,6 +13,16 @@ PPU::PPU(NES& _nes, Video& _video) : nes(_nes), video(_video)
     setRegion(Region::NTSC);
 }
 
+void PPU::start()
+{
+    // TODO there are definitely more things to be done here
+    // Clear color cache
+    for (uint i = 0; i < 0x20; i++)
+    {
+        cacheColor(i, 0);
+    }
+}
+
 void PPU::setRegion(Region _region)
 {
     region = _region;
@@ -590,6 +600,26 @@ Pixel PPU::getColor(ubyte palette, ubyte pal_i)
     return color;
 }
 
+void PPU::cacheColor(uint index, ubyte value)
+{
+    uint system_palette_i = value % 0x40;
+    system_palette_i *= 3;
+    palette_colors[index] = {ntsc_palette[system_palette_i],
+                             ntsc_palette[system_palette_i + 1],
+                             ntsc_palette[system_palette_i + 2]};
+    system_palette_i &= 0x30 * 3;
+    greyscale_palette_colors[index] = {ntsc_palette[system_palette_i],
+                                       ntsc_palette[system_palette_i + 1],
+                                       ntsc_palette[system_palette_i + 2]};
+}
+
+Pixel PPU::getCachedColor(ubyte palette, ubyte pal_i)
+{
+    uint index = palette * 4 + pal_i;
+    if (reg_mask.greyscale) return greyscale_palette_colors[index];
+    else return palette_colors[index];
+}
+
 void PPU::pushPixel(Pixel p)
 {
     assert(scanline != -1);
@@ -611,6 +641,7 @@ void PPU::renderPixel()
     // Sprite pixel
     uint spr_px = 0;
     uint spr_i = 0;
+    // TODO don't start loop if no sprites
     if (sprEnabled() && (reg_mask.left_sprites || cycle >= 9) && scanline >= 1)
     {
         for (spr_i = 0; spr_i < 8; spr_i++)
@@ -640,11 +671,11 @@ void PPU::renderPixel()
     // Sprite pixel gets drawn if foreground priority or bg_px == 0
     if (spr_px > 0 && (!(spr_at[spr_i] & 0x20) || bg_px == 0))
     {
-        pushPixel(getColor((spr_at[spr_i] & 0x03) + 4, spr_px));
+        pushPixel(getCachedColor((spr_at[spr_i] & 0x03) + 4, spr_px));
     }
     else
     {
-        pushPixel(getColor((bg_at.peekByte(bg_bit/8) & 0x03), bg_px));
+        pushPixel(getCachedColor((bg_at.peekByte(bg_bit/8) & 0x03), bg_px));
     }
 }
 
