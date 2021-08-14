@@ -117,14 +117,14 @@ int main(int argc, char ** argv)
         auto render_time = duration_cast<nanoseconds>(now - start_time);
         if (now - start_time > frame(1))
         {
-            video->updateFramerate(static_cast<float>(duration_cast<nanoseconds>(now - start_time).count()));
+            video->updateFramerate(static_cast<float>(render_time.count()));
         }
         else
         {
             std::this_thread::sleep_until(start_time + frame(1));
             video->updateFramerate(duration_cast<nanoseconds>(frame(1)).count());
         }
-        video->updateRenderTime(static_cast<float>(duration_cast<nanoseconds>(render_time).count()));
+        video->updateRenderTime(static_cast<float>(render_time.count()));
     }
     cmd_in_thread.detach(); // Thread not joinable if blocked by cin
     std::cout << std::endl;

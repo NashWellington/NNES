@@ -462,6 +462,7 @@ void Video::updateRenderTime(float time)
     if (show_render_time == RenderTimeDisplay::PERCENT)
     {
         render_time = time / static_cast<float>(duration_cast<nanoseconds>(frame(1)).count());
+        render_time *= 100.0f;
     }
     else
     {
