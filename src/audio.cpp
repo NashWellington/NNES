@@ -86,7 +86,8 @@ void AudioBuffer::push(float sample)
     buffer[head] = sample;
     head++;
     head %= 4096;
-    if (size() >= 1024) cv->notify_one();
+    lk.unlock();
+    if (size() >= 512) cv->notify_one();
 }
 
 float AudioBuffer::pull()
@@ -100,6 +101,7 @@ float AudioBuffer::pull()
     float sample = muted ? 0.0f : buffer[tail];
     tail++;
     tail %= 4096;
+    lk.unlock();
     cv->notify_one();
     return sample;
 }
