@@ -259,7 +259,7 @@ ubyte PPU::getNTByte()
 {
     uword address = 0x2000 | (vram_addr.addr & 0x0FFF);
     assert(address >= 0x2000 && address < 0x3000);
-    return nes.mem->ppuRead(0x2000 | (vram_addr.addr & 0x0FFF));
+    return nes.mem->ppuRead(address);
 }
 
 ubyte PPU::getAttribute()

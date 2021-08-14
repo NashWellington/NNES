@@ -176,7 +176,8 @@ void APU::mix()
     audio.pushSample(output);
 }
 
-ubyte APU::read(uword address)
+
+ubyte APU::read([[maybe_unused]] uword address)
 {
     assert(address == 0x4015);
     ubyte data = 0;

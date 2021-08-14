@@ -10,20 +10,11 @@ Process::Process(std::shared_ptr<Processor> _processor) : processor(_processor)
     running = false;
 }
 
-// Scheduler::Scheduler(std::vector<std::shared_ptr<Processor>> processors, uint64_t cpf)
-// {
-//     assert(processors.size() > 1);
-//     for (auto& processor : processors)
-//     {
-//         min_cycles = std::min(min_cycles, processor->time_scale);
-//         processes.push_back(std::make_unique<Process>(processor));
-//     }
-//     cycles_per_frame = cpf;
-// }
-
-void Scheduler::run(Length length)
+// TODO potentially support cycle/instruction/frame advance?
+void Scheduler::run([[maybe_unused]] Length length)
 {
     assert(length == FRAME);
+    // TODO rename & implement cooperative multithreading mode
     // if (mode == BROKEN)
     // {
     //     std::thread thread_cpu(ticks, processes[0]->processor, cycles_per_frame / processes[0]->time_scale);

@@ -36,7 +36,10 @@ void CPU::write(uword address, ubyte data)
 
 ubyte CPU::pop()
 {
+    #ifndef NDEBUG 
     ubyte old_sp = reg_sp;
+    #endif
+
     reg_sp++;
     uword address = 0x0100 + reg_sp;
 
@@ -52,7 +55,10 @@ ubyte CPU::pop()
 
 void CPU::push(ubyte data)
 {
+    #ifndef NDEBUG
     ubyte old_sp = reg_sp;
+    #endif
+    
     uword address = 0x0100 + reg_sp;
     reg_sp--;
 
