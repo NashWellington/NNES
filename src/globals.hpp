@@ -7,7 +7,7 @@
 
 // Uncomment this in release builds to prevent assertions and cerr logging
 //#ifndef NDEBUG
-//#define NDEBUG
+#define NDEBUG
 //#endif
 
 #include <iostream>
