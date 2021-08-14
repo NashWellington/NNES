@@ -103,10 +103,10 @@ int main(int argc, char ** argv)
     std::thread cmd_in_thread = std::thread(CMD::cmdLoop, input);
 
     bool running = true;
+    std::chrono::time_point start_time = std::chrono::steady_clock::now();
     while (running)
     {
         using namespace std::chrono;
-        time_point start_time = std::chrono::steady_clock::now();
 
         running = input->poll();
         nes->run(Scheduler::FRAME);
@@ -118,10 +118,12 @@ int main(int argc, char ** argv)
         if (now - start_time > frame(1))
         {
             video->updateFramerate(static_cast<float>(render_time.count()));
+            start_time = std::chrono::steady_clock::now();
         }
         else
         {
-            std::this_thread::sleep_until(start_time + frame(1));
+            start_time += duration_cast<steady_clock::duration>(frame(1));
+            std::this_thread::sleep_until(start_time);
             video->updateFramerate(duration_cast<nanoseconds>(frame(1)).count());
         }
         video->updateRenderTime(static_cast<float>(render_time.count()));
