@@ -250,13 +250,15 @@ bool Input::mute()
     return m;
 }
 
-void Input::toggle_fps()
+bool Input::toggle_fps()
 {
     std::unique_lock<std::mutex> lk(mtx);
     cv.wait(lk, [this]{return ready();});
     video.show_framerate = !video.show_framerate;
+    bool f = video.show_framerate;
     lk.unlock();
     cv.notify_one();
+    return f;
 }
 
 void Input::toggle_fps(bool show)
@@ -268,7 +270,7 @@ void Input::toggle_fps(bool show)
     cv.notify_one();
 }
 
-void Input::toggle_render_time()
+Video::RenderTimeDisplay Input::toggle_render_time()
 {
     std::unique_lock<std::mutex> lk(mtx);
     cv.wait(lk, [this]{return ready();});
@@ -278,11 +280,13 @@ void Input::toggle_render_time()
         video.show_render_time = Video::RenderTimeDisplay::PERCENT;
     else if (video.show_render_time == Video::RenderTimeDisplay::PERCENT)
         video.show_render_time = Video::RenderTimeDisplay::NO;
+    auto v = video.show_render_time;
     lk.unlock();
     cv.notify_one();
+    return v;
 }
 
-void Input::toggle_render_time(bool show)
+Video::RenderTimeDisplay Input::toggle_render_time(bool show)
 {
     std::unique_lock<std::mutex> lk(mtx);
     cv.wait(lk, [this]{return ready();});
@@ -294,8 +298,10 @@ void Input::toggle_render_time(bool show)
             video.show_render_time = Video::RenderTimeDisplay::PERCENT;
         else video.show_render_time = Video::RenderTimeDisplay::MS;
     }
+    auto v = video.show_render_time;
     lk.unlock();
     cv.notify_one();
+    return v;
 }
 
 void Input::toggle_render_time(Video::RenderTimeDisplay opt)
@@ -377,7 +383,6 @@ void Input::pollKeyboard(SDL_Event& event)
 
 bool Input::poll()
 {
-    // TODO lock this one too?
     ready(true);
     cv.notify_one();
     SDL_Event event;
@@ -387,7 +392,6 @@ bool Input::poll()
     }
     pollControllers();
     console.processInputs();
-    // TODO
     ready(false);
     return running;
 }

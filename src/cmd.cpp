@@ -7,7 +7,7 @@ void CMD::cmdLoop(std::shared_ptr<Input> input)
     while (input->running)
     {
         cout << "NNES> ";
-        cin >> command;
+        getline(cin, command);
 
         bool valid = true; // Determines whether it's an invalid command
 
@@ -70,26 +70,45 @@ void CMD::cmdLoop(std::shared_ptr<Input> input)
         }
         else if (cmd_tokens[0] == "fps" || (cmd_tokens.size() >= 2 && cmd_tokens[1] == "fps"))
         {
-            if (cmd_tokens[0] == "show") input->toggle_fps(true);
-            else if (cmd_tokens[1] == "hide") input->toggle_fps(false);
-            else input->toggle_fps();
+            if (cmd_tokens[0] == "show") 
+            {
+                cout << "Showing";
+                input->toggle_fps(true);
+            }
+            else if (cmd_tokens[0] == "hide")
+            {
+                cout << "Hiding";
+                input->toggle_fps(false);
+            }
+            else 
+            {
+                cout << (input->toggle_fps() ? "Showing" : "Hiding");
+            }
+            cout << " FPS counter" << endl;
         }
         else if (cmd_tokens[0] == "render" || (cmd_tokens.size() >= 2 && cmd_tokens[1] == "render"))
         {
+            Video::RenderTimeDisplay mode;
             if (cmd_tokens.size() == 1) // "render"
-                input->toggle_render_time();
+                mode = input->toggle_render_time();
             else if (cmd_tokens.size() == 2)
             {
                 if (cmd_tokens[0] == "show") // "show render"
-                    input->toggle_render_time(true);
+                    mode = input->toggle_render_time(true);
                 else if (cmd_tokens[0] == "hide") // "hide render"
-                    input->toggle_render_time(false);
+                    mode = input->toggle_render_time(false);
                 else if (cmd_tokens[0] == "render")
                 {
                     if (cmd_tokens[1] == "ms") // "render ms"
-                        input->toggle_render_time(Video::RenderTimeDisplay::MS);
+                    {
+                        mode = Video::RenderTimeDisplay::MS;
+                        input->toggle_render_time(mode);
+                    }
                     else if (cmd_tokens[1] == "percent") // "render percent"
-                        input->toggle_render_time(Video::RenderTimeDisplay::PERCENT);
+                    {
+                        mode = Video::RenderTimeDisplay::PERCENT;
+                        input->toggle_render_time();
+                    }
                     else valid = false;
                 }
                 else valid = false;
@@ -99,12 +118,32 @@ void CMD::cmdLoop(std::shared_ptr<Input> input)
                 if (cmd_tokens[0] == "show")
                 {
                     if (cmd_tokens[2] == "ms") // "show render ms"
-                        input->toggle_render_time(Video::RenderTimeDisplay::MS);
+                    {
+                        mode = Video::RenderTimeDisplay::MS;
+                        input->toggle_render_time(mode);
+                    }
                     else if (cmd_tokens[2] == "percent") // "show render percent"
-                        input->toggle_render_time(Video::RenderTimeDisplay::PERCENT);
+                    {
+                        mode = Video::RenderTimeDisplay::PERCENT;
+                        input->toggle_render_time(mode);
+                    }
                     else valid = false;
                 }
                 else valid = false;
+            }
+            if (valid)
+            {
+                if (mode == Video::RenderTimeDisplay::NO)
+                {
+                    cout << "Hiding frame render timer" << endl;
+                }
+                else
+                {
+                    cout << "Displaying frame render timer ";
+                    if (mode == Video::RenderTimeDisplay::MS) cout << "in milliseconds";
+                    else cout << "as a percentage of one frame";
+                    cout << endl;
+                }
             }
         }
         else if (cmd_tokens[0] == "quit" || cmd_tokens[0] == "exit")

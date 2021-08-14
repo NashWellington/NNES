@@ -39,10 +39,10 @@ public:
     void quit();
     bool pause();   // Return true if paused
     bool mute();    // Return true if muted
-    void toggle_fps();
+    bool toggle_fps();
     void toggle_fps(bool show);
-    void toggle_render_time();
-    void toggle_render_time(bool show);
+    Video::RenderTimeDisplay toggle_render_time();
+    Video::RenderTimeDisplay toggle_render_time(bool show);
     void toggle_render_time(Video::RenderTimeDisplay opt);
     void reset();
 
